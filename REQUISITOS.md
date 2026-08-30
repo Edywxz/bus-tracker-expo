@@ -18,58 +18,68 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 
 ### 📌 Requisitos Originários
 
-- [ ] **RF001 — Rastreamento em Tempo Real via GPS**
-  - **Descrição:** Exibição da localização ao vivo da van/ônibus no mapa com traçado de rota em movimento.
+- [ ] **RF001 — Cadastro de Responsável**
+  - **Descrição:** O sistema deverá permitir que o responsável crie uma conta informando seus dados necessários para utilização do aplicativo.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF002 — Envio de Notificações Automáticas e Alertas**
-  - **Descrição:** Envio de alertas de proximidade (ex: 500m), confirmação de pagamento, lembretes de aula e avisos gerais.
+  - [ ] **RF002 — Cadastro de Aluno**
+  - **Descrição:** O sistema deverá permitir que o responsável cadastre um ou mais alunos vinculados à sua conta.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF003 — Processamento de Pagamentos de Mensalidades**
-  - **Descrição:** Suporte a pagamentos via Cartão de Crédito, PIX (QR Code e Copia e Cola) e Boleto Bancário.
+- [ ] **RF003 — Rastreamento em Tempo Real via GPS**
+  - **Descrição:** Permitir que o responsável acompanhe a localização do transporte escolar em tempo real por meio de um mapa.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF004 — Histórico de Transações e Comprovantes**
-  - **Descrição:** Exibição do histórico de faturas pagas e pendentes com download/visualização de comprovante.
+- [ ] **RF004 — Envio de Notificações Automáticas e Alertas**
+  - **Descrição:** O sistema deverá enviar notificações ao responsável sobre eventos relacionados ao transporte, pagamentos e rotina escolar, incluindo alertas de proximidade, vencimento de mensalidades, confirmação de pagamentos e avisos gerais.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF005 — Processamento de Pagamentos de Mensalidades**
+  - **Descrição:** O sistema deverá permitir que o responsável realize o pagamento das mensalidades do transporte escolar por meio das opções de pagamento disponíveis (Pix, Cartão ou Boleto).
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF006 — Histórico de Transações e Comprovantes**
+  - **Descrição:** O sistema deverá permitir que o responsável consulte o histórico de mensalidades pagas e pendentes e visualize os respectivos comprovantes de pagamento.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF005 — Registro de Embarque e Desembarque com Timestamp**
-  - **Descrição:** Carimbo de data, hora e coordenadas do momento em que o aluno entra e sai do transporte.
+- [ ] **RF007 — Registro de Embarque e Desembarque**
+  - **Descrição:** Registro de data, hora e coordenadas do momento em que o aluno entra e sai do transporte.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF006 — Gestão e Conciliação de Contatos**
-  - **Descrição:** Lista de contatos entre motoristas, monitores, escola e responsáveis com acesso direto a chamadas/chat.
+- [ ] **RF008 — Comunicação entre Usuários**
+  - **Descrição:** O sistema deverá permitir a comunicação entre responsáveis, motoristas, monitores e escola por meio dos canais de comunicação disponíveis.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF007 — Comunicação de Ausência / Falta do Aluno**
+- [ ] **RF009 — Comunicação de Ausência / Falta do Aluno**
   - **Descrição:** Permite ao responsável notificar com antecedência a falta do aluno para o motorista otimizar a rota.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF008 — Controle de Acesso Baseado em Perfis (RBAC)**
-  - **Descrição:** Visões diferenciadas no app para o perfil *Responsável* (rastreio/pagamento) e *Motorista/Monitor* (GPS/chamada).
+- [ ] **RF010 — Perfis de Usuário**
+  - **Descrição:** O sistema deverá disponibilizar funcionalidades diferentes de acordo com o perfil do usuário, como responsável, motorista e monitor.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF009 — Suporte a Multi-Dependentes**
-  - **Descrição:** Permite que um mesmo responsável alterne facilmente a visualização entre múltiplos filhos cadastrados.
+- [ ] **RF011 — Cadastro e Acompanhamento de Múltiplos Alunos**
+  - **Descrição:** O sistema deverá permitir que um responsável cadastre e acompanhe múltiplos alunos vinculados á sua conta.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF010 — Botão de Alerta de Emergência / Eventos de Rota (SOS)**
-  - **Descrição:** Disparo imediato de comunicados de emergência ou atraso de rota pelo motorista para os pais.
+- [ ] **RF012 — Alerta de Emergência / Eventos de Rota (SOS)**
+  - **Descrição:** O sistema deverá permitir que o motorista envie comunicados aos responsáveis sobre situações de emergência, atrasos ou alterações na rota.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF011 — Lembretes de Vencimento e Recibo Automatizado**
-  - **Descrição:** Envio prévio de alertas de vencimento da mensalidade e emissão de recibo digital formatado.
+- [ ] **RF013 — Recibo Automatizado**
+  - **Descrição:** O sistema deverá disponibilizar um recibo digital após a confirmação do pagamento de uma mensalidade.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
@@ -80,7 +90,7 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 ### 📌 Requisitos Originários
 
 - [ ] **RNF001 — Criptografia de Dados Sensíveis (Segurança)**
-  - **Descrição:** Garantir criptografia (ex: AES-256 / SSL/TLS) de dados pessoais dos alunos, responsáveis e dados financeiros.
+  - **Descrição:** Garantir criptografia de dados pessoais dos alunos, responsáveis e dados financeiros.
   - **Prioridade:** Crítica
   - **Status:** `[ ] Pendente`
 
@@ -89,23 +99,23 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RNF003 — Interface Responsiva Mobile (Usabilidade)**
-  - **Descrição:** Layout otimizado e responsivo para sistemas Android e iOS.
+- [ ] **RNF003 — Compatibilidade com Dispositivos móveis (Usabilidade)**
+  - **Descrição:** O sistema deverá apresentar interface adequada pra utilização em dispositivos Android e iOS, se adaptando a diferente tamanhos de tela.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
 - [ ] **RNF004 — Alta Disponibilidade (Disponibilidade)**
-  - **Descrição:** Garantia de uptime de 99,9% durante os horários de operação comercial escolar.
+  - **Descrição:** Garantia de que o app permanecerá funcionando em 99,9% do tempo durante os horários de operação comercial escolar.
   - **Prioridade:** Crítica
   - **Status:** `[ ] Pendente`
 
 - [ ] **RNF005 — Operação Offline Parcial e Sincronização**
-  - **Descrição:** Armazenamento local temporário dos registros de embarque no app do motorista caso ocorra queda de sinal.
+  - **Descrição:** O sistema deverá armazenar temporariamente os registros de embarque no aplicativo do motorista em caso da conexão cair, realizando a sincronização dos dados quando a conexão for reestabelecida.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RNF006 — Conformidade com LGPD (Proteção de Dados de Menores)**
-  - **Descrição:** Mecanismos de consentimento explícito e políticas estritas de retenção e privacidade de localização dos alunos.
+- [ ] **RNF006 — Privacidade e Proteção de Dados**
+  - **Descrição:** O sistema deverá atender aos requisitos da LGPD para garantir a proteção de dados pessoais dos alunos, responsáveis, motoristas e demais usuários.
   - **Prioridade:** Crítica
   - **Status:** `[ ] Pendente`
 
