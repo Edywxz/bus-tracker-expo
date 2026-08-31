@@ -8,9 +8,9 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 
 | Categoria | Total | Concluídos `[x]` | Em Andamento `[/]` | Pendentes `[ ]` | % Progresso |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Requisitos Funcionais (RF)** | 11 | 0 | 0 | 11 | **0%** |
-| **Requisitos Não Funcionais (RNF)** | 7 | 0 | 0 | 7 | **0%** |
-| **Total Geral** | **18** | **0** | **0** | **18** | **0%** |
+| **Requisitos Funcionais (RF)** | 20 | 0 | 0 | 20 | **0%** |
+| **Requisitos Não Funcionais (RNF)** | 8 | 0 | 0 | 8 | **0%** |
+| **Total Geral** | **28** | **0** | **0** | **28** | **0%** |
 
 ---
 
@@ -18,69 +18,104 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 
 ### 📌 Requisitos Originários
 
-- [ ] **RF001 — Cadastro de Responsável**
+- [ ] **RF001 — Manter dados do Responsável**
   - **Descrição:** O sistema deverá permitir que o responsável crie uma conta informando seus dados necessários para utilização do aplicativo.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-  - [ ] **RF002 — Cadastro de Aluno**
-  - **Descrição:** O sistema deverá permitir que o responsável cadastre um ou mais alunos vinculados à sua conta.
+- [ ] **RF002 — Manter dados dos Alunos**
+  - **Descrição:** O sistema deverá permitir manter os dados dos alunos vinculados à conta do responsável, possibilitando seu cadastro, consulta, alteração e exclusão.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF003 — Rastreamento em Tempo Real via GPS**
-  - **Descrição:** Permitir que o responsável acompanhe a localização do transporte escolar em tempo real por meio de um mapa.
+- [ ] **RF003 — Rastreamento do transporte em Tempo Real**
+  - **Descrição:** O sistema deverá permitir que os usuários autorizados acompanhem a localização do transporte escolar em tempo real durante os trajetos de ida e volta, por meio de um mapa.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
 - [ ] **RF004 — Envio de Notificações Automáticas e Alertas**
-  - **Descrição:** O sistema deverá enviar notificações ao responsável sobre eventos relacionados ao transporte, pagamentos e rotina escolar, incluindo alertas de proximidade, vencimento de mensalidades, confirmação de pagamentos e avisos gerais.
+  - **Descrição:** O sistema deverá enviar notificações aos usuários sobre eventos relacionados ao transporte, pagamentos e rotina escolar, incluindo início do trajeto, proximidade do transporte, vencimento de mensalidades, confirmação de pagamentos, alterações no calendário, atrasos, ocorrências e avisos gerais.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF005 — Processamento de Pagamentos de Mensalidades**
-  - **Descrição:** O sistema deverá permitir que o responsável realize o pagamento das mensalidades do transporte escolar por meio das opções de pagamento disponíveis (Pix, Cartão ou Boleto).
+- [ ] **RF005 — Acompanhamento e Pagamento de Mensalidades**
+  - **Descrição:** O sistema deverá permitir que o responsável realize o pagamento das mensalidades do transporte escolar por meio das opções de pagamento disponíveis (Pix, Cartão ou Boleto), podendo ser único ou em até 12 parcelas.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF006 — Histórico de Transações e Comprovantes**
-  - **Descrição:** O sistema deverá permitir que o responsável consulte o histórico de mensalidades pagas e pendentes e visualize os respectivos comprovantes de pagamento.
+- [ ] **RF006 — Histórico de Transações**
+  - **Descrição:** O sistema deverá permitir que o responsável consulte o histórico de mensalidades, identificando pagamentos realizados, valores e parcelas pendentes.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
 - [ ] **RF007 — Registro de Embarque e Desembarque**
-  - **Descrição:** Registro de data, hora e coordenadas do momento em que o aluno entra e sai do transporte.
+  - **Descrição:** O sistema deverá registrar o embarque e o desembarque do aluno, armazenando informações como data, horário e localização do registro.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF008 — Comunicação entre Usuários**
-  - **Descrição:** O sistema deverá permitir a comunicação entre responsáveis, motoristas, monitores e escola por meio dos canais de comunicação disponíveis.
+- [ ] **RF008 — Comunicação**
+  - **Descrição:** O sistema deverá permitir a comunicação entre responsáveis, transportadores, monitores e instituições de ensino por meio dos canais de comunicação disponíveis.
   - **Prioridade:** Média
   - **Status:** `[ ] Pendente`
 
 - [ ] **RF009 — Comunicação de Ausência / Falta do Aluno**
-  - **Descrição:** Permite ao responsável notificar com antecedência a falta do aluno para o motorista otimizar a rota.
+  - **Descrição:** O sistema deverá permitir que o responsável informe antecipadamente a ausência do aluno ao transportador.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF010 — Perfis de Usuário**
-  - **Descrição:** O sistema deverá disponibilizar funcionalidades diferentes de acordo com o perfil do usuário, como responsável, motorista e monitor.
+- [ ] **RF010 — Gerenciamento de Perfis e Permissões**
+  - **Descrição:** O sistema deverá disponibilizar funcionalidades e permissões diferentes de acordo com o perfil do usuário, incluindo responsável, transportador, monitor e instituição de ensino.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF011 — Cadastro e Acompanhamento de Múltiplos Alunos**
-  - **Descrição:** O sistema deverá permitir que um responsável cadastre e acompanhe múltiplos alunos vinculados á sua conta.
-  - **Prioridade:** Média
-  - **Status:** `[ ] Pendente`
-
-- [ ] **RF012 — Alerta de Emergência / Eventos de Rota (SOS)**
-  - **Descrição:** O sistema deverá permitir que o motorista envie comunicados aos responsáveis sobre situações de emergência, atrasos ou alterações na rota.
+- [ ] **RF011 — Alerta de Emergência / Eventos de Rota**
+  - **Descrição:** O sistema deverá permitir que o motorista registre e envie comunicados aos responsáveis e à instituição de ensino sobre situações ocorridas durante o transporte, incluindo emergências, atrasos, alterações na rota e outras ocorrências.
   - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
-- [ ] **RF013 — Recibo Automatizado**
+- [ ] **RF012 — Emissão de Recibo de Pagamento**
   - **Descrição:** O sistema deverá disponibilizar um recibo digital após a confirmação do pagamento de uma mensalidade.
   - **Prioridade:** Média
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF013 — Cadastro e Identificação de Veículos**
+  - **Descrição:** O sistema deverá permitir o cadastro dos veículos utilizados no transporte escolar, incluindo sua placa de identificação e sua associação ao respectivo transportador.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF014 — Manter dados de Empresas**
+  - **Descrição:** O sistema deverá permitir manter os dados das empresas de transporte escolar cadastradas, incluindo sua associação aos respectivos usuários, veículos e serviços.
+  - **Prioridade:** Média
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF015 — Manter dados de instituições de ensino**
+  - **Descrição:** O sistema deverá permitir o cadastro e gerenciamento das instituições de ensino participantes do serviço de transporte escolar.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF016 — Visualização de contratos**
+  - **Descrição:** O sistema deverá permitir que o responsável e o transportador visualizem as informações do contrato de prestação de serviço de transporte escolar previamente cadastrados pela instituição de ensino.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF017 — Gerenciamento de Alunos pelo Transportador**
+  - **Descrição:** O sistema deverá permitir que o transportador consulte e acompanhe os alunos vinculados ao seu serviço de transporte.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF018 — Manter Pessoas Autorizadas**
+  - **Descrição:** O sistema deverá permitir que o responsável mantenha os dados das pessoas autorizadas a entregar e receber o aluno durante o embarque e desembarque.
+  - **Prioridade:** Alta
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF019 — Manter Calendário Escolar**
+  - **Descrição:** O sistema deverá permitir que a instituição de ensino mantenha as datas relacionadas ao calendário escolar, incluindo dias letivos e dias sem aula.
+  - **Prioridade:** Média
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RF020 — Início do Serviço de Transporte**
+  - **Descrição:** O sistema deverá permitir que o transportador inicie o serviço de transporte pelo aplicativo, ativando as funcionalidades relacionadas ao acompanhamento do trajeto e comunicação com os usuários.
+  - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
 
 ---
@@ -111,7 +146,7 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 
 - [ ] **RNF005 — Operação Offline Parcial e Sincronização**
   - **Descrição:** O sistema deverá armazenar temporariamente os registros de embarque no aplicativo do motorista em caso da conexão cair, realizando a sincronização dos dados quando a conexão for reestabelecida.
-  - **Prioridade:** Alta
+  - **Prioridade:** Crítica
   - **Status:** `[ ] Pendente`
 
 - [ ] **RNF006 — Privacidade e Proteção de Dados**
@@ -122,4 +157,9 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 - [ ] **RNF007 — Economia de Bateria e Consumo de Dados no GPS**
   - **Descrição:** Otimização do consumo de energia e tráfego de dados na transmissão de localização pelo dispositivo da van.
   - **Prioridade:** Média
+  - **Status:** `[ ] Pendente`
+
+- [ ] **RNF008 — Isolamento dos Dados entre Empresas**
+  - **Descrição:** O sistema deverá garantir que os dados de uma empresa de transporte não sejam acessíveis por usuários vinculados a outras empresas.
+  - **Prioridade:** Alta
   - **Status:** `[ ] Pendente`
