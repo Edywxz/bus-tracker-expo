@@ -6,7 +6,7 @@ Aplicativo mobile em React Native com Expo para rastreamento em tempo real de tr
 
 ## 📄 Documentação de Requisitos e Progresso
 
-Todos os Requisitos Funcionais (**RF001 a RF011**) e Não Funcionais (**RNF001 a RNF007**) com seus respectivos indicadores de progresso estão documentados no arquivo:
+Todos os Requisitos Funcionais (**RF001 a RF021**) e Não Funcionais (**RNF001 a RNF008**) com seus respectivos indicadores de progresso e rastreabilidade com o DCU estão documentados no arquivo:
 👉 [REQUISITOS.md](./REQUISITOS.md)
 
 ---
