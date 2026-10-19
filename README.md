@@ -4,10 +4,14 @@ Aplicativo mobile em React Native com Expo para rastreamento em tempo real de tr
 
 ---
 
-## 📄 Documentação de Requisitos e Progresso
+## 📄 Documentação de Requisitos e Modelagem UML
 
-Todos os Requisitos Funcionais (**RF001 a RF021**) e Não Funcionais (**RNF001 a RNF008**) com seus respectivos indicadores de progresso e rastreabilidade com o DCU estão documentados no arquivo:
-👉 [REQUISITOS.md](./REQUISITOS.md)
+- 📋 **Requisitos Funcionais e DCU:** 👉 [REQUISITOS.md](./REQUISITOS.md)
+- 📐 **Diagrama de Classes UML (Draw.io):** 👉 [DIAGRAMA_CLASSES.md](./DIAGRAMA_CLASSES.md)
+  - Arquivo editável: [`diagrama-classes.drawio`](./diagrama-classes.drawio)
+  - Imagem PNG de alta resolução: [`diagrama-classes.drawio.png`](./diagrama-classes.drawio.png)
+  - Vetor SVG: [`diagrama-classes.drawio.svg`](./diagrama-classes.drawio.svg)
+  - Código Mermaid: [`diagrama-classes.mmd`](./diagrama-classes.mmd)
 
 ---
 
