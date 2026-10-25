@@ -3,19 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-// Configurações do Supabase obtidas via variáveis de ambiente do Expo (EXPO_PUBLIC_*)
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://SEU_PROJETO.supabase.co';
-const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'SUA_CHAVE_ANON_PUBLICA';
+// ⚠️  NUNCA adicione chaves reais aqui. Use variáveis de ambiente EXPO_PUBLIC_*
+// Configure o arquivo .env na raiz do projeto (veja .env.example).
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-export const isSupabaseConfigured = () => {
-  return (
-    Boolean(supabaseUrl) &&
-    Boolean(supabaseAnonKey) &&
-    !supabaseUrl.includes('seu-projeto')
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    '[Supabase] Variáveis de ambiente EXPO_PUBLIC_SUPABASE_URL e ' +
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY não estão definidas. ' +
+    'Configure o arquivo .env na raiz do projeto.'
   );
-};
+}
+
+export const isSupabaseConfigured = () =>
+  Boolean(supabaseUrl) && Boolean(supabaseAnonKey);
 
 /**
  * Cliente Supabase com tipagem estrita gerada pelo schema do banco de dados
