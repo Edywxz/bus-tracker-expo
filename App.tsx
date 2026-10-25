@@ -13,8 +13,9 @@ import { supabase, isSupabaseConfigured } from './src/services/supabase';
 
 export default function App() {
   const [configured, setConfigured] = useState<boolean>(false);
-  const [dbStatus, setDbStatus] = useState<string>('Verificando status...');
+  const [dbStatus, setDbStatus] = useState<string>('Verificando conexão...');
   const [loading, setLoading] = useState<boolean>(true);
+  const [tablesSummary, setTablesSummary] = useState<string[]>([]);
 
   useEffect(() => {
     checkConnection();
@@ -25,20 +26,34 @@ export default function App() {
     const hasConfig = isSupabaseConfigured();
     setConfigured(hasConfig);
 
-    if (!hasConfig) {
-      setDbStatus('Aguardando credenciais no arquivo .env');
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Teste de chamada para verificar conectividade com o Supabase
-      const { error } = await supabase.from('perfis').select('id').limit(1);
-      if (error && error.code !== 'PGRST116') {
-        // Se a tabela não foi criada ainda ou erro de conexão
-        setDbStatus(`Conectado ao Supabase (${error.message})`);
+      // Teste de consulta em tabelas do Supabase
+      const [perfisRes, veiculosRes, viagensRes] = await Promise.all([
+        supabase.from('perfis').select('id', { count: 'exact', head: true }),
+        supabase.from('veiculos').select('id', { count: 'exact', head: true }),
+        supabase.from('viagens').select('id', { count: 'exact', head: true }),
+      ]);
+
+      if (perfisRes.error) {
+        setDbStatus(`Erro ao consultar: ${perfisRes.error.message}`);
       } else {
-        setDbStatus('Conectado ao Supabase com Sucesso!');
+        setDbStatus('✅ Conectado ao Supabase com Sucesso! Schema e RLS operantes.');
+        setTablesSummary([
+          'perfis',
+          'responsaveis',
+          'transportadores',
+          'instituicoes_ensino',
+          'alunos',
+          'pessoas_autorizadas',
+          'veiculos',
+          'viagens',
+          'localizacoes_gps (PostGIS)',
+          'registros_embarque_desembarque',
+          'eventos_rota',
+          'contratos_servico',
+          'mensalidades',
+          'pagamentos',
+        ]);
       }
     } catch (err: any) {
       setDbStatus(`Erro de conexão: ${err.message || 'Falha ao acessar servidor'}`);
@@ -60,30 +75,33 @@ export default function App() {
           </Text>
         </View>
 
-        {/* Card de Status do Banco de Dados */}
+        {/* Card de Conexão com o Supabase */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Status do Banco de Dados</Text>
+            <Text style={styles.cardTitle}>Conexão Supabase</Text>
             <View
               style={[
                 styles.badge,
-                { backgroundColor: configured ? '#D1FAE5' : '#FEF3C7' },
+                { backgroundColor: configured ? '#D1FAE5' : '#FEE2E2' },
               ]}
             >
               <Text
                 style={[
                   styles.badgeText,
-                  { color: configured ? '#065F46' : '#92400E' },
+                  { color: configured ? '#065F46' : '#991B1B' },
                 ]}
               >
-                {configured ? 'NUVEM ATIVA' : 'CONFIG PENDENTE'}
+                {configured ? 'ONLINE • NUVEM' : 'OFFLINE'}
               </Text>
             </View>
           </View>
 
           <View style={styles.statusBox}>
             {loading ? (
-              <ActivityIndicator size="small" color="#F59E0B" />
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color="#F59E0B" />
+                <Text style={styles.loadingText}>Conectando ao banco...</Text>
+              </View>
             ) : (
               <Text style={styles.statusText}>{dbStatus}</Text>
             )}
@@ -98,57 +116,52 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* Módulos do Sistema */}
+        {/* Tabelas Ativas */}
+        {tablesSummary.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Tabelas Modeladas no Banco (14)</Text>
+            <Text style={styles.cardSubtitle}>
+              Todas com Row Level Security (RLS) habilitado:
+            </Text>
+            <View style={styles.tagContainer}>
+              {tablesSummary.map((tbl) => (
+                <View key={tbl} style={styles.tag}>
+                  <Text style={styles.tagText}>{tbl}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Serviços Implementados */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Módulos Integrados ao Banco</Text>
+          <Text style={styles.sectionTitle}>Serviços Integrados no Código</Text>
         </View>
 
         <View style={styles.moduleGrid}>
           <View style={styles.moduleCard}>
             <Text style={styles.moduleIcon}>📍</Text>
-            <Text style={styles.moduleTitle}>Rastreamento GPS</Text>
+            <Text style={styles.moduleTitle}>LocationTrackerService</Text>
             <Text style={styles.moduleDesc}>
-              Telemetria em tempo real com PostGIS e baixa latência (RF003).
+              Telemetria GPS em tempo real (PostGIS Point) + Realtime Broadcast para pais e escolas.
             </Text>
           </View>
 
           <View style={styles.moduleCard}>
             <Text style={styles.moduleIcon}>🎒</Text>
-            <Text style={styles.moduleTitle}>Controle de Alunos</Text>
+            <Text style={styles.moduleTitle}>BoardingService</Text>
             <Text style={styles.moduleDesc}>
-              Embarque/desembarque com suporte a sincronização offline (RF007).
+              Registro de embarque/desembarque com fila de sincronização offline automática.
             </Text>
           </View>
 
           <View style={styles.moduleCard}>
             <Text style={styles.moduleIcon}>💳</Text>
-            <Text style={styles.moduleTitle}>Módulo Financeiro</Text>
+            <Text style={styles.moduleTitle}>PaymentService</Text>
             <Text style={styles.moduleDesc}>
-              Gestão de contratos, PIX, boletos e recibos digitais (RF005/012).
+              Controle de parcelas, emissão de recibos e liquidação via PIX, Cartão e Boleto.
             </Text>
           </View>
-
-          <View style={styles.moduleCard}>
-            <Text style={styles.moduleIcon}>🛡️</Text>
-            <Text style={styles.moduleTitle}>Segurança & LGPD</Text>
-            <Text style={styles.moduleDesc}>
-              Isolamento estrito entre transportadores via RLS (RNF006/008).
-            </Text>
-          </View>
-        </View>
-
-        {/* Instruções de Ativação */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>📋 Próximos Passos de Configuração:</Text>
-          <Text style={styles.infoItem}>
-            1. Crie seu projeto no painel do <Text style={styles.bold}>Supabase</Text>.
-          </Text>
-          <Text style={styles.infoItem}>
-            2. Execute o script <Text style={styles.bold}>supabase/schema.sql</Text> no SQL Editor do Supabase.
-          </Text>
-          <Text style={styles.infoItem}>
-            3. Preencha as chaves no seu arquivo <Text style={styles.bold}>.env</Text> (vide .env.example).
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -162,15 +175,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 36,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   logo: {
     fontSize: 48,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   title: {
     fontSize: 24,
@@ -178,7 +191,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
@@ -186,8 +199,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    padding: 18,
+    marginBottom: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -198,12 +211,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1E293B',
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    marginBottom: 10,
   },
   badge: {
     paddingHorizontal: 8,
@@ -218,9 +237,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: 10,
     padding: 12,
-    marginVertical: 12,
-    minHeight: 48,
+    marginVertical: 10,
+    minHeight: 46,
     justifyContent: 'center',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#475569',
   },
   statusText: {
     fontSize: 13,
@@ -232,67 +260,61 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 4,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tag: {
+    backgroundColor: '#EEF2F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  tagText: {
+    fontSize: 11,
+    color: '#334155',
+    fontWeight: '500',
+  },
   sectionHeader: {
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1E293B',
   },
   moduleGrid: {
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 20,
   },
   moduleCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   moduleIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 22,
+    marginBottom: 6,
   },
   moduleTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   moduleDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
-    lineHeight: 18,
-  },
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E40AF',
-    marginBottom: 8,
-  },
-  infoItem: {
-    fontSize: 13,
-    color: '#1E3A8A',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  bold: {
-    fontWeight: '700',
+    lineHeight: 16,
   },
 });

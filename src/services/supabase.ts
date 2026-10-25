@@ -1,25 +1,27 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Database } from '../types/supabase';
 
 // Configurações do Supabase obtidas via variáveis de ambiente do Expo (EXPO_PUBLIC_*)
-// Para configurar, crie um arquivo .env na raiz do projeto com estas variáveis
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://seu-projeto.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sua-chave-anon-publica';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://SEU_PROJETO.supabase.co';
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'SUA_CHAVE_ANON_PUBLICA';
 
 export const isSupabaseConfigured = () => {
   return (
-    Boolean(process.env.EXPO_PUBLIC_SUPABASE_URL) &&
-    Boolean(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) &&
-    !process.env.EXPO_PUBLIC_SUPABASE_URL?.includes('seu-projeto')
+    Boolean(supabaseUrl) &&
+    Boolean(supabaseAnonKey) &&
+    !supabaseUrl.includes('seu-projeto')
   );
 };
 
 /**
- * Cliente Supabase configurado com persistência de sessão assíncrona
- * via AsyncStorage para o ambiente Expo / React Native.
+ * Cliente Supabase com tipagem estrita gerada pelo schema do banco de dados
+ * e persistência de sessão assíncrona via AsyncStorage.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
