@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors } from './colors';
+import { radius, shadows, spacing } from './tokens';
 
 export const globalStyles = StyleSheet.create({
   safeArea: {
@@ -19,40 +20,22 @@ export const globalStyles = StyleSheet.create({
   // Apple Inset Grouped Card (Design limpo, minimalista e premium)
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.xl,
+    borderCurve: 'continuous',
     padding: 18,
-    marginBottom: 16,
-    borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    marginBottom: spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.shadowColor,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 1.5,
-      },
-    }),
+    ...shadows.card,
   },
 
   cardElevated: {
     backgroundColor: colors.surface,
-    borderRadius: 22,
+    borderRadius: radius.xl,
+    borderCurve: 'continuous',
     padding: 20,
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.shadowColor,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.06,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    marginBottom: spacing.lg,
+    ...shadows.floating,
   },
 
   // Tipografia Apple HIG
@@ -148,8 +131,8 @@ export const globalStyles = StyleSheet.create({
   // Segmented Control (Padrão iOS)
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: '#E5E5EA',
-    borderRadius: 12,
+    backgroundColor: '#E9E9EE',
+    borderRadius: radius.md,
     padding: 3,
     marginBottom: 16,
   },

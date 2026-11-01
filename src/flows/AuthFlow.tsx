@@ -1,0 +1,337 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated, Dimensions, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme/colors';
+import { motion, radius, shadows, spacing } from '../theme/tokens';
+import { type } from '../theme/type';
+import { TouchableScale } from '../components/ui/TouchableScale';
+import { AppleButton } from '../components/AppleButton';
+import { Banner, Field } from '../components/ui/kit';
+import { useApp } from '../context/AppContext';
+import { AuthService, traduzirErroAuth } from '../services/authService';
+import { TipoUsuario } from '../types/database';
+
+const W = Dimensions.get('window').width;
+
+type Step = 'boasvindas' | 'entrar' | 'perfil' | 'cadastro' | 'confirmar' | 'recuperar';
+
+const SLIDES: { icon: keyof typeof Ionicons.glyphMap; title: string; text: string; tint: string }[] = [
+  { icon: 'navigate', title: 'Veja a van chegando', text: 'Acompanhe o trajeto em tempo real e saiba exatamente quando o aluno embarca e desembarca.', tint: '#FEF3C7' },
+  { icon: 'shield-checkmark', title: 'Mais segurança no dia a dia', text: 'Pessoas autorizadas, avisos de ocorrência na rota e registro de cada embarque, mesmo sem sinal.', tint: '#E5F1FF' },
+  { icon: 'wallet', title: 'Mensalidades sem complicação', text: 'Pague por PIX ou boleto, receba o recibo e converse com motorista e escola no mesmo lugar.', tint: '#EBF9F0' },
+];
+
+const PAPEIS: { tipo: TipoUsuario; icon: keyof typeof Ionicons.glyphMap; titulo: string; texto: string }[] = [
+  { tipo: 'RESPONSAVEL', icon: 'people', titulo: 'Sou pai, mãe ou responsável', texto: 'Acompanhar o trajeto, pagar e avisar faltas' },
+  { tipo: 'TRANSPORTADOR', icon: 'bus', titulo: 'Sou motorista', texto: 'Conduzir rotas, registrar embarques e receber' },
+  { tipo: 'INSTITUICAO', icon: 'school', titulo: 'Represento a escola', texto: 'Ver chegadas, calendário e falar com as vans' },
+];
+
+const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+
+/** Ilustração: ícone grande sobre círculos concêntricos com flutuação suave. */
+const HeroArt: React.FC<{ icon: keyof typeof Ionicons.glyphMap; tint: string }> = ({ icon, tint }) => {
+  const f = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const l = Animated.loop(Animated.sequence([
+      Animated.timing(f, { toValue: 1, duration: 2200, useNativeDriver: true }),
+      Animated.timing(f, { toValue: 0, duration: 2200, useNativeDriver: true }),
+    ]));
+    l.start();
+    return () => l.stop();
+  }, [f]);
+  return (
+    <View style={art.wrap}>
+      <View style={[art.ring, { width: 260, height: 260, backgroundColor: tint, opacity: 0.35 }]} />
+      <View style={[art.ring, { width: 190, height: 190, backgroundColor: tint, opacity: 0.7 }]} />
+      <Animated.View style={[art.core, { transform: [{ translateY: f.interpolate({ inputRange: [0, 1], outputRange: [4, -6] }) }] }]}>
+        <Ionicons name={icon} size={54} color={colors.accent} />
+      </Animated.View>
+    </View>
+  );
+};
+
+export const AuthFlow: React.FC = () => {
+  const { entrar, cadastrar, recuperarSenha, entrarDemo } = useApp();
+  const [step, setStep] = useState<Step>('boasvindas');
+  const [dir, setDir] = useState(1);
+  const [page, setPage] = useState(0);
+  const [tipo, setTipo] = useState<TipoUsuario>('RESPONSAVEL');
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [campoErro, setCampoErro] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const senhaRef = useRef<any>(null);
+  const emailRef = useRef<any>(null);
+  const t = useRef(new Animated.Value(1)).current;
+  const disponivel = AuthService.disponivel();
+
+  const go = (s: Step, d = 1) => {
+    setDir(d); setErro(null); setCampoErro({}); setInfo(null);
+    t.setValue(0);
+    setStep(s);
+    Animated.timing(t, { toValue: 1, duration: 340, easing: motion.easing, useNativeDriver: true }).start();
+  };
+
+  const validar = (campos: ('nome' | 'email' | 'senha')[]) => {
+    const e: Record<string, string> = {};
+    if (campos.includes('nome') && nome.trim().length < 2) e.nome = 'Informe seu nome.';
+    if (campos.includes('email') && !emailOk(email)) e.email = 'Digite um e-mail válido.';
+    if (campos.includes('senha') && senha.length < 6) e.senha = 'Use pelo menos 6 caracteres.';
+    setCampoErro(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const submeter = async (acao: () => Promise<void>) => {
+    setLoading(true); setErro(null);
+    try { await acao(); } catch (e) { setErro(traduzirErroAuth(e)); } finally { setLoading(false); }
+  };
+
+  const onEntrar = () => validar(['email', 'senha']) && submeter(() => entrar(email, senha));
+  const onCadastrar = () =>
+    validar(['nome', 'email', 'senha']) &&
+    submeter(async () => {
+      const r = await cadastrar({ nome, email, senha, tipo });
+      if (r.precisaConfirmar) go('confirmar');
+    });
+  const onRecuperar = () =>
+    validar(['email']) &&
+    submeter(async () => { await recuperarSenha(email); setInfo('Enviamos um link para redefinir sua senha. Confira seu e-mail.'); });
+
+  const slide = {
+    opacity: t,
+    transform: [{ translateX: t.interpolate({ inputRange: [0, 1], outputRange: [28 * dir, 0] }) }],
+  };
+
+  /* ------------------ Boas-vindas ------------------ */
+  if (step === 'boasvindas') {
+    return (
+      <SafeAreaView style={s.root}>
+        <View style={s.topRow}>
+          <View style={s.brand}>
+            <View style={s.brandIcon}><Ionicons name="bus" size={16} color={colors.accent} /></View>
+            <Text style={s.brandText}>VanEscolar</Text>
+          </View>
+          <TouchableScale onPress={() => go('entrar')} accessibilityLabel="Pular apresentação" style={s.skip}>
+            <Text style={s.skipText}>Pular</Text>
+          </TouchableScale>
+        </View>
+
+        <Animated.ScrollView
+          horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
+          onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / W))}
+          scrollEventThrottle={16}
+        >
+          {SLIDES.map((sl) => (
+            <View key={sl.title} style={{ width: W, paddingHorizontal: 28 }}>
+              <HeroArt icon={sl.icon} tint={sl.tint} />
+              <Text style={s.slideTitle} accessibilityRole="header">{sl.title}</Text>
+              <Text style={s.slideText}>{sl.text}</Text>
+            </View>
+          ))}
+        </Animated.ScrollView>
+
+        <View style={s.dots} accessibilityLabel={`Página ${page + 1} de ${SLIDES.length}`}>
+          {SLIDES.map((_, i) => {
+            const w = scrollX.interpolate({ inputRange: [(i - 1) * W, i * W, (i + 1) * W], outputRange: [8, 24, 8], extrapolate: 'clamp' });
+            const o = scrollX.interpolate({ inputRange: [(i - 1) * W, i * W, (i + 1) * W], outputRange: [0.25, 1, 0.25], extrapolate: 'clamp' });
+            return <Animated.View key={i} style={[s.dot, { width: w, opacity: o }]} />;
+          })}
+        </View>
+
+        <View style={s.cta}>
+          <AppleButton size="lg" title="Criar conta" onPress={() => go('perfil')} />
+          <AppleButton size="lg" variant="secondary" title="Já tenho conta" onPress={() => go('entrar')} />
+          <TouchableScale onPress={() => entrarDemo('RESPONSAVEL')} style={s.demo} accessibilityRole="button">
+            <Text style={s.demoText}>Explorar com dados de exemplo</Text>
+          </TouchableScale>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* ------------------ Demais passos ------------------ */
+  const voltar = () => go(step === 'cadastro' ? 'perfil' : step === 'confirmar' ? 'entrar' : 'boasvindas', -1);
+
+  return (
+    <SafeAreaView style={s.root}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.topRow}>
+          <TouchableScale onPress={voltar} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Voltar">
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          </TouchableScale>
+          <View style={{ width: 44 }} />
+        </View>
+
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.formScroll} showsVerticalScrollIndicator={false}>
+          <Animated.View style={slide}>
+            {!disponivel && step !== 'perfil' && (
+              <View style={{ marginBottom: 16 }}>
+                <Banner tone="info" message="O servidor ainda não está configurado neste app. Use “Explorar com dados de exemplo” na tela inicial ou preencha o arquivo .env." />
+              </View>
+            )}
+
+            {step === 'perfil' && (
+              <>
+                <Text style={s.h1} accessibilityRole="header">Como você vai usar o app?</Text>
+                <Text style={s.sub}>Isso define o que aparece para você. Dá para ter outra conta depois.</Text>
+                <View style={{ gap: 12, marginTop: 24 }}>
+                  {PAPEIS.map((p) => {
+                    const on = tipo === p.tipo;
+                    return (
+                      <TouchableScale
+                        key={p.tipo}
+                        onPress={() => setTipo(p.tipo)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: on }}
+                        style={[s.role, on && s.roleOn]}
+                      >
+                        <View style={[s.roleIcon, on && { backgroundColor: colors.ink }]}>
+                          <Ionicons name={p.icon} size={22} color={on ? colors.accent : colors.textSecondary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.roleTitle}>{p.titulo}</Text>
+                          <Text style={s.roleText}>{p.texto}</Text>
+                        </View>
+                        <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? colors.ink : colors.borderOpaque} />
+                      </TouchableScale>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            {step === 'cadastro' && (
+              <>
+                <Text style={s.h1} accessibilityRole="header">Crie sua conta</Text>
+                <Text style={s.sub}>Leva menos de um minuto.</Text>
+                <View style={s.form}>
+                  <Field label="Nome completo" value={nome} onChangeText={setNome} error={campoErro.nome} icon="person-outline"
+                    autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()} />
+                  <Field label="E-mail" value={email} onChangeText={setEmail} error={campoErro.email} icon="mail-outline"
+                    keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email"
+                    textContentType="emailAddress" returnKeyType="next" inputRef={emailRef}
+                    onSubmitEditing={() => senhaRef.current?.focus()} />
+                  <Field label="Senha" value={senha} onChangeText={setSenha} error={campoErro.senha} icon="lock-closed-outline"
+                    secureTextEntry autoCapitalize="none" autoComplete="new-password" textContentType="newPassword"
+                    hint="Mínimo de 6 caracteres" returnKeyType="done" inputRef={senhaRef} onSubmitEditing={onCadastrar} />
+                  {erro && <Banner tone="error" message={erro} />}
+                </View>
+                <Text style={s.legal}>Ao continuar você concorda com o tratamento dos seus dados e dos dados do aluno conforme a LGPD.</Text>
+              </>
+            )}
+
+            {step === 'entrar' && (
+              <>
+                <Text style={s.h1} accessibilityRole="header">Que bom te ver de novo</Text>
+                <Text style={s.sub}>Entre para acompanhar a van.</Text>
+                <View style={s.form}>
+                  <Field label="E-mail" value={email} onChangeText={setEmail} error={campoErro.email} icon="mail-outline"
+                    keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email"
+                    textContentType="emailAddress" returnKeyType="next" inputRef={emailRef}
+                    onSubmitEditing={() => senhaRef.current?.focus()} />
+                  <Field label="Senha" value={senha} onChangeText={setSenha} error={campoErro.senha} icon="lock-closed-outline"
+                    secureTextEntry autoCapitalize="none" autoComplete="current-password" textContentType="password"
+                    returnKeyType="go" inputRef={senhaRef} onSubmitEditing={onEntrar} />
+                  {erro && <Banner tone="error" message={erro} />}
+                  <TouchableScale onPress={() => go('recuperar')} style={{ alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center' }} accessibilityRole="button">
+                    <Text style={s.link}>Esqueci a senha</Text>
+                  </TouchableScale>
+                </View>
+              </>
+            )}
+
+            {step === 'recuperar' && (
+              <>
+                <Text style={s.h1} accessibilityRole="header">Redefinir senha</Text>
+                <Text style={s.sub}>Enviaremos um link para o seu e-mail.</Text>
+                <View style={s.form}>
+                  <Field label="E-mail" value={email} onChangeText={setEmail} error={campoErro.email} icon="mail-outline"
+                    keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email"
+                    textContentType="emailAddress" returnKeyType="send" onSubmitEditing={onRecuperar} />
+                  {erro && <Banner tone="error" message={erro} />}
+                  {info && <Banner tone="success" message={info} />}
+                </View>
+              </>
+            )}
+
+            {step === 'confirmar' && (
+              <View style={{ alignItems: 'center', paddingTop: 24 }}>
+                <HeroArt icon="mail-open" tint="#EBF9F0" />
+                <Text style={[s.h1, { textAlign: 'center' }]} accessibilityRole="header">Confirme seu e-mail</Text>
+                <Text style={[s.sub, { textAlign: 'center' }]}>
+                  Enviamos um link para {email.trim()}. Toque nele e depois volte aqui para entrar.
+                </Text>
+              </View>
+            )}
+          </Animated.View>
+        </ScrollView>
+
+        <View style={s.footer}>
+          {step === 'perfil' && <AppleButton size="lg" title="Continuar" onPress={() => go('cadastro')} />}
+          {step === 'cadastro' && (
+            <>
+              <AppleButton size="lg" title="Criar conta" onPress={onCadastrar} loading={loading} disabled={!disponivel} />
+              <TouchableScale onPress={() => go('entrar')} style={s.demo}><Text style={s.demoText}>Já tenho conta</Text></TouchableScale>
+            </>
+          )}
+          {step === 'entrar' && (
+            <>
+              <AppleButton size="lg" title="Entrar" onPress={onEntrar} loading={loading} disabled={!disponivel} />
+              <TouchableScale onPress={() => go('perfil')} style={s.demo}><Text style={s.demoText}>Criar uma conta</Text></TouchableScale>
+            </>
+          )}
+          {step === 'recuperar' && <AppleButton size="lg" title="Enviar link" onPress={onRecuperar} loading={loading} disabled={!disponivel} />}
+          {step === 'confirmar' && <AppleButton size="lg" title="Ir para o login" onPress={() => go('entrar')} />}
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const art = StyleSheet.create({
+  wrap: { height: 280, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  ring: { position: 'absolute', borderRadius: 999 },
+  core: { width: 112, height: 112, borderRadius: 36, borderCurve: 'continuous', backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.floating },
+});
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === 'android' ? 28 : 0 },
+  topRow: { height: 52, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  brandText: { ...type.headline, color: colors.textPrimary },
+  skip: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  skipText: { ...type.callout, color: colors.textTertiary },
+  slideTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center', marginTop: 8 },
+  slideText: { ...type.body, color: colors.textTertiary, textAlign: 'center', marginTop: 10 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 22 },
+  dot: { height: 8, borderRadius: 4, backgroundColor: colors.ink },
+  cta: { marginTop: 'auto', paddingHorizontal: 22, paddingBottom: 18, gap: 10 },
+  demo: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  demoText: { ...type.callout, color: colors.textSecondary },
+  backBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, ...shadows.card },
+  formScroll: { paddingHorizontal: 22, paddingTop: 8, paddingBottom: 24 },
+  h1: { ...type.largeTitle, fontSize: 30, color: colors.textPrimary },
+  sub: { ...type.body, color: colors.textTertiary, marginTop: 6 },
+  form: { gap: 16, marginTop: 24 },
+  link: { ...type.callout, fontWeight: '600', color: colors.accentDark },
+  legal: { ...type.footnote, color: colors.textTertiary, marginTop: 18 },
+  footer: { paddingHorizontal: 22, paddingBottom: Platform.OS === 'ios' ? 8 : 18, paddingTop: 8, gap: 4 },
+  role: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderCurve: 'continuous', borderWidth: 1.5, borderColor: 'transparent', ...shadows.card,
+  },
+  roleOn: { borderColor: colors.ink },
+  roleIcon: { width: 46, height: 46, borderRadius: 16, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  roleTitle: { ...type.callout, fontWeight: '700', color: colors.textPrimary },
+  roleText: { ...type.footnote, color: colors.textTertiary, marginTop: 2 },
+});

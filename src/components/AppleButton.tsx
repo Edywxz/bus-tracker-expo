@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -18,6 +19,7 @@ interface AppleButtonProps {
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle | TextStyle[];
 }
@@ -30,6 +32,7 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
   size = 'md',
   icon,
   disabled = false,
+  loading = false,
   style,
   textStyle,
 }) => {
@@ -101,7 +104,7 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
       case 'primary':
       default:
         return {
-          bg: colors.accent,
+          bg: colors.ink,
           border: 'transparent',
           borderWidth: 0,
           textColor: '#FFFFFF',
@@ -115,22 +118,22 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
         return {
           paddingVertical: 8,
           paddingHorizontal: 12,
-          borderRadius: 10,
+          borderRadius: 12,
           fontSize: 13,
         };
       case 'lg':
         return {
-          paddingVertical: 16,
+          paddingVertical: 17,
           paddingHorizontal: 22,
-          borderRadius: 16,
+          borderRadius: 20,
           fontSize: 16,
         };
       case 'md':
       default:
         return {
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          borderRadius: 14,
+          paddingVertical: 13,
+          paddingHorizontal: 18,
+          borderRadius: 16,
           fontSize: 14,
         };
     }
@@ -144,7 +147,10 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      disabled={disabled}
+      disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={{ opacity: disabled ? 0.45 : 1 }}
     >
       <Animated.View
@@ -164,7 +170,7 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
           style,
         ]}
       >
-        {icon}
+        {loading ? <ActivityIndicator size="small" color={vStyle.textColor} /> : icon}
         {title ? (
           <Text
             style={[
@@ -201,10 +207,10 @@ const styles = StyleSheet.create({
   primaryShadow: {
     ...Platform.select({
       ios: {
-        shadowColor: colors.accentDark,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.18,
-        shadowRadius: 6,
+        shadowColor: colors.ink,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.22,
+        shadowRadius: 12,
       },
       android: {
         elevation: 2,
