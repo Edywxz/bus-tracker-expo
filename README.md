@@ -127,6 +127,12 @@ npm run web
 
 ---
 
+## 🎨 Design System
+
+Guia vivo em [`design-system/index.html`](./design-system/index.html) (abra no navegador). Implementação em `src/components/ds/` e tokens em `src/theme/`. Navegação 100% nativa com Expo Router: `NativeTabs` (Liquid Glass no iOS 26, Material 3 no Android), cabeçalhos nativos e sheets nativas.
+
+---
+
 ## 🏗️ Como Gerar Builds do Aplicativo (EAS Build)
 
 O projeto utiliza o **EAS (Expo Application Services)** para compilação em nuvem de instaladores para Android e iOS:
@@ -193,7 +199,7 @@ npx expo-doctor
 
 ```
 bus-tracker-expo/
-├── App.tsx                      # Componente raiz com AppProvider e StatusBar
+├── app/                         # Rotas (Expo Router): _layout raiz, (tabs) com NativeTabs, telas de detalhe
 ├── app.json                     # Metadados e configuração do Expo
 ├── package.json                 # Dependências e scripts
 ├── tsconfig.json                # Configuração do TypeScript
@@ -202,12 +208,13 @@ bus-tracker-expo/
 ├── supabase/
 │   └── schema.sql               # Script DDL com PostgreSQL, PostGIS e políticas RLS
 └── src/
-    ├── components/              # Componentes reutilizáveis (AppleButton, Header, MapCard, Modais)
+    ├── components/ds/           # Design System "Faixa escolar" (HIG + Liquid Glass, equivalentes Material no Android)
+    ├── components/              # RouteMap e kit (reexporta o design system)
     ├── context/                 # Estado global (AppContext) com persistência e ações
-    ├── navigation/              # Tab Bar inferior estilo iOS e roteamento
+    ├── navigation/              # Atalhos de rota (routes.ts)
     ├── screens/                 # Telas da aplicação (Rastreamento, Embarque, Financeiro, etc.)
     ├── services/                # Regras de negócio (Boarding, Pagamento, GPS, Segurança/LGPD)
-    ├── theme/                   # Tokens de design Apple HIG (cores neutras, tipografia, estilos)
+    ├── theme/                   # Tokens: colors.ts (claro/escuro), tokens.ts (espaço, raio, elevação, movimento), type.ts
     └── types/                   # Definições de tipos TypeScript do domínio
 ```
 

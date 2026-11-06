@@ -7,7 +7,7 @@
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F2F2F7"
     },
     "ios": {
       "supportsTablet": true
@@ -16,6 +16,13 @@
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "vanescolar",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }

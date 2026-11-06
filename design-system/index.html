@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VanEscolar GPS · Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+<style>
+/* ---- style-guide chrome only; tokens + components live in styles.css ---- */
+body{font-family:var(--font-body);color:var(--label);background:var(--grouped-bg);display:flex;-webkit-font-smoothing:antialiased}
+nav.side{position:sticky;top:0;align-self:flex-start;height:100vh;width:224px;flex:0 0 224px;background:var(--secondary-grouped-bg);border-right:.5px solid var(--separator);padding:22px 14px;overflow:auto}
+nav.side .brand{display:flex;align-items:center;gap:10px;font:700 17px var(--font-display);margin-bottom:18px;padding-left:6px}
+nav.side .brand i{width:30px;height:30px;border-radius:8px;background:var(--signal);color:var(--on-signal);display:flex;align-items:center;justify-content:center}
+nav.side a{display:block;padding:6px 10px;border-radius:8px;font-size:13px;color:var(--secondary-label);text-decoration:none}
+nav.side a:hover{background:var(--fill-4);color:var(--label)}
+nav.side a.concept-link{margin:0 0 6px;padding:11px 12px;font-weight:600;color:var(--on-primary);background:var(--primary);border-radius:12px}
+nav.side a.concept-link:hover{color:var(--on-primary);opacity:.9}
+nav.side .grp{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tertiary-label);margin:16px 0 4px 10px}
+main{flex:1;padding:40px 48px 140px;max-width:1100px;min-width:0}
+section{margin-bottom:60px;scroll-margin-top:24px}
+h2.sec{font:700 22px/28px var(--font-display);letter-spacing:-.014em;margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+h2.sec .cat{font:600 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:var(--tertiary-label);margin-right:6px}
+h2.sec .ext{font:600 11px var(--font-body);background:var(--signal-container);color:var(--on-signal-container);border-radius:6px;padding:2px 7px}
+.sec-desc{color:var(--secondary-label);font-size:15px;margin-bottom:18px;max-width:720px;line-height:1.55}
+.sec-desc code,.note code{font:12px var(--font-mono);background:var(--fill-3);padding:1px 5px;border-radius:4px;color:var(--label)}
+.stage{background:var(--secondary-grouped-bg);border-radius:var(--r-lg);padding:28px;display:flex;flex-wrap:wrap;gap:28px;align-items:center}
+.stage.col{flex-direction:column;align-items:stretch}
+.stage.grouped{background:var(--grouped-bg);box-shadow:inset 0 0 0 .5px var(--separator)}
+.stage.top{align-items:flex-start}
+/* map-like backdrop so glass materials can be judged over real content */
+.stage.map{background-color:var(--map-land);
+  background-image:linear-gradient(90deg,transparent 46%,var(--map-road) 46% 50%,transparent 50%),linear-gradient(0deg,transparent 62%,var(--map-road) 62% 66%,transparent 66%),linear-gradient(35deg,transparent 30%,var(--map-park) 30% 44%,transparent 44%),linear-gradient(120deg,transparent 70%,var(--map-water) 70% 82%,transparent 82%);
+  background-size:180px 140px,220px 160px,100% 100%,100% 100%}
+.cell{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cell.l{align-items:flex-start}
+.spec{font:11px var(--font-mono);color:var(--tertiary-label);text-align:center}
+.phonew{width:375px;background:var(--grouped-bg);border-radius:var(--r-lg);overflow:hidden;padding:12px 0;box-shadow:inset 0 0 0 .5px var(--separator)}
+.note{font-size:13px;color:var(--secondary-label);line-height:1.55;max-width:720px;margin-top:14px}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;max-width:760px}
+.dos div{background:var(--secondary-grouped-bg);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--secondary-label)}
+.dos b{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.dos .y b{color:var(--success)} .dos .n b{color:var(--error)}
+/* foundations */
+.cgroup{margin-bottom:22px}.cgroup h3{font:600 13px var(--font-body);color:var(--secondary-label);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sw{border-radius:var(--r-md);overflow:hidden;background:var(--secondary-grouped-bg);box-shadow:inset 0 0 0 .5px var(--separator)}
+.sw .c{height:58px;display:flex;align-items:flex-end;padding:6px 8px;font:600 12px var(--font-body)}
+.sw .m{padding:8px 10px}.sw .n{font:600 12px var(--font-mono)}.sw .v{font:11px var(--font-mono);color:var(--tertiary-label);margin-top:2px}
+.typerow{display:flex;align-items:baseline;gap:20px;padding:12px 0;border-bottom:.5px solid var(--separator)}
+.typerow .tk{width:150px;flex:0 0 150px;font:11px/1.5 var(--font-mono);color:var(--tertiary-label)}
+.sprow{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.sprow .bar{background:var(--signal);height:12px;border-radius:3px}.sprow .lbl{width:190px;font:12px var(--font-mono);color:var(--secondary-label)}
+.rad{width:96px;height:72px;background:var(--fill-2);display:flex;align-items:center;justify-content:center;font:11px var(--font-mono);color:var(--secondary-label)}
+.elev{width:150px;height:96px;border-radius:var(--r-lg);background:var(--secondary-grouped-bg);display:flex;align-items:center;justify-content:center;font:11px var(--font-mono);color:var(--secondary-label)}
+.matbox{width:150px;height:96px;border-radius:var(--r-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 13px var(--font-body);color:var(--label);border:.5px solid var(--glass-edge);box-shadow:var(--glass-rim)}
+.matbox small{font:11px var(--font-mono);color:var(--secondary-label)}
+.iconGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.iconGrid .it{background:var(--secondary-grouped-bg);border-radius:var(--r-md);padding:14px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.iconGrid .it .nm{font:10px var(--font-mono);color:var(--tertiary-label)}
+.motion-demo{width:56px;height:56px;border-radius:var(--r-md);background:var(--primary)}
+.stage:hover .motion-demo.a{transform:translateX(140px);transition:transform var(--dur-slow) var(--ease)}
+.stage:hover .motion-demo.b{transform:translateX(140px);transition:transform var(--dur-slow) var(--ease-spring)}
+/* top controls + Dev Mode */
+#topctl{position:fixed;top:14px;right:18px;z-index:50;display:flex;gap:8px;align-items:center;padding:6px;border-radius:999px;background:var(--mat-regular);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:var(--glass-rim),var(--glass-shadow)}
+#themeSel,#langSel{font:600 12px var(--font-body);border:0;border-radius:999px;padding:8px 10px;background:var(--fill-3);color:var(--label)}
+.ds-btn,#devToggle{font:600 12px var(--font-body);border:0;border-radius:999px;padding:8px 14px;cursor:pointer;background:var(--fill-3);color:var(--label)}
+.ds-btn.pri{background:var(--primary);color:var(--on-primary)}
+#devToggle.on{background:var(--signal);color:var(--on-signal)}
+.sec-prompt{font:600 11px var(--font-body);border:0;background:var(--fill-3);color:var(--label);border-radius:999px;padding:4px 10px;margin-left:8px;cursor:pointer}
+body.dev [data-insp]:hover{outline:2px dashed var(--signal);outline-offset:3px;cursor:pointer}
+.insp-sel{outline:2px solid var(--sys-blue)!important;outline-offset:3px}
+#inspector{position:fixed;top:0;right:0;width:350px;height:100vh;background:var(--secondary-grouped-bg);border-left:.5px solid var(--separator);box-shadow:-8px 0 24px rgb(0 0 0 / .08);transform:translateX(100%);transition:transform .28s var(--ease);z-index:49;overflow:auto;padding:66px 20px 40px}
+body.inspecting #inspector{transform:translateX(0)}
+body.inspecting main{margin-right:350px}
+#inspector .iclose{position:absolute;top:78px;right:16px;border:none;background:var(--fill-3);width:28px;height:28px;border-radius:999px;color:var(--secondary-label);cursor:pointer}
+#inspector .nm{font:700 22px var(--font-display)}
+#inspector .file{font:12px var(--font-mono);color:var(--tertiary-label);margin-top:2px}
+#inspector .desc{font-size:13px;color:var(--secondary-label);line-height:1.6;margin-top:10px}
+#inspector .native{overflow-wrap:anywhere;font-size:12px;line-height:1.5;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--signal-container);color:var(--on-signal-container)}
+#inspector h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tertiary-label);margin:20px 0 8px}
+.prop{padding:8px 0;border-bottom:.5px solid var(--separator)}.prop .pn{font:600 13px var(--font-mono)}.prop .pt{font:11px var(--font-mono);color:var(--signal-ink);overflow-wrap:anywhere}.prop .pdef{font:11px var(--font-mono);color:var(--tertiary-label)}.prop .pd{font-size:12px;color:var(--secondary-label);margin-top:3px}
+.tok{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer}.tok:hover{background:var(--fill-4)}
+.tok .tsw{width:22px;height:22px;border-radius:6px;box-shadow:inset 0 0 0 .5px var(--separator);flex:0 0 22px}.tok .tn{font:600 12px var(--font-mono)}.tok .tr{font-size:11px;color:var(--secondary-label)}.tok .tv{margin-left:auto;font:11px var(--font-mono);color:var(--tertiary-label);text-align:right;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.metric{display:flex;justify-content:space-between;gap:10px;font:12px var(--font-mono);padding:5px 0;border-bottom:.5px dashed var(--separator)}.metric .mk{color:var(--secondary-label)}
+.copyprompt{width:100%;margin-top:18px;font:600 15px var(--font-body);background:var(--primary);color:var(--on-primary);border:none;border-radius:999px;padding:12px;cursor:pointer}
+.copied{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--glass-tint-prominent);color:var(--on-primary);font-size:13px;font-weight:600;padding:10px 18px;border-radius:999px;opacity:0;transition:.2s;z-index:60;pointer-events:none}.copied.show{opacity:1}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Geometry drawn in the style of Lucide/Feather (MIT). SF-like look via tokens. Not SF Symbols. -->
+  <symbol id="i-van" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 0 1 2-2h10.5a2 2 0 0 1 1.7.95L21 12v5h-2"/><path d="M3 17h2"/><path d="M9 17h6"/><path d="M3 11h18"/><path d="M8 5v6M13 5v6"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-location" viewBox="0 0 24 24"><path d="M3 11 22 2l-9 19-2-8z"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H17a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h8.5"/></symbol>
+  <symbol id="i-school" viewBox="0 0 24 24"><path d="M2 10 12 5l10 5-10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></symbol>
+  <symbol id="i-person-check" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 11.5-5.4"/><path d="m16 19 2 2 4-4"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 21l2-5.3A8.5 8.5 0 1 1 21 11.5z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></symbol>
+  <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 2h14v20l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 7h16a2 2 0 0 1 2 2v6h-5a2 2 0 0 1 0-4h5"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-sos" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v6M12 16.5h.01"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.2-2.8M19 13a10 10 0 0 0-2.5-1.8M2 8.8a15 15 0 0 1 4.2-2.7M22 8.8A15 15 0 0 0 10.7 5M12 20h.01"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v13M7.5 7.5 12 3l4.5 4.5"/><path d="M8 10H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.6-4.6"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-updown" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="11" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-faceid" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M9 9v1M15 9v1M12 9v4h-1M9 16a4 4 0 0 0 6 0"/></symbol>
+  <symbol id="i-steering" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 14.5V21.5M9.6 11.3 2.8 9.5M14.4 11.3l6.8-1.8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-6"/><path d="M3.3 17A10 10 0 1 1 20.7 17"/></symbol>
+</svg>
+
+
+<div id="topctl">
+  <button class="ds-btn pri" onclick="copyFullSystem()" title="Prompt para instalar/atualizar o sistema inteiro">⤓ Install design system</button>
+  <select id="themeSel" title="Tema" aria-label="Tema"><option value="">Claro</option><option value="dark">Escuro</option></select>
+  <select id="langSel" title="Alvo do Copy as prompt" aria-label="Linguagem alvo"></select>
+  <button id="devToggle" onclick="toggleDev()">◧ Dev Mode</button>
+</div>
+<aside id="inspector"><button class="iclose" onclick="closeInspector()" aria-label="Fechar">✕</button><div id="inspectorBody"></div></aside>
+<div class="copied" id="copied">Copiado</div>
+
+<nav class="side">
+  <div class="brand"><i><svg class="ico ico--sm"><use href="#i-van"/></svg></i>VanEscolar DS</div>
+  <a class="concept-link" href="concept.html">◳ &nbsp;Concept preview &nbsp;→</a>
+  <div class="grp">Foundations</div>
+  <a href="#colors">Color</a><a href="#type">Typography</a><a href="#materials">Materials · Liquid Glass</a><a href="#radius">Corner radius</a><a href="#spacing">Spacing &amp; layout</a><a href="#elevation">Elevation</a><a href="#motion">Motion</a><a href="#icons">Iconography</a>
+  <div class="grp">Bars</div>
+  <a href="#navbar">Navigation bar</a><a href="#tabbar">Tab bar</a><a href="#toolbar">Toolbar</a><a href="#searchbar">Search bar</a>
+  <div class="grp">Content</div>
+  <a href="#list">Lists &amp; tables</a><a href="#sectionheader">Section header/footer</a><a href="#card">Card</a><a href="#disclosure">Disclosure group</a>
+  <div class="grp">Controls</div>
+  <a href="#button">Button</a><a href="#menubutton">Pull-down &amp; pop-up</a><a href="#segmented">Segmented control</a><a href="#slider">Slider</a><a href="#stepper">Stepper</a><a href="#toggle">Toggle</a><a href="#picker">Pickers</a><a href="#textfield">Text field</a><a href="#texteditor">Text editor</a><a href="#progress">Progress</a><a href="#pagecontrol">Page control</a>
+  <div class="grp">Modality</div>
+  <a href="#sheet">Sheet</a><a href="#actionsheet">Action sheet</a><a href="#alert">Alert</a><a href="#popover">Popover</a><a href="#contextmenu">Context menu</a><a href="#activityview">Activity view</a>
+  <div class="grp">Status</div>
+  <a href="#badge">Badge</a>
+  <div class="grp">Extensions · domínio</div>
+  <a href="#avatar">Avatar</a><a href="#statuspill">Status pill</a><a href="#vanmarker">Van marker</a><a href="#timeline">Route timeline</a><a href="#bubble">Message bubble</a><a href="#liveactivity">Live Activity</a>
+  <div class="grp">Mais</div>
+  <a href="icons.html">Página de ícones →</a>
+</nav>
+
+<main>
+  <header style="margin-bottom:44px">
+    <div class="t-caption2" style="text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Apple HIG · iOS 26 Liquid Glass · Expo</div>
+    <div class="t-largeTitle">VanEscolar GPS<br>Design System — <span style="color:var(--signal-ink)">Faixa escolar</span></div>
+    <p class="sec-desc" style="margin-top:12px;font-size:17px;line-height:1.5">Para pais acompanhando uma van em movimento, uma interface neutra e silenciosa com <b>um único sinal amarelo</b> torna “onde está / quando chega” instantâneo. Tinta preta conduz a ação; amarelo escolar marca só a van ao vivo e o ETA; verde, laranja e vermelho são reservados para embarque, atraso e emergência.</p>
+    <p class="sec-desc">Fonte única: <code>styles.css</code>. Ative <b>Dev Mode</b> e clique em qualquer componente para ver props, tokens e métricas; <b>Copy as prompt</b> gera a implementação (padrão: React Native / Expo).</p>
+  </header>
+
+  <!-- ===================== FOUNDATIONS ===================== -->
+  <section id="colors"><h2 class="sec"><span class="cat">Foundation</span>Color</h2>
+    <p class="sec-desc">Papéis semânticos HIG. Cada preenchimento tem seu par <code>--on-*</code>, com contraste verificado por cálculo WCAG (texto ≥ 4.5:1). Valores lidos ao vivo — troque para “Escuro” e veja o conjunto escuro.</p>
+    <div id="colorGroups"></div>
+    <div class="dos"><div class="y"><b>Faça</b>Use <code>--signal</code> só na van ao vivo, no ETA e no estado “a caminho”. Uma tela, um amarelo.</div><div class="n"><b>Evite</b>Texto amarelo sobre branco (use <code>--signal-ink</code>), cards amarelos decorativos, ou azul como segunda cor de ação.</div></div>
+  </section>
+
+  <section id="type"><h2 class="sec"><span class="cat">Foundation</span>Typography</h2>
+    <p class="sec-desc">Estilos de texto HIG no tamanho padrão de Dynamic Type (Large). SF Pro (sistema) com Inter de fallback. Uma família só; o peso faz a hierarquia. Números de ETA e valores usam SF Rounded tabular — o único momento “grande” de cada tela.</p>
+    <div id="typeList"></div></section>
+
+  <section id="materials"><h2 class="sec"><span class="cat">Foundation</span>Materials · Liquid Glass</h2>
+    <p class="sec-desc">Vidro existe só na <b>camada de navegação e controles</b> que flutua sobre o conteúdo (barras, botões sobre o mapa, menus, sheets). Listas e cards ficam sólidos. Nunca vidro sobre vidro. No app: <code>GlassView</code> de <code>expo-glass-effect</code> (iOS 26) com fallback <code>BlurView</code> tint <code>systemMaterial</code>.</p>
+    <div class="stage map">
+      <div class="matbox mat-ultrathin">Ultra thin<small>--mat-ultrathin</small></div>
+      <div class="matbox mat-thin">Thin<small>--mat-thin</small></div>
+      <div class="matbox mat-regular">Regular · glass<small>--mat-regular</small></div>
+      <div class="matbox mat-thick">Thick<small>--mat-thick</small></div>
+      <div class="matbox mat-chrome">Chrome (barras)<small>--mat-chrome</small></div>
+      <div class="matbox" style="background:var(--glass-tint-prominent);color:var(--on-primary);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)">Glass prominent<small style="color:inherit;opacity:.7">--glass-tint-prominent</small></div>
+    </div>
+    <div class="dos"><div class="y"><b>Faça</b>Texto sobre vidro sempre em <code>--label</code> com material Regular ou mais espesso; sobre mapa claro o contraste fica ≥ 7:1.</div><div class="n"><b>Evite</b>Ultra thin com texto pequeno sobre mapa; vidro em linhas de lista; empilhar duas camadas de vidro.</div></div>
+  </section>
+
+  <section id="radius"><h2 class="sec"><span class="cat">Foundation</span>Corner radius</h2>
+    <p class="sec-desc">Cantos contínuos (squircle). No RN use <code>borderCurve:'continuous'</code>. Botões e pílulas são cápsulas; raios internos são concêntricos ao container (raio interno = externo − padding).</p>
+    <div class="stage" id="radiusRow"></div></section>
+
+  <section id="spacing"><h2 class="sec"><span class="cat">Foundation</span>Spacing &amp; layout</h2>
+    <p class="sec-desc">Ritmo de 4/8pt. Papéis semânticos: relacionado (8) &lt; seção (24) &lt; maior (32). Margem de layout 16pt, linha mínima 44pt, alvo de toque ≥ 44pt. Respeite safe areas com <code>contentInsetAdjustmentBehavior="automatic"</code>.</p>
+    <div id="spacingList"></div></section>
+
+  <section id="elevation"><h2 class="sec"><span class="cat">Foundation</span>Elevation</h2>
+    <p class="sec-desc">Profundidade vem do vidro, não de sombras pesadas. Conteúdo: elev-1 quase imperceptível (some no escuro — separação por tom). Elementos flutuantes: elev-2. Sheets: elev-3. No RN use <code>boxShadow</code> (nunca shadow*/elevation legados).</p>
+    <div class="stage grouped">
+      <div class="elev" style="box-shadow:var(--elev-0);box-shadow:inset 0 0 0 .5px var(--separator)">elev-0 · flat</div>
+      <div class="elev" style="box-shadow:var(--elev-1)">elev-1 · conteúdo</div>
+      <div class="elev" style="box-shadow:var(--elev-2)">elev-2 · flutuante</div>
+      <div class="elev" style="box-shadow:var(--elev-3)">elev-3 · sheet</div>
+    </div></section>
+
+  <section id="motion"><h2 class="sec"><span class="cat">Foundation</span>Motion</h2>
+    <p class="sec-desc">Passe o mouse: em cima, <code>--ease</code> (easeOutQuint) para navegação; embaixo, <code>--ease-spring</code> com leve overshoot para feedback de toque e morphing de vidro. Durações: fast 150 · base 250 · slow 400ms. Respeite “Reduzir movimento”.</p>
+    <div class="stage col"><div class="motion-demo a"></div><div class="motion-demo b"></div></div></section>
+
+  <section id="icons"><h2 class="sec"><span class="cat">Foundation</span>Iconography</h2>
+    <p class="sec-desc">No app nativo: <b>SF Symbols via <code>expo-symbols</code></b> (nomes na <a href="icons.html" style="color:var(--link)">página de ícones</a>). Aqui, um sprite SVG aberto no estilo Lucide imita o peso SF (traço 1.6, pontas arredondadas). Glifo 22pt, inline 17pt, toque ≥ 44pt. Nunca emoji.</p>
+    <div class="iconGrid" id="iconGrid"></div></section>
+
+  <!-- ===================== BARS ===================== -->
+  <section id="navbar"><h2 class="sec"><span class="cat">Bars</span>Navigation bar</h2>
+    <p class="sec-desc">iOS 26: sem fundo na barra em repouso; botões em círculos de vidro. Título grande nas raízes das abas; título padrão em telas empurradas. Ao rolar, a barra ganha material chrome.</p>
+    <div class="stage map col">
+      <div class="phonew" style="background:transparent;box-shadow:none" data-insp="navbar">
+        <div class="navbar"><div class="nb-side"><div class="nav-btn"><svg class="ico"><use href="#i-chevron-left"/></svg></div></div><div class="nb-title">Mensalidade</div><div class="nb-side end"><div class="nav-btn"><svg class="ico"><use href="#i-share"/></svg></div></div></div>
+      </div>
+      <div class="phonew" data-insp="navbar">
+        <div class="navbar"><div class="nb-side"></div><div class="nb-title"></div><div class="nb-side end"><div class="nav-btn"><svg class="ico"><use href="#i-plus"/></svg></div><div class="nav-btn"><svg class="ico"><use href="#i-more"/></svg></div></div></div>
+        <div class="largetitle"><div class="t-largeTitle">Alunos</div><div class="sub">3 alunos · Rota manhã</div></div>
+      </div>
+      <div class="phonew" style="padding:0" data-insp="navbar">
+        <div class="navbar navbar--scrolled"><div class="nb-side"><div class="nav-btn text">Cancelar</div></div><div class="nb-title">Avisar ausência</div><div class="nb-side end"><div class="nav-btn text prominent">Enviar</div></div></div>
+      </div>
+    </div><div class="spec" style="margin-top:8px;text-align:left">standard · large title · scrolled (chrome) com ação prominent</div></section>
+
+  <section id="tabbar"><h2 class="sec"><span class="cat">Bars</span>Tab bar</h2>
+    <p class="sec-desc">Cápsula de vidro flutuante (iOS 26) com até 5 abas e um botão auxiliar separado. A aba selecionada recebe um preenchimento sutil — sem cor de destaque. Badge vermelho para recados não lidos.</p>
+    <div class="stage map col">
+      <div class="tabbar-wrap" style="max-width:400px" data-insp="tabbar">
+        <div class="tabbar">
+          <div class="tab sel"><svg class="ico"><use href="#i-map"/></svg>Rota</div>
+          <div class="tab"><svg class="ico"><use href="#i-people"/></svg>Alunos</div>
+          <div class="tab"><svg class="ico"><use href="#i-message"/></svg>Recados<span class="badge">3</span></div>
+          <div class="tab"><svg class="ico"><use href="#i-wallet"/></svg>Pagar</div>
+        </div>
+        <div class="tabbar-aux"><svg class="ico"><use href="#i-person"/></svg></div>
+      </div>
+    </div></section>
+
+  <section id="toolbar"><h2 class="sec"><span class="cat">Bars</span>Toolbar</h2>
+    <p class="sec-desc">Grupo de ações em vidro flutuando na base da tela — ex.: controles do motorista durante a rota. Uma ação prominent no máximo.</p>
+    <div class="stage map">
+      <div class="toolbar" data-insp="toolbar">
+        <div class="tb-item"><svg class="ico"><use href="#i-location"/></svg></div>
+        <div class="tb-item"><svg class="ico"><use href="#i-phone"/></svg></div>
+        <div class="tb-sep"></div>
+        <div class="tb-item prominent"><svg class="ico ico--sm"><use href="#i-play"/></svg>Iniciar rota</div>
+      </div>
+      <div class="toolbar" data-insp="toolbar">
+        <div class="tb-item"><svg class="ico"><use href="#i-alert"/></svg>Ocorrência</div>
+        <div class="tb-sep"></div>
+        <div class="tb-item is-disabled"><svg class="ico"><use href="#i-share"/></svg></div>
+      </div>
+    </div></section>
+
+  <section id="searchbar"><h2 class="sec"><span class="cat">Bars</span>Search bar</h2>
+    <p class="sec-desc">Campo inline sob o título grande, ou flutuando na base em vidro (padrão iOS 26 quando a busca é a ação principal da aba).</p>
+    <div class="stage col">
+      <div class="searchbar" data-insp="searchbar"><div class="sb-field"><svg class="ico"><use href="#i-search"/></svg><span>Buscar aluno ou parada</span><svg class="ico mic"><use href="#i-mic"/></svg></div></div>
+      <div class="searchbar" data-insp="searchbar"><div class="sb-field"><svg class="ico"><use href="#i-search"/></svg><span class="val">Helena</span></div><span class="sb-cancel">Cancelar</span></div>
+    </div>
+    <div class="stage map" style="margin-top:12px"><div class="searchbar glass-float" style="width:360px" data-insp="searchbar"><div class="sb-field"><svg class="ico"><use href="#i-search"/></svg><span>Buscar endereço</span></div></div></div></section>
+
+  <!-- ===================== CONTENT ===================== -->
+  <section id="list"><h2 class="sec"><span class="cat">Content</span>Lists &amp; tables</h2>
+    <p class="sec-desc">Três estilos: <b>inset-grouped</b> (padrão para ajustes e detalhes), <b>grouped</b> (borda a borda) e <b>plain</b> (listas longas, ex. histórico). Linhas: ícone/avatar à esquerda, título + subtítulo, valor/toggle/chevron à direita. Separador recuado alinhado ao texto.</p>
+    <div class="stage grouped top">
+      <div class="cell l"><div class="spec">inset-grouped</div>
+      <div style="width:375px" data-insp="list"><div class="list list--inset">
+        <div class="row has-lead"><div class="row-icon row-icon--signal"><svg class="ico"><use href="#i-van"/></svg></div><div class="row-body"><div class="row-title">Veículo</div></div><div class="row-trail">ABC1D23<svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div>
+        <div class="row has-lead"><div class="row-icon"><svg class="ico"><use href="#i-doc"/></svg></div><div class="row-body"><div class="row-title">Contrato de transporte</div></div><div class="row-trail"><svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div>
+        <div class="row has-lead"><div class="row-icon row-icon--success"><svg class="ico"><use href="#i-bell"/></svg></div><div class="row-body"><div class="row-title">Avisar quando a van estiver perto</div></div><div class="row-trail"><span class="toggle on"></span></div></div>
+        <div class="row is-destructive"><div class="row-body"><div class="row-title">Remover pessoa autorizada</div></div></div>
+      </div></div></div>
+      <div class="cell l"><div class="spec">plain · avatar + subtítulo + valor</div>
+      <div style="width:375px" data-insp="list"><div class="list list--plain">
+        <div class="row has-avatar"><div class="avatar">HD</div><div class="row-body"><div class="row-title strong">Helena Duarte</div><div class="row-sub">Embarcou às 6h52 · Rua das Acácias, 120</div></div><div class="row-trail"><span class="pill pill--success">Na van</span></div></div>
+        <div class="row has-avatar"><div class="avatar">PS</div><div class="row-body"><div class="row-title strong">Pedro Souza</div><div class="row-sub">Próxima parada · 7h04</div></div><div class="row-trail"><span class="pill pill--neutral">Aguardando</span></div></div>
+        <div class="row has-avatar is-disabled"><div class="avatar">LM</div><div class="row-body"><div class="row-title strong">Lívia Martins</div><div class="row-sub">Ausência avisada pela mãe</div></div><div class="row-trail"><span class="pill pill--warning">Ausente</span></div></div>
+      </div></div></div>
+      <div class="cell l"><div class="spec">grouped (borda a borda)</div>
+      <div style="width:375px" data-insp="list"><div class="list list--grouped">
+        <div class="row"><div class="row-body"><div class="row-title">Turno</div></div><div class="row-trail">Manhã</div></div>
+        <div class="row"><div class="row-body"><div class="row-title">Escola</div></div><div class="row-trail">Colégio Santa Clara<svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div>
+        <div class="row is-action"><svg class="ico ico--sm" style="color:var(--primary-ink)"><use href="#i-plus"/></svg><div class="row-body"><div class="row-title">Adicionar aluno</div></div></div>
+      </div></div></div>
+    </div></section>
+
+  <section id="sectionheader"><h2 class="sec"><span class="cat">Content</span>Section header / footer</h2>
+    <p class="sec-desc">Cabeçalho padrão em caixa alta 13pt; variante <b>prominent</b> (título 3 + ação) para seções de conteúdo. Rodapé explica a consequência de um ajuste.</p>
+    <div class="stage grouped"><div style="width:375px" data-insp="sectionheader">
+      <div class="sec-header">Pessoas autorizadas</div>
+      <div class="list list--inset"><div class="row has-avatar"><div class="avatar avatar--sm">MD</div><div class="row-body"><div class="row-title">Marta Duarte · avó</div></div><div class="row-trail"><svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div></div>
+      <div class="sec-footer">Só estas pessoas podem receber a Helena no ponto de desembarque. O motorista confere o documento.</div>
+      <div class="sec-header sec-header--prominent" style="margin-top:12px">Hoje <a href="#">Ver tudo</a></div>
+    </div></div></section>
+
+  <section id="card"><h2 class="sec"><span class="cat">Content</span>Card</h2>
+    <p class="sec-desc">Container agrupado customizado — sólido, nunca vidro. Variante <b>signal</b> (fundo amarelo claro) só para o aviso mais importante do momento.</p>
+    <div class="stage grouped top">
+      <div class="card" style="width:330px" data-insp="card">
+        <div class="card-head"><div class="avatar">MR</div><div class="row-body"><div class="t-headline">Marcos Ribeiro</div><div class="t-footnote">Motorista · Renault Master · ABC1D23</div></div></div>
+        <div class="hstack" style="margin-top:var(--sp-12)"><span class="btn btn-tinted btn-sm"><svg class="ico ico--sm"><use href="#i-message"/></svg>Mensagem</span><span class="btn btn-tinted btn-sm"><svg class="ico ico--sm"><use href="#i-phone"/></svg>Ligar</span></div>
+      </div>
+      <div class="card card--signal" style="width:330px" data-insp="card">
+        <div class="t-headline">A van chega em 7 min</div>
+        <div class="t-footnote" style="color:var(--on-signal-container);margin-top:4px">Leve a Helena até o portão. Avisaremos de novo a 1 minuto.</div>
+      </div>
+    </div></section>
+
+  <section id="disclosure"><h2 class="sec"><span class="cat">Content</span>Disclosure group</h2>
+    <p class="sec-desc">Revela detalhes secundários em linha (ex.: cláusulas do contrato, histórico de um dia). Chevron gira 90° com <code>--ease</code>.</p>
+    <div class="stage grouped top">
+      <div style="width:375px" data-insp="disclosure"><div class="list list--inset">
+        <div class="disclosure open"><div class="row"><div class="row-body"><div class="row-title strong">Valores e reajuste</div></div><div class="row-trail"><svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div>
+          <div class="dg-body"><div class="row"><div class="row-body"><div class="row-title">Mensalidade</div></div><div class="row-trail num">R$ 480,00</div></div><div class="row"><div class="row-body"><div class="row-title">Vencimento</div></div><div class="row-trail">Dia 10</div></div></div></div>
+        <div class="disclosure"><div class="row"><div class="row-body"><div class="row-title strong">Cancelamento</div></div><div class="row-trail"><svg class="ico chev"><use href="#i-chevron-right"/></svg></div></div></div>
+      </div></div>
+    </div></section>
+
+  <!-- ===================== CONTROLS ===================== -->
+  <section id="button"><h2 class="sec"><span class="cat">Controls</span>Button</h2>
+    <p class="sec-desc">Estilos HIG mapeados para uma única família de ação (tinta). <b>bordered-prominent</b> = ação principal da tela; <b>filled</b> = CTA largo no rodapé; <b>glass / glass-prominent</b> = botões flutuando sobre o mapa. Papel destrutivo troca para vermelho. Tamanhos sm 30 · md 44 · lg 50.</p>
+    <div class="stage">
+      <div class="cell"><span class="btn btn-plain" data-insp="button">Ver rota</span><div class="spec">plain</div></div>
+      <div class="cell"><span class="btn btn-gray" data-insp="button">Mais tarde</span><div class="spec">gray</div></div>
+      <div class="cell"><span class="btn btn-tinted" data-insp="button"><svg class="ico ico--sm"><use href="#i-message"/></svg>Mensagem</span><div class="spec">tinted</div></div>
+      <div class="cell"><span class="btn btn-bordered" data-insp="button">Avisar ausência</span><div class="spec">bordered</div></div>
+      <div class="cell"><span class="btn btn-prominent" data-insp="button">Confirmar embarque</span><div class="spec">bordered-prominent</div></div>
+      <div class="cell"><span class="btn btn-prominent is-pressed" data-insp="button">Confirmar embarque</span><div class="spec">pressed</div></div>
+      <div class="cell"><span class="btn btn-prominent is-disabled" data-insp="button">Confirmar embarque</span><div class="spec">disabled</div></div>
+    </div>
+    <div class="stage" style="margin-top:12px">
+      <div class="cell" style="width:340px"><span class="btn btn-filled" data-insp="button">Pagar R$ 480,00 com PIX</span><div class="spec">filled · full width</div></div>
+      <div class="cell"><span class="btn btn-tinted btn--destructive" data-insp="button">Cancelar contrato</span><div class="spec">tinted · destructive</div></div>
+      <div class="cell"><span class="btn btn-prominent btn--destructive" data-insp="button"><svg class="ico ico--sm"><use href="#i-alert"/></svg>Emergência</span><div class="spec">prominent · destructive</div></div>
+      <div class="cell"><span class="btn btn-prominent btn-sm" data-insp="button">Embarcou</span><div class="spec">small</div></div>
+      <div class="cell"><span class="btn btn-prominent btn-lg" data-insp="button">Iniciar rota</span><div class="spec">large</div></div>
+    </div>
+    <div class="stage map" style="margin-top:12px">
+      <div class="cell"><span class="btn btn-glass" data-insp="button"><svg class="ico ico--sm"><use href="#i-location"/></svg>Centralizar</span><div class="spec" style="color:var(--label)">glass</div></div>
+      <div class="cell"><span class="btn btn-glass btn-icon" data-insp="button"><svg class="ico"><use href="#i-phone"/></svg></span><div class="spec" style="color:var(--label)">glass · icon</div></div>
+      <div class="cell"><span class="btn btn-glass-prominent" data-insp="button">Ver detalhes</span><div class="spec" style="color:var(--label)">glass-prominent</div></div>
+    </div></section>
+
+  <section id="menubutton"><h2 class="sec"><span class="cat">Controls</span>Pull-down &amp; pop-up menu buttons</h2>
+    <p class="sec-desc"><b>Pop-up</b> mostra o valor atual e escolhe entre opções exclusivas (marca ✓). <b>Pull-down</b> abre ações a partir de um botão (ex.: “…” na barra). Menus em material thick.</p>
+    <div class="stage top">
+      <div class="cell l"><div class="list list--inset" style="margin:0;width:330px" data-insp="menubutton"><div class="row"><div class="row-body"><div class="row-title">Aluno</div></div><span class="popup-btn">Helena <svg class="ico"><use href="#i-chevron-updown"/></svg></span></div></div><div class="spec">pop-up button</div></div>
+      <div class="cell l"><div class="menu" data-insp="menubutton">
+        <div class="menu-item"><svg class="ico chk"><use href="#i-check"/></svg>Helena Duarte</div>
+        <div class="menu-item"><span class="chk"></span>Rafael Duarte</div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="chk"></span>Adicionar aluno<svg class="ico ico--sm trail"><use href="#i-plus"/></svg></div>
+      </div><div class="spec">pop-up menu</div></div>
+      <div class="cell l"><div class="menu" data-insp="menubutton">
+        <div class="menu-head">Rota manhã</div>
+        <div class="menu-item">Compartilhar localização<svg class="ico ico--sm trail"><use href="#i-share"/></svg></div>
+        <div class="menu-item">Ligar para o motorista<svg class="ico ico--sm trail"><use href="#i-phone"/></svg></div>
+        <div class="menu-item is-destructive">Reportar problema<svg class="ico ico--sm trail"><use href="#i-alert"/></svg></div>
+      </div><div class="spec">pull-down menu</div></div>
+    </div></section>
+
+  <section id="segmented"><h2 class="sec"><span class="cat">Controls</span>Segmented control</h2>
+    <p class="sec-desc">2–5 opções exclusivas da mesma natureza. Cápsula com polegar elevado.</p>
+    <div class="stage col" style="max-width:420px">
+      <div class="segmented" data-insp="segmented"><div class="seg sel">PIX</div><div class="seg">Cartão</div><div class="seg">Boleto</div></div>
+      <div class="segmented" data-insp="segmented"><div class="seg">Ida</div><div class="seg sel">Volta</div></div>
+    </div></section>
+
+  <section id="slider"><h2 class="sec"><span class="cat">Controls</span>Slider</h2>
+    <p class="sec-desc">Valor contínuo — ex.: distância para o alerta de aproximação.</p>
+    <div class="stage col" style="max-width:420px">
+      <div class="hstack" data-insp="slider"><svg class="ico ico--sm" style="color:var(--secondary-label)"><use href="#i-pin"/></svg><div class="slider" style="flex:1"><div class="track"></div><div class="fill" style="width:40%"></div><div class="thumb" style="left:40%"></div></div><span class="t-subheadline num">800 m</span></div>
+      <div class="slider is-disabled" data-insp="slider"><div class="track"></div><div class="fill" style="width:70%"></div><div class="thumb" style="left:70%"></div></div>
+    </div></section>
+
+  <section id="stepper"><h2 class="sec"><span class="cat">Controls</span>Stepper</h2>
+    <p class="sec-desc">Incremento discreto — ex.: assentos do veículo, minutos de antecedência.</p>
+    <div class="stage"><div class="list list--inset" style="margin:0;width:340px" data-insp="stepper"><div class="row"><div class="row-body"><div class="row-title">Assentos</div><div class="row-sub num">15 de 16</div></div><div class="stepper"><button aria-label="Menos"><svg class="ico ico--sm"><use href="#i-minus"/></svg></button><span class="div"></span><button aria-label="Mais" disabled><svg class="ico ico--sm"><use href="#i-plus"/></svg></button></div></div></div></div></section>
+
+  <section id="toggle"><h2 class="sec"><span class="cat">Controls</span>Toggle</h2>
+    <p class="sec-desc">Switch iOS 51×31 — ligado em verde (padrão do sistema; tem significado “ativo”). Sempre dentro de uma linha com rótulo.</p>
+    <div class="stage">
+      <div class="cell"><span class="toggle on" data-insp="toggle"></span><div class="spec">on</div></div>
+      <div class="cell"><span class="toggle" data-insp="toggle"></span><div class="spec">off</div></div>
+      <div class="cell"><span class="toggle on is-disabled" data-insp="toggle"></span><div class="spec">disabled</div></div>
+    </div></section>
+
+  <section id="picker"><h2 class="sec"><span class="cat">Controls</span>Pickers — wheel / date / time</h2>
+    <p class="sec-desc">Data inline (calendário escolar; pontos amarelos = eventos), horário compacto em pílula, e roda para listas curtas. No app use <code>@expo/ui</code> DateTimePicker / Picker.</p>
+    <div class="stage top">
+      <div class="card datepick" data-insp="picker">
+        <div class="dp-head"><div class="dp-month">Novembro 2026 <svg class="ico ico--sm" style="color:var(--primary-ink)"><use href="#i-chevron-right"/></svg></div><div class="dp-nav"><svg class="ico"><use href="#i-chevron-left"/></svg><svg class="ico"><use href="#i-chevron-right"/></svg></div></div>
+        <div class="dp-grid" id="dpGrid"></div>
+      </div>
+      <div class="cell l" style="gap:16px">
+        <div class="list list--inset" style="margin:0;width:300px" data-insp="picker"><div class="row"><div class="row-body"><div class="row-title">Saída de casa</div></div><span class="timepill">6:45</span></div><div class="row"><div class="row-body"><div class="row-title">Chegada à escola</div></div><span class="timepill is-active">7:20</span></div></div>
+        <div class="card" style="padding:0" data-insp="picker"><div class="wheel"><div class="w-sel"></div><div class="w-item f2">Avô</div><div class="w-item f1">Avó</div><div class="w-item">Tia</div><div class="w-item f1">Tio</div><div class="w-item f2">Vizinho(a)</div></div></div>
+      </div>
+    </div></section>
+
+  <section id="textfield"><h2 class="sec"><span class="cat">Controls</span>Text field</h2>
+    <p class="sec-desc">Rótulo acima (13pt), campo de 44pt, ajuda/erro abaixo. Estados: vazio, foco, preenchido, erro, desabilitado. Use teclados certos (CPF numérico, e-mail, telefone).</p>
+    <div class="stage grouped top">
+      <div class="field" data-insp="textfield"><span class="lbl">Nome completo</span><div class="box"><span class="ph">Ex.: Marta Duarte</span></div></div>
+      <div class="field is-focused" data-insp="textfield"><span class="lbl">Telefone</span><div class="box"><span class="num">(11) 98765-43</span></div><span class="help">Para o motorista ligar no ponto.</span></div>
+      <div class="field is-error" data-insp="textfield"><span class="lbl">CPF</span><div class="box"><span class="num">123.456.789-0</span></div><span class="help">CPF incompleto — falta 1 dígito.</span></div>
+      <div class="field" data-insp="textfield"><span class="lbl">Placa</span><div class="box"><svg class="ico ico--sm"><use href="#i-lock"/></svg><span>ABC1D23</span></div><span class="help">Definida pelo motorista.</span></div>
+      <div class="field is-disabled" data-insp="textfield"><span class="lbl">Escola</span><div class="box"><span>Colégio Santa Clara</span></div></div>
+    </div></section>
+
+  <section id="texteditor"><h2 class="sec"><span class="cat">Controls</span>Text editor</h2>
+    <p class="sec-desc">Texto multilinha com contador — observações de ausência, ocorrência de rota.</p>
+    <div class="stage grouped"><div class="field texteditor" style="width:360px" data-insp="texteditor"><span class="lbl">Observação para o motorista</span><div class="box">A Helena vai sair mais cedo na quinta (12) por consulta médica. A avó busca às 10h30.</div><span class="count">86/280</span></div></div></section>
+
+  <section id="progress"><h2 class="sec"><span class="cat">Controls</span>Progress — bar &amp; activity</h2>
+    <p class="sec-desc">Barra determinada (progresso da rota em amarelo; uploads em tinta) e indicador de atividade para carregamentos curtos e sincronização offline.</p>
+    <div class="stage">
+      <div class="cell l" style="width:300px"><div class="t-footnote">Rota: 4 de 7 paradas</div><div class="progress progress--signal" data-insp="progress" style="width:100%"><i style="width:57%"></i></div></div>
+      <div class="cell l" style="width:220px"><div class="t-footnote">Enviando documento…</div><div class="progress" data-insp="progress" style="width:100%"><i style="width:30%"></i></div></div>
+      <div class="cell"><span class="spinner" data-insp="progress"></span><div class="spec">activity</div></div>
+      <div class="cell"><div class="hstack t-footnote" data-insp="progress"><span class="spinner"></span>Sincronizando 3 embarques</div><div class="spec">inline</div></div>
+    </div></section>
+
+  <section id="pagecontrol"><h2 class="sec"><span class="cat">Controls</span>Page control</h2>
+    <p class="sec-desc">Paginação de onboarding (3 passos: rastreio, avisos, pagamentos) ou carrossel de alunos.</p>
+    <div class="stage"><span class="pagedots" data-insp="pagecontrol"><i class="sel"></i><i></i><i></i></span>
+      <div class="stage map" style="padding:16px"><span class="pagedots glass" data-insp="pagecontrol" style="background:var(--mat-thin);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)"><i></i><i class="sel"></i><i></i></span></div></div></section>
+
+  <!-- ===================== MODALITY ===================== -->
+  <section id="sheet"><h2 class="sec"><span class="cat">Modality</span>Sheet</h2>
+    <p class="sec-desc">Sheet com detents (médio/grande) e grabber. No mapa, a sheet de vidro flutua com margens (estilo Buscar/Mapas); formulários usam sheet sólida em tela cheia. Raio 34 concêntrico ao iPhone.</p>
+    <div class="stage map top">
+      <div style="width:375px" data-insp="sheet"><div class="sheet sheet--floating">
+        <div class="grabber"></div>
+        <div class="inset"><div class="hstack"><span class="pill pill--signal"><span class="dot"></span>A caminho</span><span class="t-footnote">atualizado agora</span></div>
+        <div class="hstack" style="margin-top:var(--sp-12);align-items:flex-end"><span class="t-eta">7<small>min</small></span><div class="spacer"></div><span class="btn btn-glass-prominent btn-sm">Detalhes</span></div></div>
+      </div></div>
+      <div style="width:375px" data-insp="sheet"><div class="sheet sheet--solid">
+        <div class="grabber"></div>
+        <div class="sh-head"><span class="nav-btn"><svg class="ico"><use href="#i-close"/></svg></span><span class="sh-title">Avisar ausência</span><span class="nav-btn prominent"><svg class="ico"><use href="#i-check"/></svg></span></div>
+        <div class="list list--inset"><div class="row"><div class="row-body"><div class="row-title">Dia</div></div><span class="timepill">qui., 12 nov.</span></div><div class="row"><div class="row-body"><div class="row-title">Trajeto</div></div><div class="segmented" style="width:150px"><div class="seg sel">Ida</div><div class="seg">Volta</div></div></div></div>
+      </div></div>
+    </div></section>
+
+  <section id="actionsheet"><h2 class="sec"><span class="cat">Modality</span>Action sheet</h2>
+    <p class="sec-desc">Escolha entre ações ligadas a um contexto. Destrutiva em vermelho; “Cancelar” separado e em negrito. No iPhone iOS 26 pode ancorar ao botão de origem.</p>
+    <div class="stage map"><div class="actionsheet" data-insp="actionsheet">
+      <div class="as-group"><div class="as-title"><b>Registrar ocorrência</b>Os pais da rota e a escola serão avisados imediatamente.</div><div class="as-btn">Trânsito intenso</div><div class="as-btn">Problema mecânico</div><div class="as-btn is-destructive">Emergência</div></div>
+      <div class="as-group"><div class="as-btn cancel">Cancelar</div></div>
+    </div></div></section>
+
+  <section id="alert"><h2 class="sec"><span class="cat">Modality</span>Alert</h2>
+    <p class="sec-desc">Só para informação crítica que exige decisão. Título curto, mensagem com consequência, no máximo 2 botões lado a lado (3+ empilham).</p>
+    <div class="stage map">
+      <div class="alert" data-insp="alert"><div class="al-title">Confirmar embarque de Helena?</div><div class="al-msg">Os responsáveis recebem uma notificação com horário e local.</div><div class="al-actions"><span class="btn btn-gray">Cancelar</span><span class="btn btn-prominent">Confirmar</span></div></div>
+      <div class="alert" data-insp="alert"><div class="al-title">Sem conexão</div><div class="al-msg">O embarque foi salvo no aparelho e será enviado quando a internet voltar.</div><div class="al-actions stacked"><span class="btn btn-prominent">OK</span></div></div>
+    </div></section>
+
+  <section id="popover"><h2 class="sec"><span class="cat">Modality</span>Popover</h2>
+    <p class="sec-desc">Informação contextual leve ancorada a um controle (no iPhone vira sheet, exceto dicas). Ex.: explicar o ETA.</p>
+    <div class="stage map" style="padding-top:40px"><div class="popover" data-insp="popover"><div class="t-headline">Como calculamos o tempo</div><div class="t-footnote" style="margin-top:4px">Posição GPS da van a cada 10 s, trânsito atual e as paradas antes da sua.</div></div></div></section>
+
+  <section id="contextmenu"><h2 class="sec"><span class="cat">Modality</span>Context menu</h2>
+    <p class="sec-desc">Toque longo numa linha: prévia + ações. No app: <code>Link.Preview</code>/<code>Link.Menu</code> do Expo Router.</p>
+    <div class="stage map"><div class="ctxmenu" data-insp="contextmenu">
+      <div class="cm-preview"><div class="t-headline">Mensalidade de novembro</div><div class="t-footnote num">R$ 480,00 · vence 10/11</div></div>
+      <div class="menu" style="min-width:0"><div class="menu-item">Pagar agora<svg class="ico ico--sm trail"><use href="#i-wallet"/></svg></div><div class="menu-item">Copiar código PIX<svg class="ico ico--sm trail"><use href="#i-copy"/></svg></div><div class="menu-item">Compartilhar recibo<svg class="ico ico--sm trail"><use href="#i-share"/></svg></div></div>
+    </div></div></section>
+
+  <section id="activityview"><h2 class="sec"><span class="cat">Modality</span>Activity view (share sheet)</h2>
+    <p class="sec-desc">Folha de compartilhamento do sistema — recibo digital, localização temporária da van. Use a API nativa (<code>Share</code> / <code>expo-sharing</code>); este é só o retrato visual.</p>
+    <div class="stage map"><div class="sheet sharesheet" data-insp="activityview">
+      <div class="grabber"></div>
+      <div class="ss-head"><div class="ss-thumb"><svg class="ico"><use href="#i-receipt"/></svg></div><div class="row-body"><div class="t-headline">Recibo · novembro 2026</div><div class="t-footnote">PDF · 84 KB</div></div><span class="nav-btn"><svg class="ico"><use href="#i-close"/></svg></span></div>
+      <div class="ss-people"><div class="ss-person"><div class="avatar">RD</div>Ricardo</div><div class="ss-person"><div class="avatar">MD</div>Marta</div><div class="ss-person"><div class="avatar">CS</div>Colégio Santa Clara</div></div>
+      <div class="ss-apps"><div class="ss-app"><i><svg class="ico"><use href="#i-message"/></svg></i>Mensagens</div><div class="ss-app"><i><svg class="ico"><use href="#i-doc"/></svg></i>Arquivos</div><div class="ss-app"><i><svg class="ico"><use href="#i-copy"/></svg></i>Copiar</div></div>
+    </div></div></section>
+
+  <!-- ===================== STATUS ===================== -->
+  <section id="badge"><h2 class="sec"><span class="cat">Status</span>Badge</h2>
+    <p class="sec-desc">Contagem (recados não lidos) e ponto (novidade). Vermelho do sistema por padrão; neutro para contagens informativas; signal para “ao vivo”.</p>
+    <div class="stage">
+      <div class="cell"><span class="badge" data-insp="badge">3</span><div class="spec">count</div></div>
+      <div class="cell"><span class="badge" data-insp="badge">12</span><div class="spec">2 dígitos</div></div>
+      <div class="cell"><span class="badge badge--dot" data-insp="badge"></span><div class="spec">dot</div></div>
+      <div class="cell"><span class="badge badge--neutral" data-insp="badge">7</span><div class="spec">neutral</div></div>
+      <div class="cell"><span class="badge badge--signal" data-insp="badge">AO VIVO</span><div class="spec">signal</div></div>
+    </div></section>
+
+  <!-- ===================== EXTENSIONS ===================== -->
+  <section id="avatar"><h2 class="sec"><span class="cat">Extension</span>Avatar <span class="ext">domínio</span></h2>
+    <p class="sec-desc">Iniciais em preenchimento neutro (foto do aluno é opcional e protegida pela LGPD). Anel amarelo = aluno na van agora.</p>
+    <div class="stage"><div class="cell"><div class="avatar avatar--sm" data-insp="avatar">HD</div><div class="spec">sm 30</div></div><div class="cell"><div class="avatar" data-insp="avatar">HD</div><div class="spec">md 40</div></div><div class="cell"><div class="avatar avatar--lg" data-insp="avatar">HD</div><div class="spec">lg 64</div></div><div class="cell"><div class="avatar avatar--lg avatar--ring" data-insp="avatar">HD</div><div class="spec">ring · na van</div></div></div></section>
+
+  <section id="statuspill"><h2 class="sec"><span class="cat">Extension</span>Status pill <span class="ext">domínio</span></h2>
+    <p class="sec-desc">Estado da van, do aluno ou do pagamento — sempre com texto, nunca só cor. Signal pulsa só quando ao vivo.</p>
+    <div class="stage"><span class="pill pill--signal" data-insp="statuspill"><span class="dot"></span>A caminho · 1,2 km</span><span class="pill pill--success" data-insp="statuspill"><span class="dot"></span>Embarcou 6h52</span><span class="pill pill--warning" data-insp="statuspill"><span class="dot"></span>Atraso de 10 min</span><span class="pill pill--error" data-insp="statuspill"><span class="dot"></span>Vencida</span><span class="pill pill--neutral" data-insp="statuspill"><span class="dot"></span>Rota não iniciada</span></div></section>
+
+  <section id="vanmarker"><h2 class="sec"><span class="cat">Extension</span>Van marker &amp; stops <span class="ext">domínio</span></h2>
+    <p class="sec-desc">A única forma amarela no mapa. Halo pulsante = transmitindo GPS; cinza = parada/sem sinal. Paradas como anéis na cor da rota; casa do aluno em tinta.</p>
+    <div class="stage map" style="gap:44px;padding:44px"><div class="cell"><div class="van-pin" data-insp="vanmarker"><svg class="ico"><use href="#i-van"/></svg></div><div class="spec" style="color:var(--label)">live</div></div><div class="cell"><div class="van-pin van-pin--idle" data-insp="vanmarker"><svg class="ico"><use href="#i-van"/></svg></div><div class="spec" style="color:var(--label)">idle</div></div><div class="cell"><div class="stop-pin" data-insp="vanmarker"></div><div class="spec" style="color:var(--label)">stop</div></div><div class="cell"><div class="stop-pin stop-pin--home" data-insp="vanmarker"><svg class="ico ico--sm"><use href="#i-house"/></svg></div><div class="spec" style="color:var(--label)">home</div></div></div></section>
+
+  <section id="timeline"><h2 class="sec"><span class="cat">Extension</span>Route timeline <span class="ext">domínio</span></h2>
+    <p class="sec-desc">Itinerário sequencial: concluídas em tinta, atual em amarelo, próxima com anel, futuras em cinza. Horários tabulares.</p>
+    <div class="stage"><div class="card" style="width:360px" data-insp="timeline"><div class="timeline">
+      <div class="tl-item done"><div class="tl-rail"><span class="tl-dot"></span></div><div class="tl-body"><span class="tl-title">Saída · garagem</span><span class="tl-time">6h30</span></div></div>
+      <div class="tl-item done"><div class="tl-rail"><span class="tl-dot"></span></div><div class="tl-body"><span class="tl-title">Pedro Souza</span><span class="tl-time">6h41</span></div></div>
+      <div class="tl-item now"><div class="tl-rail"><span class="tl-dot"></span></div><div class="tl-body"><span class="tl-title">Van em movimento</span><span class="tl-time">agora</span></div></div>
+      <div class="tl-item next"><div class="tl-rail"><span class="tl-dot"></span></div><div class="tl-body"><span class="tl-title">Helena Duarte · sua parada</span><span class="tl-time">~6h52</span></div></div>
+      <div class="tl-item"><div class="tl-rail"><span class="tl-dot"></span></div><div class="tl-body"><span class="tl-title">Colégio Santa Clara</span><span class="tl-time">~7h20</span></div></div>
+    </div></div></div></section>
+
+  <section id="bubble"><h2 class="sec"><span class="cat">Extension</span>Message bubble <span class="ext">domínio</span></h2>
+    <p class="sec-desc">Chat estilo iMessage entre pais, motorista e escola. Enviadas em tinta, recebidas em fill neutro, avisos automáticos do sistema em signal-container centralizados.</p>
+    <div class="stage"><div style="width:360px" data-insp="bubble"><div class="bubbles">
+      <div class="bubble system">A van iniciou a rota da manhã · 6h30</div>
+      <div class="bubble in">Bom dia! Hoje vou chegar uns 5 minutos antes por causa da obra na Av. Brasil.</div><div class="bubble-meta">Marcos · 6h31</div>
+      <div class="bubble out">Combinado, ela já está pronta no portão 👍</div><div class="bubble-meta out">Lida · 6h33</div>
+    </div></div></div>
+    <p class="note">Emoji aparece aqui só como conteúdo escrito pelo usuário — nunca como ícone de interface.</p></section>
+
+  <section id="liveactivity"><h2 class="sec"><span class="cat">Extension</span>Live Activity <span class="ext">domínio</span></h2>
+    <p class="sec-desc">Tela de bloqueio / Dynamic Island durante a rota — o pai acompanha sem abrir o app. Sempre escuro (superfície do sistema). Requer target nativo (<code>@bacons/apple-targets</code> + ActivityKit) e dev build.</p>
+    <div class="stage map"><div class="live" data-insp="liveactivity">
+      <div class="lv-top"><span class="pill pill--signal"><span class="dot"></span>A caminho</span><span class="lv-sub">VanEscolar</span></div>
+      <div class="hstack" style="justify-content:space-between;align-items:flex-end"><div><div class="lv-eta">7 min</div><div class="lv-sub">até a parada da Helena</div></div><div class="lv-sub" style="text-align:right">Marcos<br>ABC1D23</div></div>
+      <div class="lv-bar"><i style="width:62%"></i><b style="left:62%"><svg class="ico ico--sm" style="--icon-size:14px;--icon-stroke:2"><use href="#i-van"/></svg></b></div>
+    </div></div></section>
+</main>
+
+<script>
+/* ===== Foundations data (values read LIVE from :root so dark mode updates) ===== */
+const CGROUPS={
+ 'Interação — tinta':['primary','on-primary','primary-container','on-primary-container'],
+ 'Sinal — amarelo escolar':['signal','on-signal','signal-ink','signal-container','on-signal-container'],
+ 'Status':['success','on-success','success-container','warning','warning-container','error','on-error','error-container','info','link'],
+ 'Labels':['label','secondary-label','tertiary-label','quaternary-label'],
+ 'Backgrounds':['system-bg','secondary-system-bg','tertiary-system-bg','grouped-bg','secondary-grouped-bg'],
+ 'Separators & fills':['separator','opaque-separator','fill-1','fill-2','fill-3','fill-4'],
+ 'System colors':['sys-red','sys-orange','sys-yellow','sys-green','sys-mint','sys-teal','sys-cyan','sys-blue','sys-indigo','sys-purple','sys-pink','sys-brown'],
+ 'Mapa':['map-land','map-road','map-park','map-water','route','route-done']};
+const PAIR={'primary':'on-primary','primary-container':'on-primary-container','signal':'on-signal','signal-container':'on-signal-container','success':'on-success','success-container':'on-success-container','warning':'on-warning','warning-container':'on-warning-container','error':'on-error','error-container':'on-error-container','info':'on-info'};
+function renderColors(){const cs=getComputedStyle(document.documentElement);
+ colorGroups.innerHTML=Object.entries(CGROUPS).map(([g,ns])=>`<div class="cgroup"><h3>${g}</h3><div class="colors">${ns.map(n=>{const v=cs.getPropertyValue('--'+n).trim();const on=PAIR[n];
+  return `<div class="sw"><div class="c" style="background:var(--${n});${on?`color:var(--${on})`:''}">${on?'Aa':''}</div><div class="m"><div class="n">--${n}</div><div class="v">${v}</div></div></div>`}).join('')}</div></div>`).join('');}
+const TYPE=[['t-largeTitle','Large Title · 800 34/41','Alunos'],['t-title1','Title 1 · 700 28/34','Mensalidade de novembro'],['t-title2','Title 2 · 700 22/28','Rota da manhã'],['t-title3','Title 3 · 600 20/25','Hoje'],['t-headline','Headline · 600 17/22','Helena Duarte'],['t-body','Body · 400 17/22','A van saiu da garagem e está a 1,2 km da sua parada.'],['t-callout','Callout · 400 16/21','Leve a Helena até o portão.'],['t-subheadline','Subheadline · 400 15/20','Embarcou às 6h52 · Rua das Acácias, 120'],['t-footnote','Footnote · 400 13/18','Atualizado há 8 segundos'],['t-caption1','Caption 1 · 400 12/16','Placa ABC1D23 · Renault Master'],['t-caption2','Caption 2 · 500 11/13','LIDA 6H33'],['t-eta','ETA · Rounded 800 56','7<small>min</small>'],['t-amount','Amount · Rounded 700 40','R$ 480,00']];
+typeList.innerHTML=TYPE.map(([n,m,s])=>`<div class="typerow"><div class="tk">.${n}<br>${m}</div><div class="${n}">${s}</div></div>`).join('');
+const RADII=[['r-xs',6],['r-sm',8],['r-md',12],['r-lg',20],['r-xl',28],['r-sheet',34],['r-full','cápsula']];
+radiusRow.innerHTML=RADII.map(([n,v])=>`<div class="cell"><div class="rad cs" style="border-radius:var(--${n})">${v}</div><div class="spec">--${n}</div></div>`).join('');
+const SPACING=[['sp-4',4],['sp-8 · gap-related',8],['sp-12',12],['sp-16 · layout-gutter',16],['sp-20',20],['sp-24 · gap-section',24],['sp-32 · gap-major',32],['target-min · row-min',44],['sp-48',48],['tabbar-height',62]];
+spacingList.innerHTML=SPACING.map(([n,v])=>`<div class="sprow"><div class="lbl">${n} · ${v}</div><div class="bar" style="width:${v*4}px"></div></div>`).join('');
+const ICONS=[...document.querySelectorAll('symbol')].map(s=>s.id.slice(2));
+iconGrid.innerHTML=ICONS.map(n=>`<div class="it"><svg class="ico ico--lg"><use href="#i-${n}"/></svg><div class="nm">i-${n}</div></div>`).join('');
+(function(){const dows=['D','S','T','Q','Q','S','S'];let h=dows.map(d=>`<div class="dow">${d}</div>`).join('');
+ for(let i=0;i<0;i++)h+='<div></div>';
+ const ev=[2,15,20];for(let d=1;d<=30;d++){const c=[d===5?'today':'',d===12?'sel':'',ev.includes(d)?'event':''].join(' ');h+=`<div class="d ${c}">${d}</div>`;}
+ dpGrid.innerHTML=h;})();
+
+/* ===== SPECS — one per component (Inspector + Copy-as-prompt). native = recommended Expo implementation ===== */
+const T=(r,n)=>({r,n,v:'',c:null,live:true});
+const SPECS={
+ navbar:{name:'Navigation bar',file:'components/navigation-bar.tsx',desc:'Top bar. iOS 26: transparent at rest, glass circular bar buttons (44pt), centred 17pt semibold title or Large Title (34pt heavy) on tab roots; gains chrome material once content scrolls under it. Max one prominent (ink-tinted glass) action.',
+  native:'Use the native header: Expo Router <Stack.Screen options={{ headerLargeTitle, headerTransparent, headerBlurEffect }}> and Stack.Toolbar / headerRight items — do not hand-roll a bar. Glass buttons come from the system on iOS 26.',
+  props:[{n:'title',t:'string'},{n:'variant',t:'"standard"|"large"',def:'"standard"'},{n:'leading',t:'BarItem[]'},{n:'trailing',t:'BarItem[]'},{n:'prominentAction',t:'BarItem?',d:'Rendered as ink-tinted glass (e.g. Enviar)'},{n:'scrolled',t:'boolean',def:'false',d:'Applies --mat-chrome + hairline'}],
+  tokens:[T('title colour','--label'),T('button glass','--mat-regular'),T('glass rim','--glass-rim'),T('prominent glass','--glass-tint-prominent'),T('scrolled bg','--mat-chrome'),T('hairline','--separator')],
+  metrics:[['bar height','--bar-height (44)'],['button','44×44 circle'],['side padding','--layout-gutter (16)'],['large title','34/41 800, -0.022em'],['title','17 600']]},
+ tabbar:{name:'Tab bar',file:'components/tab-bar.tsx',desc:'Floating Liquid Glass capsule with up to 5 tabs + an optional separate auxiliary circle (account/search). Selected tab gets --fill-3 pill and ink label — no accent colour. Count badge on Recados.',
+  native:'Use Expo Router NativeTabs (expo-router/unstable-native-tabs) — it renders the real iOS 26 glass tab bar. Icons via sf prop (map, person.2, message, wallet.bifold). Badge via <NativeTabs.Trigger.Badge>. Do not build a JS tab bar.',
+  props:[{n:'tabs',t:'{key,label,sfSymbol,badge?}[]'},{n:'selected',t:'string'},{n:'aux',t:'BarItem?'},{n:'onSelect',t:'(key)=>void'}],
+  tokens:[T('material','--mat-regular'),T('shadow','--glass-shadow'),T('selected fill','--fill-3'),T('label','--label'),T('badge','--error')],
+  metrics:[['height','--tabbar-height (62)'],['radius','--r-full'],['inset from edges','--float-inset (16)'],['icon','24'],['label','10/12 500']]},
+ toolbar:{name:'Toolbar',file:'components/toolbar.tsx',desc:'Floating glass group of contextual actions at the bottom (driver: centre map, call, Iniciar rota). One prominent ink item max; separators group related items.',
+  native:'Stack.Toolbar (Expo Router) placement="bottom", or GlassView isInteractive from expo-glass-effect wrapping Pressables inside a GlassContainer so items morph.',
+  props:[{n:'items',t:'ToolbarItem[]'},{n:'prominent',t:'ToolbarItem?'},{n:'disabled',t:'string[]'}],
+  tokens:[T('material','--mat-regular'),T('prominent fill','--primary'),T('prominent label','--on-primary'),T('separator','--separator'),T('disabled','--quaternary-label')],
+  metrics:[['height','48'],['item min','44×40'],['radius','--r-full'],['gap','--sp-4']]},
+ searchbar:{name:'Search bar',file:'components/search-bar.tsx',desc:'Inline capsule field under a large title (36pt, --fill-3) or a floating glass field at the bottom when search is the screen’s main task. Cancel appears while focused.',
+  native:'headerSearchBarOptions on the native Stack (placement "integrated"/"stacked"); iOS 26 moves it to the bottom automatically on search tabs.',
+  props:[{n:'placeholder',t:'string',def:'"Buscar"'},{n:'value',t:'string'},{n:'variant',t:'"inline"|"floating"',def:'"inline"'},{n:'showsMic',t:'boolean',def:'true'}],
+  tokens:[T('field fill','--fill-3'),T('placeholder','--tertiary-label'),T('icon','--secondary-label'),T('floating material','--mat-regular'),T('cancel','--primary-ink')],
+  metrics:[['height','36 inline · 48 floating'],['radius','--r-full'],['icon','18']]},
+ list:{name:'List / table',file:'components/list.tsx',desc:'Rows in plain, grouped or inset-grouped containers. Row = leading (30pt rounded icon tile or avatar) + title/subtitle + trailing (value, pill, toggle, chevron). Separators inset to text. Roles: default, action (ink medium), destructive (red), disabled.',
+  native:'Short fixed lists (settings, detalhes): @expo/ui List + ListItem / Section (real SwiftUI Form). Long lists (alunos, histórico): FlashList with contentInsetAdjustmentBehavior="automatic" and this row component.',
+  props:[{n:'style',t:'"plain"|"grouped"|"insetGrouped"',def:'"insetGrouped"'},{n:'rows',t:'Row[]'},{n:'row.leading',t:'Icon|Avatar?'},{n:'row.title',t:'string'},{n:'row.subtitle',t:'string?'},{n:'row.trailing',t:'"chevron"|"value"|"toggle"|Pill?'},{n:'row.role',t:'"default"|"action"|"destructive"',def:'"default"'}],
+  tokens:[T('container','--secondary-grouped-bg'),T('screen bg','--grouped-bg'),T('title','--label'),T('subtitle/value','--secondary-label'),T('chevron','--tertiary-label'),T('separator','--separator'),T('icon tile','--primary'),T('pressed','--fill-4')],
+  metrics:[['row min height','--row-min (44)'],['leading inset','--row-inset (16)'],['icon tile','30, radius --r-sm'],['inset container radius','--r-lg (20)'],['title','17/22'],['subtitle','15/20']]},
+ sectionheader:{name:'Section header / footer',file:'components/section-header.tsx',desc:'Uppercase 13pt secondary header aligned to row text; prominent variant = Title 3 + trailing text action; footer explains the consequence of the section’s settings.',
+  native:'@expo/ui Section title/footer in Forms; for FlashList use this component as sticky header.',
+  props:[{n:'title',t:'string'},{n:'variant',t:'"default"|"prominent"',def:'"default"'},{n:'action',t:'{label,onPress}?'},{n:'footer',t:'string?'}],
+  tokens:[T('header text','--secondary-label'),T('prominent text','--label'),T('action','--primary-ink')],
+  metrics:[['header','13/18 600 caps +0.02em'],['prominent','20/25 700'],['top padding','--sp-16'],['footer','13/18']]},
+ card:{name:'Card',file:'components/card.tsx',desc:'Custom solid grouped container (never glass) for one entity: driver, aviso. Variant signal = signal-container background for the single most important notice on screen.',
+  native:'View with borderRadius 20 + borderCurve:"continuous", boxShadow from --elev-1 (omit in dark).',
+  props:[{n:'variant',t:'"default"|"signal"',def:'"default"'},{n:'onPress',t:'()=>void?'},{n:'children',t:'ReactNode'}],
+  tokens:[T('surface','--secondary-grouped-bg'),T('elevation','--elev-1'),T('signal bg','--signal-container'),T('signal text','--on-signal-container')],
+  metrics:[['radius','--r-lg (20)'],['padding','--sp-16'],['inner gap','--gap-related (8)']]},
+ disclosure:{name:'Disclosure group',file:'components/disclosure-group.tsx',desc:'Expandable row revealing nested rows inline; chevron rotates 90° with --ease over --dur-base.',
+  native:'@expo/ui DisclosureGroup (SwiftUI) inside a List; or a row + Reanimated layout transition.',
+  props:[{n:'title',t:'string'},{n:'expanded',t:'boolean',def:'false'},{n:'onToggle',t:'(open)=>void'},{n:'children',t:'Row[]'}],
+  tokens:[T('title','--label'),T('chevron','--tertiary-label'),T('motion','--ease')],
+  metrics:[['nested indent','+18'],['rotation','90°'],['duration','--dur-base (250ms)']]},
+ button:{name:'Button',file:'components/button.tsx',desc:'HIG button styles on one ink interaction family: plain, gray, tinted, bordered, bordered-prominent (screen’s main action), filled (full-width footer CTA), glass & glass-prominent (over map). Roles: default/destructive. Sizes sm 30 / md 44 / lg 50. States: enabled, pressed (scale .97 + dim), disabled (.38), focus ring.',
+  native:'@expo/ui Button with variant (borderless/bordered/borderedProminent/glass/glassProminent) and role="destructive"; or Pressable + this styling. Haptics: expo-haptics impactLight on prominent actions (iOS only).',
+  props:[{n:'label',t:'string'},{n:'variant',t:'"plain"|"gray"|"tinted"|"bordered"|"borderedProminent"|"filled"|"glass"|"glassProminent"',def:'"borderedProminent"'},{n:'role',t:'"default"|"destructive"',def:'"default"'},{n:'size',t:'"sm"|"md"|"lg"',def:'"md"'},{n:'icon',t:'SFSymbol?'},{n:'disabled',t:'boolean',def:'false'},{n:'loading',t:'boolean',def:'false'}],
+  tokens:[T('prominent fill','--primary'),T('prominent label','--on-primary'),T('tinted fill','--primary-container'),T('gray fill','--fill-3'),T('bordered stroke','--opaque-separator'),T('destructive','--error'),T('glass','--mat-regular'),T('glass prominent','--glass-tint-prominent'),T('focus','--ring')],
+  metrics:[['heights','30 / 44 / 50'],['radius','--r-full (filled: --r-md 12)'],['h padding','16 (sm 12, lg 24)'],['label','17/22 600'],['pressed','scale --pressed-scale .97']]},
+ menubutton:{name:'Pull-down & pop-up menu button',file:'components/menu-button.tsx',desc:'Pop-up button shows the current value with up/down chevrons and opens an exclusive-choice menu (checkmark). Pull-down opens an action menu from a bar button; destructive items red; groups separated by 8pt bands.',
+  native:'@expo/ui Menu / ContextMenu + Picker variant="menu"; on bars use Stack.Toolbar.Menu.',
+  props:[{n:'kind',t:'"popup"|"pulldown"'},{n:'items',t:'MenuItem[]'},{n:'selected',t:'string?'},{n:'title',t:'string?'}],
+  tokens:[T('menu material','--mat-thick'),T('item','--label'),T('value','--secondary-label'),T('destructive','--error'),T('group band','--fill-4')],
+  metrics:[['item height','44'],['menu radius','--r-lg (20)'],['min width','250']]},
+ segmented:{name:'Segmented control',file:'components/segmented-control.tsx',desc:'2–5 mutually exclusive same-kind options (PIX/Cartão/Boleto, Ida/Volta). Capsule track with raised thumb.',
+  native:'@expo/ui Picker variant="segmented" (SwiftUI) — native animation & haptics.',
+  props:[{n:'options',t:'string[]'},{n:'selectedIndex',t:'number',def:'0'},{n:'onChange',t:'(i)=>void'}],
+  tokens:[T('track','--fill-3'),T('thumb','--tertiary-system-bg'),T('label','--label')],
+  metrics:[['height','32'],['radius','--r-full'],['label','13 500 (sel 600)']]},
+ slider:{name:'Slider',file:'components/slider.tsx',desc:'Continuous value (proximity alert distance) with min/max glyphs and live value label.',
+  native:'@expo/ui Slider.',
+  props:[{n:'value',t:'number'},{n:'min',t:'number'},{n:'max',t:'number'},{n:'step',t:'number?'},{n:'disabled',t:'boolean',def:'false'}],
+  tokens:[T('track','--fill-1'),T('fill','--primary'),T('thumb','#FFFFFF + shadow')],
+  metrics:[['track','6'],['thumb','28'],['hit height','44']]},
+ stepper:{name:'Stepper',file:'components/stepper.tsx',desc:'Discrete +/- in a row with the current value in the subtitle; disables at bounds.',
+  native:'@expo/ui Stepper (SwiftUI) if available in your SDK, else Pressable pair.',
+  props:[{n:'value',t:'number'},{n:'min',t:'number'},{n:'max',t:'number'},{n:'step',t:'number',def:'1'}],
+  tokens:[T('bg','--fill-3'),T('glyph','--label'),T('disabled','--quaternary-label'),T('divider','--separator')],
+  metrics:[['size','94×32'],['radius','--r-sm (8)']]},
+ toggle:{name:'Toggle (switch)',file:'components/toggle.tsx',desc:'iOS switch; on = system green (means “active”). Always inside a labelled row.',
+  native:'@expo/ui Switch (or RN Switch) — built-in haptics.',
+  props:[{n:'value',t:'boolean'},{n:'onValueChange',t:'(v)=>void'},{n:'disabled',t:'boolean',def:'false'}],
+  tokens:[T('on','--success'),T('off','--fill-1'),T('knob','#FFFFFF')],
+  metrics:[['size','51×31'],['knob','27'],['motion','--ease-spring']]},
+ picker:{name:'Pickers (wheel / date / time)',file:'components/pickers.tsx',desc:'Inline calendar (school calendar, yellow dots = events/recessos), compact time pill, wheel for short lists (parentesco).',
+  native:'@expo/ui DateTimePicker (variant inline/compact/wheel) and Picker variant="wheel".',
+  props:[{n:'mode',t:'"date"|"time"|"wheel"'},{n:'value',t:'Date|string'},{n:'display',t:'"inline"|"compact"|"wheel"'},{n:'events',t:'Date[]?'}],
+  tokens:[T('selected day','--primary'),T('selected text','--on-primary'),T('today','--primary-ink'),T('event dot','--signal'),T('pill bg','--fill-3'),T('wheel band','--fill-3')],
+  metrics:[['day cell','40 circle'],['wheel row','34'],['time pill','34 h, --r-sm']]},
+ textfield:{name:'Text field',file:'components/text-field.tsx',desc:'Label above (13pt), 44pt field on grouped surface, helper/error below. States: empty, focused (ink stroke), filled, error (red stroke + message), disabled, read-only (lock).',
+  native:'RN TextInput (or @expo/ui TextField) with correct keyboardType/textContentType (CPF numeric, telephoneNumber, emailAddress) and autoComplete.',
+  props:[{n:'label',t:'string'},{n:'value',t:'string'},{n:'placeholder',t:'string?'},{n:'helper',t:'string?'},{n:'error',t:'string?'},{n:'disabled',t:'boolean',def:'false'},{n:'readOnly',t:'boolean',def:'false'},{n:'keyboardType',t:'KeyboardType'}],
+  tokens:[T('field bg','--secondary-grouped-bg'),T('text','--label'),T('placeholder','--tertiary-label'),T('label/helper','--secondary-label'),T('focus stroke','--primary'),T('error','--error')],
+  metrics:[['height','44'],['radius','--r-md (12)'],['h padding','16'],['text','17']]},
+ texteditor:{name:'Text editor',file:'components/text-editor.tsx',desc:'Multiline input with character counter (absence note, route incident).',
+  native:'TextInput multiline with maxLength; counter as tabular footnote.',
+  props:[{n:'value',t:'string'},{n:'maxLength',t:'number',def:'280'},{n:'label',t:'string'}],
+  tokens:[T('bg','--secondary-grouped-bg'),T('text','--label'),T('counter','--tertiary-label')],
+  metrics:[['min height','110'],['padding','12 / 16'],['radius','--r-md']]},
+ progress:{name:'Progress (bar + activity)',file:'components/progress.tsx',desc:'Determinate bar (route progress in signal yellow; uploads in ink) and activity indicator for short loads and offline sync.',
+  native:'@expo/ui ProgressView / RN ActivityIndicator.',
+  props:[{n:'kind',t:'"bar"|"activity"'},{n:'value',t:'number 0–1?'},{n:'tone',t:'"default"|"signal"',def:'"default"'}],
+  tokens:[T('track','--fill-1'),T('fill','--primary'),T('route fill','--signal'),T('spinner','--secondary-label')],
+  metrics:[['bar height','4'],['spinner','20 / 36']]},
+ pagecontrol:{name:'Page control',file:'components/page-control.tsx',desc:'Dots for onboarding pages or a student carousel; glass variant over imagery/map.',
+  native:'Small custom View row (no native RN equivalent).',
+  props:[{n:'count',t:'number'},{n:'index',t:'number'},{n:'variant',t:'"default"|"glass"'}],
+  tokens:[T('dot','--fill-1'),T('current','--label')],
+  metrics:[['dot','7'],['gap','8']]},
+ sheet:{name:'Sheet',file:'components/sheet.tsx',desc:'Detented sheet with grabber. Map context: floating glass sheet inset 8pt (Find My / Maps style) holding the ETA. Forms: solid sheet with glass close/confirm buttons.',
+  native:'Expo Router formSheet: <Stack.Screen options={{ presentation:"formSheet", sheetAllowedDetents:[0.35,1], sheetGrabberVisible:true }}> — or @expo/ui BottomSheet. Never @gorhom/bottom-sheet.',
+  props:[{n:'detents',t:'number[]',def:'[0.5,1]'},{n:'material',t:'"glass"|"solid"',def:'"glass"'},{n:'floating',t:'boolean',def:'false'},{n:'title',t:'string?'}],
+  tokens:[T('glass','--mat-thick'),T('solid','--secondary-system-bg'),T('grabber','--fill-1'),T('shadow','--elev-3')],
+  metrics:[['radius','--r-sheet (34)'],['grabber','36×5'],['floating inset','8']]},
+ actionsheet:{name:'Action sheet',file:'components/action-sheet.tsx',desc:'Context actions with optional title/message; destructive in red; separate bold Cancel.',
+  native:'ActionSheetIOS.showActionSheetWithOptions or @expo/ui ConfirmationDialog.',
+  props:[{n:'title',t:'string?'},{n:'message',t:'string?'},{n:'actions',t:'{label,role?}[]'},{n:'cancelLabel',t:'string',def:'"Cancelar"'}],
+  tokens:[T('material','--mat-thick'),T('action','--primary-ink'),T('destructive','--error'),T('title','--secondary-label')],
+  metrics:[['button height','56'],['radius','--r-xl (28)'],['label','20']]},
+ alert:{name:'Alert',file:'components/alert.tsx',desc:'Critical decision only. Short title, consequence message, ≤2 side-by-side buttons (3+ stack).',
+  native:'Alert.alert (native).',
+  props:[{n:'title',t:'string'},{n:'message',t:'string?'},{n:'buttons',t:'{label,style}[]'}],
+  tokens:[T('material','--mat-thick'),T('title','--label'),T('message','--secondary-label')],
+  metrics:[['width','300'],['radius','--r-xl (28)'],['padding','20']]},
+ popover:{name:'Popover',file:'components/popover.tsx',desc:'Lightweight anchored info (how ETA is computed). On iPhone becomes a sheet except for tips.',
+  native:'@expo/ui Popover (SwiftUI .popover) or a medium formSheet.',
+  props:[{n:'anchor',t:'Ref'},{n:'content',t:'ReactNode'}],
+  tokens:[T('material','--mat-thick'),T('shadow','--glass-shadow')],
+  metrics:[['width','280'],['radius','--r-lg'],['arrow','16']]},
+ contextmenu:{name:'Context menu',file:'components/context-menu.tsx',desc:'Long-press preview + actions (pay now, copy PIX code, share receipt).',
+  native:'Expo Router <Link.Preview/> + <Link.Menu> or @expo/ui ContextMenu.',
+  props:[{n:'preview',t:'ReactNode'},{n:'actions',t:'MenuItem[]'}],
+  tokens:[T('preview','--secondary-grouped-bg'),T('menu','--mat-thick')],
+  metrics:[['width','260'],['item','44']]},
+ activityview:{name:'Activity view (share sheet)',file:'(system)',desc:'System share sheet for receipts and temporary van location. Visual reference only — always invoke the OS sheet.',
+  native:'RN Share.share or expo-sharing shareAsync(fileUri).',
+  props:[{n:'url / file',t:'string'},{n:'title',t:'string?'}],
+  tokens:[T('material','--mat-thick')],
+  metrics:[['system-provided','—']]},
+ badge:{name:'Badge',file:'components/badge.tsx',desc:'Count or dot; system red by default, neutral for informational counts, signal for LIVE.',
+  native:'NativeTabs badge for tabs; small View elsewhere. Tabular numerals.',
+  props:[{n:'count',t:'number?'},{n:'dot',t:'boolean',def:'false'},{n:'tone',t:'"alert"|"neutral"|"signal"',def:'"alert"'}],
+  tokens:[T('alert','--error'),T('alert text','--on-error'),T('neutral','--fill-2'),T('signal','--signal')],
+  metrics:[['height','20 (tab 17)'],['dot','10'],['text','13 600']]},
+ avatar:{name:'Avatar',file:'components/avatar.tsx',desc:'Initials on neutral fill; optional photo (LGPD-protected). Ring variant = student currently on the van.',
+  native:'expo-image for photos; fallback initials View.',
+  props:[{n:'name',t:'string'},{n:'photo',t:'uri?'},{n:'size',t:'"sm"|"md"|"lg"',def:'"md"'},{n:'onBoard',t:'boolean',def:'false'}],
+  tokens:[T('fill','--fill-2'),T('initials','--label'),T('ring','--signal')],
+  metrics:[['sizes','30 / 40 / 64'],['ring','2 gap + 2']]},
+ statuspill:{name:'Status pill',file:'components/status-pill.tsx',desc:'Van/student/payment state — always text + colour, never colour alone. Signal pulses only while live.',
+  native:'View + Text; pulse via Reanimated withRepeat (respect reduce motion).',
+  props:[{n:'tone',t:'"signal"|"success"|"warning"|"error"|"neutral"'},{n:'label',t:'string'},{n:'live',t:'boolean',def:'false'}],
+  tokens:[T('signal','--signal'),T('on-signal','--on-signal'),T('success','--success-container'),T('warning','--warning-container'),T('error','--error-container'),T('neutral','--fill-3')],
+  metrics:[['height','26'],['radius','--r-full'],['dot','8'],['text','13 600']]},
+ vanmarker:{name:'Van marker & stops',file:'components/map-markers.tsx',desc:'Only yellow shape on the map. Live = halo pulse; idle = gray. Stops as route-colour rings; the child’s home in ink.',
+  native:'expo-maps (AppleMaps.View) annotations / markers with a custom view; or react-native-maps Marker.',
+  props:[{n:'kind',t:'"van"|"stop"|"home"'},{n:'live',t:'boolean'},{n:'heading',t:'number?'}],
+  tokens:[T('van','--signal'),T('van glyph','--on-signal'),T('stop ring','--route'),T('home','--primary')],
+  metrics:[['van','44'],['halo','+14'],['stop','16'],['home','30']]},
+ timeline:{name:'Route timeline',file:'components/route-timeline.tsx',desc:'Sequential itinerary: done (ink), now (signal), next (ring), future (gray); tabular times.',
+  native:'Plain View column; no list virtualisation needed (<15 stops).',
+  props:[{n:'stops',t:'{label,time,state}[]'},{n:'highlight',t:'string?',d:'the parent’s own stop'}],
+  tokens:[T('done','--route'),T('pending','--route-done'),T('now','--signal'),T('time','--secondary-label')],
+  metrics:[['dot','12 (now 16)'],['rail','2'],['row gap','16']]},
+ bubble:{name:'Message bubble',file:'components/message-bubble.tsx',desc:'iMessage-style chat: outgoing ink, incoming neutral fill, system notices centred in signal-container.',
+  native:'FlashList inverted + this bubble; KeyboardAvoidingView / react-native-keyboard-controller.',
+  props:[{n:'kind',t:'"in"|"out"|"system"'},{n:'text',t:'string'},{n:'meta',t:'string?'}],
+  tokens:[T('out bg','--primary'),T('out text','--on-primary'),T('in bg','--fill-3'),T('system bg','--signal-container')],
+  metrics:[['radius','18 (tail 6)'],['max width','78%'],['padding','8 / 12']]},
+ liveactivity:{name:'Live Activity',file:'targets/live-activity/',desc:'Lock Screen / Dynamic Island while the route runs: status pill, ETA, progress with van glyph. Always dark system surface.',
+  native:'Requires dev build: @bacons/apple-targets widget target + ActivityKit (SwiftUI). Update via push tokens.',
+  props:[{n:'eta',t:'minutes'},{n:'progress',t:'0–1'},{n:'driver',t:'string'},{n:'plate',t:'string'}],
+  tokens:[T('accent','--signal (dark value)')],
+  metrics:[['radius','--r-xl'],['eta','34 800 rounded']]},
+};
+
+/* ===== Copy-as-prompt — user's stack is Expo (RN) so it is FIRST ===== */
+const LANGS=['React Native (Expo SDK 58 + TypeScript)','SwiftUI (iOS 26)','Flutter (Dart)','Jetpack Compose (Kotlin)','React (TypeScript + CSS)','HTML + CSS'];
+let promptLang=LANGS[0];
+langSel.innerHTML=LANGS.map(l=>`<option${l===promptLang?' selected':''}>${l}</option>`).join('');
+langSel.onchange=()=>promptLang=langSel.value;
+const isExpo=()=>promptLang.startsWith('React Native');
+
+const varGroups={
+ 'Color — interaction (ink)':['--primary','--on-primary','--primary-strong','--primary-ink','--primary-container','--on-primary-container','--tint'],
+ 'Color — signal (school yellow)':['--signal','--on-signal','--signal-ink','--signal-container','--on-signal-container'],
+ 'Color — status':['--success','--on-success','--success-container','--on-success-container','--warning','--on-warning','--warning-container','--on-warning-container','--error','--on-error','--error-container','--on-error-container','--info','--on-info','--link'],
+ 'Color — HIG labels/backgrounds/separators/fills':['--label','--secondary-label','--tertiary-label','--quaternary-label','--system-bg','--secondary-system-bg','--tertiary-system-bg','--grouped-bg','--secondary-grouped-bg','--tertiary-grouped-bg','--separator','--opaque-separator','--fill-1','--fill-2','--fill-3','--fill-4'],
+ 'Color — system':['--sys-red','--sys-orange','--sys-yellow','--sys-green','--sys-mint','--sys-teal','--sys-cyan','--sys-blue','--sys-indigo','--sys-purple','--sys-pink','--sys-brown'],
+ 'Color — map':['--map-land','--map-road','--map-park','--map-water','--route','--route-done'],
+ 'Materials (Liquid Glass)':['--mat-ultrathin','--mat-thin','--mat-regular','--mat-thick','--mat-chrome','--glass-tint-prominent','--glass-edge','--glass-shadow','--scrim'],
+ 'Spacing & layout':['--gap-related','--gap-section','--gap-major','--layout-gutter','--row-min','--row-inset','--target-min','--bar-height','--tabbar-height','--float-inset','--sp-4','--sp-8','--sp-12','--sp-16','--sp-20','--sp-24','--sp-32','--sp-48'],
+ 'Radius (continuous)':['--r-xs','--r-sm','--r-md','--r-lg','--r-xl','--r-sheet','--r-full'],
+ 'Elevation':['--elev-1','--elev-2','--elev-3'],
+ 'State':['--pressed-scale','--pressed-dim','--disabled-opacity'],
+ 'Type families':['--font-display','--font-body','--font-rounded'],
+ 'Motion':['--dur-fast','--dur-base','--dur-slow','--ease','--ease-spring'],
+ 'Icons':['--icon-size','--icon-inline','--icon-large','--icon-stroke']};
+function readVars(theme){const root=document.documentElement;const prev=root.getAttribute('data-theme');
+ if(theme)root.setAttribute('data-theme',theme);else root.removeAttribute('data-theme');
+ const cs=getComputedStyle(root);const out={};for(const ns of Object.values(varGroups))for(const n of ns)out[n]=cs.getPropertyValue(n).trim();
+ if(prev)root.setAttribute('data-theme',prev);else root.removeAttribute('data-theme');return out;}
+function tokenLines(){const L=readVars(''),D=readVars('dark');const out=[];
+ for(const[grp,names]of Object.entries(varGroups)){const rows=names.map(n=>L[n]?`- ${n} = ${L[n]}${D[n]&&D[n]!==L[n]?`   | dark: ${D[n]}`:''}`:null).filter(Boolean);if(rows.length)out.push(`### ${grp}`,...rows,'');}
+ return out;}
+function expoNotes(){return isExpo()?[`### Expo implementation rules`,`- Tokens live in src/theme/ (colors.ts, tokens.ts, type.ts). Colors: export light+dark objects and pick with useColorScheme(); where a HIG semantic exists, prefer Color.ios.* from expo-router with these hexes as the default/web fallback.`,`- Liquid Glass: expo-glass-effect GlassView (isGlassEffectAPIAvailable() check) → fallback expo-blur BlurView tint "systemMaterial"/"systemChromeMaterial". Glass only on bars, floating controls, menus, sheets — never on list rows/cards; never glass on glass.`,`- Native first: Expo Router NativeTabs for the tab bar, native Stack headers (headerLargeTitle, headerTransparent), formSheet for sheets, @expo/ui for Switch/Picker/Slider/Menu/List sections, Alert.alert, ActionSheetIOS.`,`- Icons: expo-symbols SymbolView (SF Symbols) — not @expo/vector-icons. Fonts: system (SF Pro / SF Pro Rounded via fontFamily "ui-rounded" not available → use fontVariant tabular-nums + weight "800").`,`- Corners: borderCurve:'continuous'. Shadows: boxShadow strings only (no shadow*/elevation). Counters: fontVariant:['tabular-nums']. Haptics: expo-haptics on iOS for confirmations.`,`- Use contentInsetAdjustmentBehavior="automatic" on every ScrollView/FlashList; respect Dynamic Type (don't cap font scaling below 1.3 except in the tab bar).`,'']:[];}
+function foundationsBody(){const L=[`## Foundations — design tokens (single source of truth)`,`Theme "Faixa escolar" for VanEscolar GPS (iOS HIG + Liquid Glass). Define every token below as a named constant in ONE theme module, idiomatic to ${promptLang}. Light values first; dark overrides after "| dark:". Components reference tokens by name — never inline raw values.`,'',...tokenLines(),`### Text styles (Dynamic Type "Large" defaults)`];
+ TYPE.forEach(([n,m])=>L.push(`- ${n.replace('t-','')}: ${m}`));
+ L.push('',...expoNotes(),`### Rules`,`- ONE interaction family: ink (--primary). Signal yellow marks only the live van, ETA and "a caminho"; never decorative, never body text on white (use --signal-ink).`,`- Every fill keeps its --on-* pair (WCAG-checked: body ≥ 4.5:1). Status colours always paired with a text label.`,`- Content surfaces are solid; depth comes from glass on the control layer + elev-1 (none in dark).`,`- Spacing roles: --gap-related (8) < --gap-section (24) < --gap-major (32); margins 16; touch targets ≥ 44.`,`- All UI copy in Portuguese (Brazil).`);
+ return L.join('\n');}
+function liveTok(t){const v=getComputedStyle(document.documentElement).getPropertyValue(t.n.split(' ')[0]).trim();return v||t.n;}
+function buildPrompt(key){const s=SPECS[key];const L=[
+  `# Add or update the \`${s.name}\` component — ${promptLang}`,'',
+  `Part of the VanEscolar GPS design system ("Faixa escolar", iOS HIG + Liquid Glass). You are most likely inside the existing bus-tracker-expo codebase: if a component with this role ALREADY EXISTS (check src/components/ and src/components/ui/kit.tsx), modify it IN PLACE to match this spec (the source of truth) — don't duplicate; note breaking prop/token changes with a migration note. Otherwise create it at \`${s.file}\`.`,'',
+  `## What it is`,s.desc,''];
+  if(s.native)L.push(`## Native implementation`,isExpo()?s.native:`(${promptLang}) Use the platform-native equivalent. Expo reference: ${s.native}`,'');
+  L.push(`## Props`);s.props.forEach(p=>L.push(`- \`${p.n}\`: ${p.t}${p.def?` (default ${p.def})`:''}${p.d?` — ${p.d}`:''}`));
+  L.push('',`## Design tokens (import from the theme module; never inline)`);
+  s.tokens.forEach(t=>L.push(`- ${t.n} = ${liveTok(t)}   // ${t.r}`));
+  L.push('',`## Metrics`);s.metrics.forEach(([k,v])=>L.push(`- ${k}: ${v}`));
+  L.push('',`## Requirements`,`- Implement every variant/state listed; light + dark.`,`- Hit targets ≥ 44pt; VoiceOver labels/roles in Portuguese; supports Dynamic Type.`,`- Keep each fill paired with its --on-* token (WCAG ≥ 4.5:1).`,`- Output complete, compilable ${promptLang} code + a short usage example with real PT-BR copy.`);
+  return L.join('\n');}
+function copyPrompt(key){copyText(buildPrompt(key));toast(`Copiado: ${SPECS[key].name} → ${promptLang}`);}
+function fullSystemPrompt(){const keys=Object.keys(SPECS);const L=[
+ `# Install or update the ENTIRE VanEscolar GPS design system — ${promptLang}`,'',
+ `Set up this design system in ${promptLang}. The bus-tracker-expo project already has src/theme/{colors,tokens,type,styles}.ts and src/components/ui/kit.tsx: UPDATE those IN PLACE to match this spec (source of truth) — modify, don't duplicate; list breaking changes with migration notes. Scaffold anything missing.`,'',
+ `## Build order`,`1. Foundation token layer (below) as the single source of truth, light + dark.`,`2. Components — independent, may be split across parallel workers, but EVERY component imports the shared token module from step 1; never redefine colours/sizes locally. Keep naming & states consistent.`,`3. Reconcile: one components index + a pass confirming every component references only named tokens; replace old ad-hoc values in screens.`,'','---','',foundationsBody(),'','---','',`## Components (${keys.length})`];
+ keys.forEach(k=>{const s=SPECS[k];L.push('',`### ${s.name} — \`${s.file}\``,s.desc,s.native?`- native: ${s.native}`:'',`- props: ${s.props.map(p=>p.n+':'+p.t).join(', ')}`,`- tokens: ${s.tokens.map(t=>t.n).join(', ')}`,`- metrics: ${s.metrics.map(m=>m[0]+' '+m[1]).join(', ')}`);});
+ L.push('','## Rules',`- One source of truth for tokens; components reference them by name.`,`- Native-first (NativeTabs, native Stack header, formSheet, @expo/ui controls, SF Symbols).`,`- Output: the token files, then each component with a short usage example.`);
+ return L.join('\n');}
+function copyFullSystem(){copyText(fullSystemPrompt());toast(`Copiado: design system (${Object.keys(SPECS).length} componentes) → ${promptLang}`);}
+function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>fallbackCopy(t));else fallbackCopy(t);}
+function fallbackCopy(t){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove();}
+
+document.querySelectorAll('main section[id]').forEach(sec=>{const key=sec.id;if(!SPECS[key])return;
+  const h=sec.querySelector('h2.sec');if(!h||h.querySelector('.sec-prompt'))return;
+  const b=document.createElement('button');b.className='sec-prompt';b.type='button';b.textContent='Copy as prompt';
+  b.addEventListener('click',()=>copyPrompt(key));h.appendChild(b);});
+
+/* ===== Dev Mode + Inspector ===== */
+function toggleDev(){const on=document.body.classList.toggle('dev');devToggle.classList.toggle('on',on);devToggle.textContent=on?'◧ Dev Mode · ON':'◧ Dev Mode';if(!on)closeInspector();}
+function closeInspector(){document.body.classList.remove('inspecting');document.querySelectorAll('.insp-sel').forEach(e=>e.classList.remove('insp-sel'));}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#inspector')||e.target.closest('#topctl'))return;
+  if(!document.body.classList.contains('dev'))return;
+  const el=e.target.closest('[data-insp]');if(el&&SPECS[el.dataset.insp]){e.preventDefault();selectComp(el,el.dataset.insp);}
+});
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function selectComp(el,key){
+  document.querySelectorAll('.insp-sel').forEach(x=>x.classList.remove('insp-sel'));el.classList.add('insp-sel');
+  document.body.classList.add('inspecting');const s=SPECS[key];
+  const props=s.props.map(p=>`<div class="prop"><span class="pn">${esc(p.n)}</span> <span class="pt">${esc(p.t)}</span>${p.def?` <span class="pdef">= ${esc(p.def)}</span>`:''}${p.d?`<div class="pd">${esc(p.d)}</div>`:''}</div>`).join('');
+  const toks=s.tokens.map(t=>{const v=liveTok(t);const name=t.n.split(' ')[0];const isVar=name.startsWith('--');
+    return `<div class="tok" data-v="${esc(v)}"><div class="tsw" style="background:${isVar?`var(${name})`:'var(--fill-4)'}"></div><div><div class="tn">${esc(t.n)}</div><div class="tr">${esc(t.r)}</div></div><div class="tv">${esc(v)}</div></div>`}).join('');
+  const mets=s.metrics.map(([k,v])=>`<div class="metric"><span class="mk">${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
+  inspectorBody.innerHTML=`<div class="nm">${s.name}</div><div class="file">${s.file}</div><div class="desc">${esc(s.desc)}</div>${s.native?`<div class="native"><b>Expo:</b> ${esc(s.native)}</div>`:''}<h4>Properties</h4>${props}<h4>Design tokens · clique para copiar</h4>${toks}<h4>Metrics</h4>${mets}<button class="copyprompt" onclick="copyPrompt('${key}')">Copy as prompt</button>`;
+  inspectorBody.querySelectorAll('.tok').forEach(n=>n.onclick=()=>{copyText(n.dataset.v);toast('Copiado '+n.dataset.v);});
+}
+function toast(msg){const c=document.getElementById('copied');c.textContent=msg;c.classList.add('show');setTimeout(()=>c.classList.remove('show'),1500);}
+
+renderColors();
+themeSel.addEventListener('change',()=>setTimeout(renderColors,0));
+</script>
+</body>
+</html>

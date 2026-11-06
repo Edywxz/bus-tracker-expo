@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
+import { gap, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-import { LargeTitleScreen } from '../components/ui/LargeTitleScreen';
-import { AppleButton } from '../components/AppleButton';
-import { TouchableScale } from '../components/ui/TouchableScale';
-import { Avatar, Badge, Card, EmptyState, Group, Row, SectionLabel, statusAluno } from '../components/ui/kit';
+import {
+  Avatar, Button, Card, confirm, EmptyState, IconButton, ListRow, ListSection, notify, Screen, SectionFooter, SectionHeader,
+  share, StatusPill, statusAluno,
+} from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
-import { useStack } from '../navigation/Stack';
+import { go } from '../navigation/routes';
 import { AbsenceSheet, AuthorizedSheet, PaySheet } from '../sheets/Sheets';
 import { brl, isoToBR, nomeMes } from '../utils/format';
 import { SecurityService } from '../services/security';
@@ -16,123 +16,115 @@ import { SecurityService } from '../services/security';
 const TURNO: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', INTEGRAL: 'Integral', NOITE: 'Noite' };
 
 /* --------------------------------------------------------- Aluno */
-export const StudentDetailScreen: React.FC<{ params?: { id: string } }> = ({ params }) => {
+export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
   const { alunos, role, pessoasAutorizadas, removerPessoaAutorizada, contratos } = useApp();
-  const stack = useStack();
   const [absence, setAbsence] = useState(false);
   const [addPessoa, setAddPessoa] = useState(false);
-  const a = alunos.find((x) => x.id === params?.id);
+  const a = alunos.find((x) => x.id === id);
   if (!a) {
-    return <LargeTitleScreen title="Aluno"><EmptyState icon="alert-circle" title="Aluno não encontrado" message="Ele pode ter sido removido." /></LargeTitleScreen>;
+    return <Screen title="Aluno"><EmptyState icon="alert" title="Aluno não encontrado" message="Ele pode ter sido removido." /></Screen>;
   }
   const st = statusAluno(a.statusEmbarque);
   const pessoas = pessoasAutorizadas.filter((p) => p.aluno_id === a.id);
   const contrato = contratos.find((c) => c.aluno_id === a.id);
   const pai = role === 'RESPONSAVEL';
 
-  const remover = (id: string, nome: string) =>
-    Alert.alert('Remover pessoa autorizada?', `${nome} não poderá mais buscar ${a.nome.split(' ')[0]}.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => removerPessoaAutorizada(id).catch((e) => Alert.alert('Erro', e.message)) },
-    ]);
+  const remover = async (pid: string, nome: string) => {
+    const ok = await confirm({ title: 'Remover pessoa autorizada?', message: `${nome} não poderá mais buscar ${a.nome.split(' ')[0]}.`, confirmLabel: 'Remover', destructive: true });
+    if (ok) removerPessoaAutorizada(pid).catch((e) => notify('Erro', e.message));
+  };
 
   return (
-    <LargeTitleScreen title={a.nome} subtitle={`${a.turma} · ${TURNO[a.turno]}`}
-      footer={pai ? <AppleButton size="lg" variant="tonal" title="Avisar falta" onPress={() => setAbsence(true)}
-        icon={<Ionicons name="calendar-outline" size={17} color={colors.accentText} />} /> : undefined}>
+    <Screen title={a.nome.split(' ')[0]}
+      footer={pai ? <Button size="lg" variant="tinted" label="Avisar falta" icon="calendar" onPress={() => setAbsence(true)} /> : undefined}>
       <Card style={s.hero}>
-        <Avatar name={a.nome} size={64} />
-        <Badge label={st.label} color={st.color} bg={st.bg} icon={st.icon} />
+        <Avatar name={a.nome} size="lg" onBoard={a.statusEmbarque === 'EMBARCADO'} />
+        <Text style={s.heroName}>{a.nome}</Text>
+        <Text style={s.center}>{a.turma} · {TURNO[a.turno]}</Text>
+        <StatusPill tone={st.tone} label={st.label} icon={st.icon} />
         {a.ultimoRegistro ? <Text style={s.center}>{a.ultimoRegistro}</Text> : null}
       </Card>
 
-      <SectionLabel>Trajeto</SectionLabel>
-      <Group>
-        <Row icon="home-outline" title="Embarque" subtitle={a.endereco_busca} />
-        <Row icon="school-outline" title="Destino" subtitle={a.endereco_entrega} />
-      </Group>
+      <SectionHeader title="Trajeto" />
+      <ListSection>
+        <ListRow icon="home" iconTone="primary" title="Embarque" subtitle={a.endereco_busca} />
+        <ListRow icon="school" iconTone="primary" title="Destino" subtitle={a.endereco_entrega} />
+      </ListSection>
 
       {a.observacoes_medicas && role !== 'INSTITUICAO' ? (
         <>
-          <View style={{ height: 16 }} />
-          <SectionLabel>Saúde</SectionLabel>
-          <Group><Row icon="medkit-outline" iconColor={colors.systemRed} iconBg={colors.systemRedLight} title="Observações" subtitle={a.observacoes_medicas} /></Group>
+          <SectionHeader title="Saúde" />
+          <ListSection><ListRow icon="medical" iconTone="error" title="Observações" subtitle={a.observacoes_medicas} subtitleLines={6} /></ListSection>
+          <SectionFooter>Visível só para a família e o motorista.</SectionFooter>
         </>
       ) : null}
 
       {role !== 'INSTITUICAO' && (
         <>
-          <View style={{ height: 16 }} />
-          <SectionLabel right={pai ? (
-            <TouchableScale onPress={() => setAddPessoa(true)} accessibilityRole="button" accessibilityLabel="Adicionar pessoa autorizada" hitSlop={10}>
-              <Text style={s.link}>Adicionar</Text>
-            </TouchableScale>) : undefined}>Pessoas autorizadas</SectionLabel>
+          <SectionHeader title="Pessoas autorizadas" action={pai ? { label: 'Adicionar', onPress: () => setAddPessoa(true) } : undefined} />
           {pessoas.length === 0 ? (
             <Card><Text style={s.muted}>Ninguém além dos responsáveis foi autorizado a buscar o aluno.</Text></Card>
           ) : (
-            <Group>
+            <ListSection>
               {pessoas.map((p) => (
-                <Row key={p.id} left={<Avatar name={p.nome} size={40} />} title={p.nome}
+                <ListRow key={p.id} leading={<Avatar name={p.nome} />} title={p.nome}
                   subtitle={`${p.grau_parentesco} · ${SecurityService.maskPhone(p.telefone)}`}
-                  right={pai ? (
-                    <TouchableScale onPress={() => remover(p.id, p.nome)} accessibilityRole="button" accessibilityLabel={`Remover ${p.nome}`} hitSlop={10}>
-                      <Ionicons name="trash-outline" size={20} color={colors.systemRed} />
-                    </TouchableScale>) : undefined} />
+                  trailing={pai ? <IconButton icon="trash" label={`Remover ${p.nome}`} variant="plain" tint={colors.error} onPress={() => remover(p.id, p.nome)} /> : undefined} />
               ))}
-            </Group>
+            </ListSection>
           )}
+          <SectionFooter>Só estas pessoas podem receber o aluno no ponto. O motorista confere o documento.</SectionFooter>
         </>
       )}
 
       {contrato && (
         <>
-          <View style={{ height: 16 }} />
-          <SectionLabel>Contrato</SectionLabel>
-          <Group><Row icon="document-text-outline" title={`Contrato ${contrato.numero_contrato}`} subtitle={`${brl(contrato.valor_mensalidade)} por mês`} onPress={() => stack.push('Contract', { alunoId: a.id })} /></Group>
+          <SectionHeader title="Contrato" />
+          <ListSection>
+            <ListRow icon="doc" iconTone="gray" title={`Contrato ${contrato.numero_contrato}`} subtitle={`${brl(contrato.valor_mensalidade)} por mês`} onPress={() => go.contract(a.id)} />
+          </ListSection>
         </>
       )}
 
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={a.id} />
       <AuthorizedSheet visible={addPessoa} onClose={() => setAddPessoa(false)} alunoId={a.id} />
-    </LargeTitleScreen>
+    </Screen>
   );
 };
 
 /* --------------------------------------------------------- Contrato */
-export const ContractScreen: React.FC<{ params?: { alunoId: string } }> = ({ params }) => {
+export const ContractScreen: React.FC<{ alunoId?: string }> = ({ alunoId }) => {
   const { contratos, alunos, nomes } = useApp();
-  const c = contratos.find((x) => x.aluno_id === params?.alunoId);
-  const aluno = alunos.find((x) => x.id === params?.alunoId);
-  if (!c) return <LargeTitleScreen title="Contrato"><EmptyState icon="document-text" title="Sem contrato" message="O contrato é criado quando o aluno é vinculado ao motorista." /></LargeTitleScreen>;
+  const c = contratos.find((x) => x.aluno_id === alunoId);
+  const aluno = alunos.find((x) => x.id === alunoId);
+  if (!c) return <Screen title="Contrato"><EmptyState icon="doc" title="Sem contrato" message="O contrato é criado quando o aluno é vinculado ao motorista." /></Screen>;
   return (
-    <LargeTitleScreen title="Contrato" subtitle={c.numero_contrato}>
-      <Group>
-        <Row icon="person-outline" title="Aluno" value={aluno?.nome ?? '-'} />
-        <Row icon="bus-outline" title="Transportador" value={nomes.transportador ?? '-'} />
-        <Row icon="cash-outline" title="Mensalidade" value={brl(c.valor_mensalidade)} />
-        <Row icon="calendar-outline" title="Vencimento" value={`Dia ${c.dia_vencimento}`} />
-        <Row icon="time-outline" title="Vigência" value={`${isoToBR(c.data_inicio)} a ${isoToBR(c.data_termino)}`} />
-        <Row icon="shield-checkmark-outline" title="Situação" value={c.status === 'ATIVO' ? 'Ativo' : c.status} />
-      </Group>
+    <Screen title="Contrato" subtitle={c.numero_contrato}>
+      <ListSection>
+        <ListRow icon="person" iconTone="gray" title="Aluno" value={aluno?.nome ?? '-'} />
+        <ListRow icon="van" iconTone="signal" title="Transportador" value={nomes.transportador ?? '-'} />
+        <ListRow icon="cash" iconTone="gray" title="Mensalidade" value={brl(c.valor_mensalidade)} />
+        <ListRow icon="calendar" iconTone="gray" title="Vencimento" value={`Dia ${c.dia_vencimento}`} />
+        <ListRow icon="clock" iconTone="gray" title="Vigência" value={`${isoToBR(c.data_inicio)} a ${isoToBR(c.data_termino)}`} />
+        <ListRow icon="shield" iconTone="success" title="Situação" value={c.status === 'ATIVO' ? 'Ativo' : c.status} />
+      </ListSection>
       {c.termos_condicoes ? (
         <>
-          <View style={{ height: 16 }} />
-          <SectionLabel>Termos</SectionLabel>
-          <Card><Text style={s.terms}>{c.termos_condicoes}</Text></Card>
+          <SectionHeader title="Termos" />
+          <Card><Text style={s.terms} selectable>{c.termos_condicoes}</Text></Card>
         </>
       ) : null}
-    </LargeTitleScreen>
+    </Screen>
   );
 };
 
 /* --------------------------------------------------------- Mensalidade / recibo */
-export const PaymentDetailScreen: React.FC<{ params?: { id: string } }> = ({ params }) => {
+export const PaymentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
   const { mensalidades, pagamentos, role, confirmarRecebimento, alunos, contratos } = useApp();
-  const stack = useStack();
   const [pay, setPay] = useState(false);
   const [busy, setBusy] = useState(false);
-  const m = mensalidades.find((x) => x.id === params?.id);
-  if (!m) return <LargeTitleScreen title="Mensalidade"><EmptyState icon="alert-circle" title="Não encontrada" message="Volte e tente novamente." /></LargeTitleScreen>;
+  const m = mensalidades.find((x) => x.id === id);
+  if (!m) return <Screen title="Mensalidade"><EmptyState icon="alert" title="Não encontrada" message="Volte e tente novamente." /></Screen>;
   const pend = pagamentos.find((p) => p.mensalidade_id === m.id && p.status === 'PENDENTE');
   const conf = pagamentos.find((p) => p.mensalidade_id === m.id && p.status === 'CONFIRMADO');
   const contrato = contratos.find((c) => c.id === m.contrato_id);
@@ -143,59 +135,61 @@ export const PaymentDetailScreen: React.FC<{ params?: { id: string } }> = ({ par
 
   const confirmar = async (aceitar: boolean) => {
     setBusy(true);
-    try { await confirmarRecebimento(pend!.id, aceitar); } catch (e) { Alert.alert('Erro', (e as Error).message); } finally { setBusy(false); }
+    try { await confirmarRecebimento(pend!.id, aceitar); } catch (e) { notify('Erro', (e as Error).message); } finally { setBusy(false); }
   };
   const recibo = pago ? SecurityService.generateReceiptHash(m.id, m.valor, m.criado_em) : null;
+  const titulo = `${nomeMes(m.mes_referencia)} ${m.ano_referencia}`;
 
   return (
-    <LargeTitleScreen title={`${nomeMes(m.mes_referencia)} ${m.ano_referencia}`} subtitle={aluno?.nome}
-      footer={role === 'RESPONSAVEL' && !pago && !pend ? <AppleButton size="lg" title={`Pagar ${brl(total)}`} onPress={() => setPay(true)} /> :
+    <Screen title={titulo}
+      headerRight={recibo ? <IconButton icon="share" label="Compartilhar recibo" variant="plain"
+        onPress={() => share({ title: `Recibo · ${titulo}`, message: `Recibo VanEscolar GPS\n${aluno?.nome ?? ''} · ${titulo}\n${brl(m.valor)}\nAutenticação: ${recibo}` })} /> : undefined}
+      footer={role === 'RESPONSAVEL' && !pago && !pend ? <Button variant="filled" label={`Pagar ${brl(total)}`} onPress={() => setPay(true)} /> :
         role === 'TRANSPORTADOR' && pend ? (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <AppleButton style={{ flex: 1 }} variant="secondary" title="Não recebi" onPress={() => confirmar(false)} disabled={busy} />
-            <AppleButton style={{ flex: 1 }} title="Confirmar" onPress={() => confirmar(true)} loading={busy} />
+          <View style={{ flexDirection: 'row', gap: gap.related }}>
+            <Button style={{ flex: 1 }} variant="bordered" label="Não recebi" onPress={() => confirmar(false)} disabled={busy} />
+            <Button style={{ flex: 1 }} label="Confirmar" onPress={() => confirmar(true)} loading={busy} />
           </View>) : undefined}>
-      <Card style={{ alignItems: 'center', gap: 6 }}>
-        <Text style={s.amount}>{brl(total)}</Text>
-        <Badge
-          label={pago ? 'Pago' : pend ? 'Aguardando confirmação' : atrasado ? 'Em atraso' : 'Em aberto'}
-          color={pago ? colors.systemGreenText : atrasado ? colors.systemRedText : pend ? colors.systemBlueText : colors.accentText}
-          bg={pago ? colors.systemGreenLight : atrasado ? colors.systemRedLight : pend ? colors.systemBlueLight : colors.accentLight}
-          icon={pago ? 'checkmark-circle' : pend ? 'hourglass' : atrasado ? 'alert-circle' : 'time'}
+      <View style={s.amountBlock}>
+        {aluno ? <Text style={s.center}>Mensalidade · {aluno.nome}</Text> : null}
+        <Text style={s.amount} accessibilityLabel={`Valor ${brl(total)}`}>{brl(total)}</Text>
+        <StatusPill
+          tone={pago ? 'success' : atrasado ? 'error' : pend ? 'info' : 'neutral'}
+          label={pago ? 'Pago' : pend ? 'Aguardando confirmação' : atrasado ? 'Em atraso' : `Vence ${isoToBR(m.data_vencimento)}`}
         />
-        <Text style={s.muted}>Vencimento {isoToBR(m.data_vencimento)}</Text>
-      </Card>
-      <View style={{ height: 16 }} />
-      <Group>
-        <Row title="Mensalidade" value={brl(m.valor)} />
-        {m.valor_multa_juros > 0 ? <Row title="Multa e juros" value={brl(m.valor_multa_juros)} /> : null}
-        {conf ? <Row title="Forma de pagamento" value={conf.metodo === 'CARTAO' ? 'Cartão' : conf.metodo === 'BOLETO' ? 'Boleto/outro' : 'PIX'} /> : null}
-        {conf ? <Row title="Pago em" value={new Date(conf.data_pagamento).toLocaleDateString('pt-BR')} /> : null}
-      </Group>
-      {recibo && (
+      </View>
+      <ListSection>
+        <ListRow title="Mensalidade" value={brl(m.valor)} />
+        {m.valor_multa_juros > 0 ? <ListRow title="Multa e juros" value={brl(m.valor_multa_juros)} /> : null}
+        <ListRow title="Vencimento" value={isoToBR(m.data_vencimento)} />
+        {conf ? <ListRow title="Forma de pagamento" value={conf.metodo === 'CARTAO' ? 'Cartão' : conf.metodo === 'BOLETO' ? 'Boleto/outro' : 'PIX'} /> : null}
+        {conf ? <ListRow title="Pago em" value={new Date(conf.data_pagamento).toLocaleDateString('pt-BR')} /> : null}
+      </ListSection>
+      {recibo ? (
         <>
-          <View style={{ height: 16 }} />
-          <SectionLabel>Recibo digital</SectionLabel>
-          <Card><Text selectable style={s.hash}>{recibo}</Text><Text style={[s.muted, { marginTop: 6 }]}>Código de autenticação do recibo.</Text></Card>
+          <SectionHeader title="Recibo digital" />
+          <Card><Text selectable style={s.hash}>{recibo}</Text></Card>
+          <SectionFooter>Código de autenticação do recibo.</SectionFooter>
         </>
-      )}
+      ) : !pago ? <SectionFooter>O recibo digital fica disponível aqui assim que o motorista confirmar o recebimento.</SectionFooter> : null}
       {contrato && (
         <>
-          <View style={{ height: 16 }} />
-          <Group><Row icon="document-text-outline" title="Ver contrato" onPress={() => stack.push('Contract', { alunoId: contrato.aluno_id })} /></Group>
+          <SectionHeader title="Contrato" />
+          <ListSection><ListRow icon="doc" iconTone="gray" title="Ver contrato" onPress={() => go.contract(contrato.aluno_id)} /></ListSection>
         </>
       )}
       <PaySheet visible={pay} onClose={() => setPay(false)} mensalidade={m} />
-    </LargeTitleScreen>
+    </Screen>
   );
 };
 
 const s = StyleSheet.create({
-  hero: { alignItems: 'center', gap: 10, marginBottom: 18 },
-  center: { ...type.footnote, color: colors.textTertiary, textAlign: 'center' },
-  muted: { ...type.footnote, color: colors.textTertiary },
-  link: { ...type.footnote, fontWeight: '700', color: colors.accentDark, textTransform: 'none' },
-  terms: { ...type.subhead, color: colors.textSecondary },
-  amount: { fontSize: 42, fontWeight: '800', letterSpacing: -1.4, color: colors.textPrimary },
-  hash: { ...type.footnote, fontFamily: undefined, color: colors.textSecondary },
+  hero: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  heroName: { ...type.title2, color: colors.label, textAlign: 'center', marginTop: spacing.xs },
+  center: { ...type.footnote, color: colors.secondaryLabel, textAlign: 'center' },
+  muted: { ...type.subheadline, color: colors.secondaryLabel },
+  terms: { ...type.subheadline, color: colors.secondaryLabel },
+  amountBlock: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg, marginBottom: spacing.sm },
+  amount: { ...type.amount, color: colors.label },
+  hash: { ...type.footnote, color: colors.secondaryLabel, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
 });

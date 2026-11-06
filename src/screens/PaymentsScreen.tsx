@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
+import { gap, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-import { LargeTitleScreen } from '../components/ui/LargeTitleScreen';
 import { FadeInUp } from '../components/ui/FadeInUp';
-import { AppleButton } from '../components/AppleButton';
-import { Badge, Card, EmptyState, Group, Row, SectionLabel, Segmented, Stat } from '../components/ui/kit';
+import {
+  Button, Card, EmptyState, ListRow, ListSection, Screen, SectionHeader, SegmentedControl, Stat, StatusPill,
+} from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
-import { useStack } from '../navigation/Stack';
+import { go } from '../navigation/routes';
 import { PaySheet } from '../sheets/Sheets';
 import { brl, isoToBR, nomeMes } from '../utils/format';
 import { Mensalidade } from '../types/database';
@@ -16,7 +17,6 @@ type Filtro = 'ABERTAS' | 'PAGAS' | 'TODAS';
 
 export const PaymentsScreen: React.FC = () => {
   const { mensalidades, pagamentos, contratos, alunos, role, recarregar } = useApp();
-  const stack = useStack();
   const [filtro, setFiltro] = useState<Filtro>('ABERTAS');
   const [pay, setPay] = useState<Mensalidade | null>(null);
   const motorista = role === 'TRANSPORTADOR';
@@ -36,87 +36,89 @@ export const PaymentsScreen: React.FC = () => {
   const aReceber = abertas.reduce((t, m) => t + m.valor + (m.valor_multa_juros ?? 0), 0);
   const recebido = mensalidades.filter((m) => m.status === 'PAGO').reduce((t, m) => t + m.valor, 0);
 
-  const badge = (m: Mensalidade) => {
-    if (m.status === 'PAGO') return <Badge label="Pago" color={colors.systemGreenText} bg={colors.systemGreenLight} />;
-    if (pendente(m)) return <Badge label="Em análise" color={colors.systemBlueText} bg={colors.systemBlueLight} />;
-    if (efetivo(m) === 'VENCIDO') return <Badge label="Atrasada" color={colors.systemRedText} bg={colors.systemRedLight} />;
-    return <Badge label="Aberta" color={colors.accentText} bg={colors.accentLight} />;
+  const pill = (m: Mensalidade) => {
+    if (m.status === 'PAGO') return <StatusPill tone="success" label="Pago" />;
+    if (pendente(m)) return <StatusPill tone="info" label="Em análise" />;
+    if (efetivo(m) === 'VENCIDO') return <StatusPill tone="error" label="Atrasada" />;
+    return <StatusPill tone="neutral" label="Aberta" />;
   };
 
   return (
-    <LargeTitleScreen title="Financeiro" subtitle={motorista ? 'Mensalidades dos seus alunos' : undefined} onRefresh={recarregar}>
+    <Screen title={motorista ? 'Receber' : 'Pagamentos'} subtitle={motorista ? 'Mensalidades dos seus alunos' : undefined} onRefresh={recarregar}>
       {mensalidades.length === 0 ? (
         <EmptyState icon="wallet" title="Sem mensalidades" message={motorista
           ? 'As mensalidades são geradas quando os pais cadastram o aluno com o seu código.'
           : 'As mensalidades são criadas assim que você cadastra o aluno e vincula ao motorista.'} />
       ) : (
         <>
-          <FadeInUp index={0} style={{ marginBottom: 16 }}>
+          <FadeInUp index={0} style={{ marginBottom: spacing.sm }}>
             {motorista ? (
               <Card>
                 <View style={{ flexDirection: 'row' }}>
-                  <Stat label="A receber" value={brl(aReceber)} tone={colors.accentDark} />
-                  <Stat label="Recebido" value={brl(recebido)} tone={colors.systemGreenText} />
+                  <Stat label="A receber" value={brl(aReceber)} />
+                  <Stat label="Recebido" value={brl(recebido)} tone="success" />
                 </View>
               </Card>
             ) : proxima ? (
-              <Card style={{ gap: 6 }}>
-                <Text style={s.cap}>PRÓXIMA MENSALIDADE</Text>
+              <Card style={{ gap: spacing.sm }}>
+                <Text style={s.cap}>Próxima mensalidade</Text>
                 <Text style={s.amount}>{brl(proxima.valor + (proxima.valor_multa_juros ?? 0))}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {badge(proxima)}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+                  {pill(proxima)}
                   <Text style={s.muted}>{nomeMes(proxima.mes_referencia)} · vence {isoToBR(proxima.data_vencimento)}</Text>
                 </View>
-                {!pendente(proxima) && <View style={{ marginTop: 10 }}><AppleButton size="lg" title="Pagar agora" onPress={() => setPay(proxima)} /></View>}
-                {pendente(proxima) && <Text style={[s.muted, { marginTop: 8 }]}>Pagamento informado. Aguardando o motorista confirmar.</Text>}
+                {!pendente(proxima) && <View style={{ marginTop: spacing.sm }}><Button variant="filled" label="Pagar agora" onPress={() => setPay(proxima)} /></View>}
+                {pendente(proxima) && <Text style={[s.muted, { marginTop: spacing.xs }]}>Pagamento informado. Aguardando o motorista confirmar.</Text>}
               </Card>
             ) : (
-              <Card style={{ alignItems: 'center', gap: 6 }}>
-                <Text style={s.amount}>Tudo em dia</Text>
+              <Card style={{ alignItems: 'center', gap: spacing.s6 }}>
+                <Text style={s.title}>Tudo em dia</Text>
                 <Text style={s.muted}>Nenhuma mensalidade em aberto.</Text>
               </Card>
             )}
           </FadeInUp>
 
           {motorista && aguardando.length > 0 && (
-            <FadeInUp index={1} style={{ marginBottom: 16 }}>
-              <SectionLabel>Confirme o recebimento</SectionLabel>
-              <Group>
+            <FadeInUp index={1}>
+              <SectionHeader title="Confirme o recebimento" />
+              <ListSection>
                 {aguardando.map((m) => (
-                  <Row key={m.id} icon="hourglass-outline" iconColor={colors.systemBlueText} iconBg={colors.systemBlueLight}
+                  <ListRow key={m.id} icon="hourglass" iconTone="info"
                     title={nomeAluno(m) || `${nomeMes(m.mes_referencia)}`} subtitle={`${nomeMes(m.mes_referencia)} · ${brl(m.valor)}`}
-                    onPress={() => stack.push('PaymentDetail', { id: m.id })} />
+                    onPress={() => go.payment(m.id)} />
                 ))}
-              </Group>
+              </ListSection>
             </FadeInUp>
           )}
 
           <FadeInUp index={2}>
-            <View style={{ marginBottom: 12 }}>
-              <Segmented<Filtro> value={filtro} onChange={setFiltro}
+            <SectionHeader title="Mensalidades" />
+            <View style={{ marginBottom: gap.related + spacing.xs }}>
+              <SegmentedControl<Filtro> value={filtro} onChange={setFiltro} accessibilityLabel="Filtrar mensalidades"
                 options={[{ value: 'ABERTAS', label: 'Em aberto' }, { value: 'PAGAS', label: 'Pagas' }, { value: 'TODAS', label: 'Todas' }]} />
             </View>
             {lista.length === 0 ? (
-              <EmptyState icon="checkmark-done" title="Nada aqui" message="Nenhuma mensalidade neste filtro." />
+              <EmptyState icon="checkDone" title="Nada aqui" message="Nenhuma mensalidade neste filtro." />
             ) : (
-              <Group>
+              <ListSection>
                 {lista.map((m) => (
-                  <Row key={m.id} title={`${nomeMes(m.mes_referencia)} ${m.ano_referencia}`}
+                  <ListRow key={m.id} title={`${nomeMes(m.mes_referencia)} ${m.ano_referencia}`}
                     subtitle={`${motorista && nomeAluno(m) ? nomeAluno(m) + ' · ' : ''}${brl(m.valor)} · vence ${isoToBR(m.data_vencimento)}`}
-                    right={badge(m)} onPress={() => stack.push('PaymentDetail', { id: m.id })} chevron />
+                    trailing={pill(m)} chevron onPress={() => go.payment(m.id)} />
                 ))}
-              </Group>
+              </ListSection>
             )}
           </FadeInUp>
         </>
       )}
       <PaySheet visible={!!pay} mensalidade={pay} onClose={() => setPay(null)} />
-    </LargeTitleScreen>
+    </Screen>
   );
 };
 
 const s = StyleSheet.create({
-  cap: { ...type.caption, color: colors.textTertiary, letterSpacing: 1 },
-  amount: { fontSize: 38, fontWeight: '800', letterSpacing: -1.2, color: colors.textPrimary },
-  muted: { ...type.footnote, color: colors.textTertiary },
+  cap: { ...type.sectionHeader, color: colors.secondaryLabel },
+  amount: { ...type.amount, color: colors.label },
+  title: { ...type.title2, color: colors.label },
+  muted: { ...type.footnote, color: colors.secondaryLabel },
 });

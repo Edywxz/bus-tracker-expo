@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { spacing } from '../theme/tokens';
+import { gap, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-import { LargeTitleScreen } from '../components/ui/LargeTitleScreen';
 import { FadeInUp } from '../components/ui/FadeInUp';
-import { AppleButton } from '../components/AppleButton';
-import { Avatar, Badge, Banner, Card, EmptyState, Group, ProgressBar, Row, SectionLabel, Stat, statusAluno } from '../components/ui/kit';
+import {
+  Avatar, Button, Card, EmptyState, ListRow, ListSection, Notice, ProgressBar, Screen, SectionHeader, Stat, StatusPill, statusAluno,
+} from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { useApp } from '../context/AppContext';
-import { useStack } from '../navigation/Stack';
+import { go } from '../navigation/routes';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
 
 export const HomeScreen: React.FC = () => {
@@ -18,7 +17,6 @@ export const HomeScreen: React.FC = () => {
     role, perfil, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo,
     simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes,
   } = useApp();
-  const stack = useStack();
   const [absence, setAbsence] = useState(false);
   const [emergency, setEmergency] = useState(false);
   const [start, setStart] = useState(false);
@@ -31,10 +29,12 @@ export const HomeScreen: React.FC = () => {
   const naEscola = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO').length;
   const ativos = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').length;
   const primeiro = (perfil?.nome ?? (role === 'TRANSPORTADOR' ? 'Marcos' : 'Carlos')).split(' ')[0];
+  const motorista = role === 'TRANSPORTADOR';
+  const pai = role === 'RESPONSAVEL';
 
-  const title = role === 'TRANSPORTADOR' ? 'Rota de hoje' : role === 'INSTITUICAO' ? 'Chegadas' : `Olá, ${primeiro}`;
+  const title = motorista ? 'Rota de hoje' : role === 'INSTITUICAO' ? 'Chegadas' : `Olá, ${primeiro}`;
   const subtitle = emRota
-    ? role === 'RESPONSAVEL' ? 'A van está a caminho' : 'Rota em andamento'
+    ? pai ? 'A van está a caminho' : 'Rota em andamento'
     : alunos.length ? 'Nenhuma rota em andamento agora' : undefined;
 
   const concluir = async () => {
@@ -45,15 +45,15 @@ export const HomeScreen: React.FC = () => {
   /* ---- estados vazios por perfil ---- */
   const vazio = (() => {
     if (alunos.length > 0) return null;
-    if (role === 'RESPONSAVEL')
-      return <EmptyState icon="person-add" title="Vamos começar" message="Cadastre seu filho com o código que o motorista passou. Em segundos você já acompanha a van."
-        action={<AppleButton size="lg" title="Adicionar aluno" onPress={() => setAddStudent(true)} />} />;
+    if (pai)
+      return <EmptyState icon="personAdd" title="Vamos começar" message="Cadastre seu filho com o código que o motorista passou. Em segundos você já acompanha a van."
+        action={<Button size="lg" label="Adicionar aluno" onPress={() => setAddStudent(true)} />} />;
     return (
-      <Card style={{ alignItems: 'center', gap: 8 }}>
-        <Text style={s.caption}>SEU CÓDIGO DE CONVITE</Text>
-        <Text style={s.code} selectable accessibilityLabel={`Código ${codigoConvite ?? ''}`}>{codigoConvite ?? '——'}</Text>
+      <Card style={{ alignItems: 'center', gap: spacing.s6 }}>
+        <Text style={s.caption}>Seu código de convite</Text>
+        <Text style={s.code} selectable accessibilityLabel={`Código ${(codigoConvite ?? '').split('').join(' ')}`}>{codigoConvite ?? '——'}</Text>
         <Text style={s.mutedCenter}>
-          {role === 'TRANSPORTADOR'
+          {motorista
             ? 'Passe este código aos pais. Quando cadastrarem o aluno, ele aparece aqui na sua rota.'
             : 'Passe este código aos pais para vincular a escola aos alunos e acompanhar as chegadas.'}
         </Text>
@@ -62,27 +62,36 @@ export const HomeScreen: React.FC = () => {
   })();
 
   return (
-    <LargeTitleScreen title={title} subtitle={subtitle} onRefresh={recarregar}>
-      {role === 'TRANSPORTADOR' && !temVeiculo && !isDemo && (
+    <Screen title={title} subtitle={subtitle} onRefresh={recarregar}>
+      {motorista && !temVeiculo && !isDemo && (
         <FadeInUp index={0} style={s.block}>
-          <Banner tone="warning" message="Cadastre seu veículo para poder iniciar rotas." />
-          <View style={{ height: 10 }} />
-          <AppleButton variant="secondary" title="Cadastrar veículo" onPress={() => stack.push('Vehicle')}
-            icon={<Ionicons name="bus-outline" size={16} color={colors.textPrimary} />} />
+          <Notice tone="warning" message="Cadastre seu veículo para poder iniciar rotas." />
+          <View style={{ height: gap.related }} />
+          <Button variant="bordered" label="Cadastrar veículo" icon="vanOutline" onPress={go.vehicle} />
         </FadeInUp>
       )}
 
       {vazio ? <FadeInUp index={1}>{vazio}</FadeInUp> : (
         <>
+          {/* Aviso principal (pais, rota ao vivo) — único card amarelo da tela */}
+          {pai && emRota && (
+            <FadeInUp index={0} style={s.block}>
+              <Card variant="signal">
+                <StatusPill tone="signal" label="A caminho" live />
+                <Text style={s.signalTitle}>{nomes.transportador ?? 'A van'} está na rota</Text>
+                <Text style={s.signalText}>Leve seu filho até o portão. Avisamos de novo quando a van estiver chegando.</Text>
+              </Card>
+            </FadeInUp>
+          )}
+
           {/* Mapa + telemetria */}
           <FadeInUp index={0} style={s.block}>
-            <Card padded={false} style={{ padding: 10 }}>
+            <Card padded={false} style={{ padding: spacing.sm }}>
               <View style={s.mapHead}>
-                <Badge
+                <StatusPill
+                  tone={emRota ? 'signal' : temViagem && viagemAtiva.status === 'CONCLUIDA' ? 'success' : 'neutral'}
                   label={emRota ? 'Em trânsito' : temViagem && viagemAtiva.status === 'CONCLUIDA' ? 'Rota concluída' : 'Parada'}
-                  color={emRota ? colors.systemGreenText : colors.textSecondary}
-                  bg={emRota ? colors.systemGreenLight : colors.background}
-                  icon={emRota ? 'radio-button-on' : 'pause-circle'}
+                  live={emRota}
                 />
                 <Text style={s.trip}>{viagemAtiva.tipo_viagem === 'IDA' ? 'Ida à escola' : 'Volta para casa'}</Text>
               </View>
@@ -98,66 +107,64 @@ export const HomeScreen: React.FC = () => {
                 <Stat label="Na escola" value={`${naEscola}`} />
                 <Stat label="Previstos" value={`${ativos}`} />
               </View>
-              {emRota && ativos > 0 && <View style={{ paddingHorizontal: 8, paddingBottom: 6 }}><ProgressBar value={aBordo + naEscola} total={ativos} color={colors.systemGreen} /></View>}
+              {emRota && ativos > 0 && (
+                <View style={{ paddingHorizontal: spacing.sm, paddingBottom: spacing.sm }}>
+                  <ProgressBar value={aBordo + naEscola} total={ativos} tone="signal" accessibilityLabel="Progresso da rota" />
+                </View>
+              )}
             </Card>
           </FadeInUp>
 
           {/* Ações por perfil */}
           <FadeInUp index={1} style={s.block}>
-            {role === 'TRANSPORTADOR' && (
-              <View style={{ gap: 10 }}>
+            {motorista && (
+              <View style={{ gap: gap.related }}>
                 {emRota ? (
                   <View style={s.row}>
-                    <AppleButton style={{ flex: 1 }} variant="secondary" title="Concluir rota" onPress={concluir} loading={finishing}
-                      icon={<Ionicons name="flag-outline" size={16} color={colors.textPrimary} />} />
-                    <AppleButton style={{ flex: 1 }} variant="destructive" title="Ocorrência" onPress={() => setEmergency(true)}
-                      icon={<Ionicons name="warning-outline" size={16} color={colors.systemRed} />} />
+                    <Button style={{ flex: 1 }} variant="bordered" label="Concluir rota" icon="flag" onPress={concluir} loading={finishing} />
+                    <Button style={{ flex: 1 }} variant="tinted" role="destructive" label="Ocorrência" icon="warning" onPress={() => setEmergency(true)} />
                   </View>
                 ) : (
-                  <AppleButton size="lg" title="Iniciar rota" onPress={() => setStart(true)}
-                    icon={<Ionicons name="play" size={16} color="#fff" />} disabled={!temVeiculo && !isDemo} />
+                  <Button size="lg" label="Iniciar rota" icon="play" onPress={() => setStart(true)} disabled={!temVeiculo && !isDemo} />
                 )}
                 {isDemo && emRota && (
-                  <AppleButton variant="tonal" title="Avançar GPS (simulação)" onPress={simularPassoGps}
-                    icon={<Ionicons name="arrow-forward-circle-outline" size={16} color={colors.accentText} />} />
+                  <Button variant="gray" label="Avançar GPS (simulação)" icon="forward" onPress={simularPassoGps} />
                 )}
               </View>
             )}
-            {role === 'RESPONSAVEL' && (
+            {pai && (
               <View style={s.row}>
-                <AppleButton style={{ flex: 1 }} variant="tonal" title="Avisar falta" onPress={() => setAbsence(true)}
-                  icon={<Ionicons name="calendar-outline" size={16} color={colors.accentText} />} />
+                <Button style={{ flex: 1 }} variant="tinted" label="Avisar falta" icon="calendar" onPress={() => setAbsence(true)} />
                 {isDemo && emRota && (
-                  <AppleButton style={{ flex: 1 }} variant="secondary" title="Avançar van" onPress={simularPassoGps}
-                    icon={<Ionicons name="arrow-forward-circle-outline" size={16} color={colors.textPrimary} />} />
+                  <Button style={{ flex: 1 }} variant="gray" label="Avançar van" icon="forward" onPress={simularPassoGps} />
                 )}
               </View>
             )}
-            {erro && <View style={{ marginTop: 10 }}><Banner tone="error" message={erro} /></View>}
-            {role === 'RESPONSAVEL' && !emRota && nomes.transportador && (
-              <Text style={[s.mutedCenter, { marginTop: 12 }]}>{nomes.transportador} ainda não iniciou a rota de hoje.</Text>
+            {erro && <View style={{ marginTop: gap.related }}><Notice tone="error" message={erro} /></View>}
+            {pai && !emRota && nomes.transportador && (
+              <Text style={[s.mutedCenter, { marginTop: spacing.md }]}>{nomes.transportador} ainda não iniciou a rota de hoje.</Text>
             )}
           </FadeInUp>
 
-          {/* Lista de alunos */}
+          {/* Paradas */}
           <FadeInUp index={2}>
-            <SectionLabel>{role === 'INSTITUICAO' ? 'Alunos desta escola' : 'Paradas'}</SectionLabel>
-            <Group>
+            <SectionHeader title={role === 'INSTITUICAO' ? 'Alunos desta escola' : 'Paradas'} />
+            <ListSection>
               {alunos.map((a) => {
                 const st = statusAluno(a.statusEmbarque);
                 return (
-                  <Row
+                  <ListRow
                     key={a.id}
-                    left={<Avatar name={a.nome} />}
+                    leading={<Avatar name={a.nome} onBoard={a.statusEmbarque === 'EMBARCADO'} />}
                     title={a.nome}
                     subtitle={a.ultimoRegistro ?? a.endereco_busca}
-                    right={<Badge label={st.label} color={st.color} bg={st.bg} icon={st.icon} />}
-                    onPress={role === 'INSTITUICAO' ? undefined : () => stack.push('StudentDetail', { id: a.id })}
+                    trailing={<StatusPill tone={st.tone} label={st.label} />}
+                    onPress={role === 'INSTITUICAO' ? undefined : () => go.student(a.id)}
                     chevron={false}
                   />
                 );
               })}
-            </Group>
+            </ListSection>
           </FadeInUp>
         </>
       )}
@@ -166,17 +173,19 @@ export const HomeScreen: React.FC = () => {
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
-    </LargeTitleScreen>
+    </Screen>
   );
 };
 
 const s = StyleSheet.create({
-  block: { marginBottom: spacing.lg },
-  row: { flexDirection: 'row', gap: 10 },
-  mapHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 8 },
-  trip: { ...type.footnote, fontWeight: '600', color: colors.textTertiary },
-  stats: { flexDirection: 'row', paddingHorizontal: 10, paddingVertical: 14 },
-  caption: { ...type.caption, color: colors.textTertiary, letterSpacing: 1 },
-  code: { fontSize: 38, fontWeight: '800', letterSpacing: 6, color: colors.textPrimary },
-  mutedCenter: { ...type.subhead, color: colors.textTertiary, textAlign: 'center' },
+  block: { marginBottom: gap.section - spacing.sm },
+  row: { flexDirection: 'row', gap: gap.related },
+  mapHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm + 2 },
+  trip: { ...type.footnote, fontWeight: '600', color: colors.secondaryLabel },
+  stats: { flexDirection: 'row', paddingHorizontal: spacing.sm, paddingVertical: spacing.md + 2 },
+  caption: { ...type.sectionHeader, color: colors.secondaryLabel },
+  code: { fontSize: 38, fontWeight: '800', letterSpacing: 6, color: colors.label, fontVariant: ['tabular-nums'] },
+  mutedCenter: { ...type.subheadline, color: colors.secondaryLabel, textAlign: 'center' },
+  signalTitle: { ...type.headline, color: colors.onSignalContainer, marginTop: spacing.md },
+  signalText: { ...type.subheadline, color: colors.onSignalContainer, marginTop: spacing.xs },
 });
