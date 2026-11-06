@@ -199,7 +199,7 @@ export class DataService {
   }
 
   /** Pede ao servidor para geocodificar o endereço (uma vez; não sobrescreve pino ajustado à mão). */
-  static async geocodificar(enderecoId: string): Promise<{ ok: boolean; precisao?: string }> {
+  static async geocodificar(enderecoId: string): Promise<{ ok: boolean; precisao?: string; motivo?: string }> {
     const { data, error } = await db.functions.invoke('geocode-endereco', { body: { endereco_id: enderecoId } });
     if (error) throw error;
     return data;

@@ -9,9 +9,10 @@ import {
   Avatar, Button, GlassSurface, IconButton, Notice, ProgressBar, PullDownButton, StatusPill, statusAluno,
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
+import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { primeiroAChegar } from '../utils/proximidade';
+import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
 
 const TURNO: Record<string, string> = { MANHA: 'manhã', TARDE: 'tarde', INTEGRAL: 'integral', NOITE: 'noite' };
@@ -30,7 +31,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
  */
 export const HomeScreen: React.FC = () => {
   const {
-    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota,
+    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo,
     simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes,
   } = useApp();
   const [absence, setAbsence] = useState(false);
@@ -198,16 +199,36 @@ export const HomeScreen: React.FC = () => {
 
   const filhoIdx = filho ? alunos.indexOf(filho) : undefined;
 
+  // Mapa real: cada passageiro aparece onde importa agora (a bordo → onde desce; senão → onde embarca).
+  const paradasMapa: MapaParada[] = alunos.flatMap((a) => {
+    const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
+    const p = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) ?? casa : casa;
+    if (!p) return [];
+    return [{ id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque: aBordoMeus >= 2 && proximo?.aluno.id === a.id, casa: pai && a.id === filho?.id }];
+  });
+  const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
+  const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.mapLand }}>
       <Stack.Screen options={{ headerShown: false, title: 'Rota' }} />
-      <RouteMap
-        step={gpsStep}
-        ativo={emRota && gpsAtivo}
-        pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque, parada: a.parada }))}
-        homeIndex={filhoIdx}
-        accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
-      />
+      {mapaReal ? (
+        <LiveMap
+          van={vanGeo}
+          vanAtiva={emRota && gpsAtivo}
+          trilha={rotaGeo}
+          paradas={paradasMapa}
+          accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
+        />
+      ) : (
+        <RouteMap
+          step={gpsStep}
+          ativo={emRota && gpsAtivo}
+          pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque, parada: a.parada }))}
+          homeIndex={filhoIdx}
+          accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
+        />
+      )}
 
       {/* botões de vidro sobre o mapa */}
       <SafeAreaView edges={['top']} style={s.top} pointerEvents="box-none">

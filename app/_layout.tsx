@@ -44,6 +44,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="conversa" options={{ title: 'Conversa' }} />
         <Stack.Screen name="aluno/[id]" options={{ title: 'Detalhes' }} />
+        <Stack.Screen name="pino" options={{ title: 'Confirmar localização' }} />
         <Stack.Screen name="contrato/[alunoId]" options={{ title: 'Contrato' }} />
         <Stack.Screen name="mensalidade/[id]" options={{ title: 'Mensalidade' }} />
         <Stack.Screen name="veiculo" options={{ title: 'Veículo' }} />

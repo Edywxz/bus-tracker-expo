@@ -106,12 +106,12 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
   const [passo, setPasso] = useState<1 | 2>(1);
   const [codigo, setCodigo] = useState('');
   const [transp, setTransp] = useState<{ id: string; nome: string } | null>(null);
-  const [f, setF] = useState({ nome: '', nasc: '', turma: '', turno: 'MANHA' as 'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE', busca: '', entrega: '', obs: '', escola: '' });
+  const [f, setF] = useState({ nome: '', nasc: '', turma: '', turno: 'MANHA' as 'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE', busca: '', local: '', entrega: '', obs: '', escola: '' });
   const [erros, setErros] = useState<Record<string, string>>({});
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    if (visible) { setPasso(1); setCodigo(''); setTransp(null); setError(null); setErros({}); setF({ nome: '', nasc: '', turma: '', turno: 'MANHA', busca: '', entrega: '', obs: '', escola: '' }); }
+    if (visible) { setPasso(1); setCodigo(''); setTransp(null); setError(null); setErros({}); setF({ nome: '', nasc: '', turma: '', turno: 'MANHA', busca: '', local: '', entrega: '', obs: '', escola: '' }); }
   }, [visible]); // eslint-disable-line
 
   const verificar = () => run(async () => {
@@ -128,13 +128,14 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
     if (!iso) e.nasc = 'Use o formato DD/MM/AAAA.';
     if (!f.turma.trim()) e.turma = 'Informe a turma.';
     if (f.busca.trim().length < 5) e.busca = 'Informe o endereço de embarque.';
+    if (f.local.trim().length < 3) e.local = 'Informe bairro e cidade, ou o CEP.';
     if (f.escola.trim().length < 2) e.escola = 'Informe a escola do dependente.';
     if (f.entrega.trim().length < 3) e.entrega = 'Informe o destino.';
     setErros(e);
     if (Object.keys(e).length) return;
     if (await run(() => cadastrarAluno({
       nome: f.nome.trim(), dataNascimento: iso!, turma: f.turma.trim(), turno: f.turno,
-      enderecoBusca: f.busca.trim(), enderecoEntrega: f.entrega.trim(), observacoes: f.obs.trim(),
+      enderecoBusca: `${f.busca.trim()}, ${f.local.trim()}`, enderecoEntrega: f.entrega.trim(), observacoes: f.obs.trim(),
       codigoTransportador: codigo, escolaNome: f.escola.trim() || undefined, escolaEndereco: f.entrega.trim(),
     }))) onClose();
   };
@@ -166,8 +167,9 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
           <Label>Turno</Label>
           <Row2>{TURNOS.map((t) => <Chip key={t.v} label={t.l} selected={f.turno === t.v} onPress={() => setF((p) => ({ ...p, turno: t.v }))} />)}</Row2>
           <TextField label="Onde o dependente embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" helper="Usamos este endereço seu para localizar o ponto no mapa (powered by Geoapify)." />
+          <TextField label="Bairro e cidade, ou CEP" value={f.local} onChangeText={set('local')} error={erros.local} icon="location" placeholder="Ex.: Bela Vista, São Paulo ou 01310-100" helper="Evita localizar uma rua de mesmo nome em outro bairro." />
           <TextField label="Escola" value={f.escola} onChangeText={set('escola')} error={erros.escola} icon="school" autoCapitalize="words" placeholder="Ex.: Colégio Santa Maria" />
-          <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="location" placeholder="Endereço da escola e portão" />
+          <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="location" placeholder="Rua, número, bairro, cidade (e portão)" />
           <TextField label="Observações de saúde (opcional)" value={f.obs} onChangeText={set('obs')} multiline helper="Alergias ou cuidados. Só você e o motorista veem." />
           {error && <Notice tone="error" message={error} />}
         </>

@@ -50,8 +50,10 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
 
       <SectionHeader title="Trajeto" />
       <ListSection>
-        <ListRow icon="home" iconTone="primary" title="Embarque" subtitle={a.endereco_busca} />
-        <ListRow icon="school" iconTone="primary" title={a.escola_nome ?? 'Destino'} subtitle={a.endereco_entrega} />
+        <ListRow icon="home" iconTone="primary" title="Embarque" subtitle={a.endereco_busca}
+          value={pai ? (a.latitude != null ? 'No mapa' : 'Marcar') : undefined} onPress={pai ? () => go.pin(a.id, 'busca') : undefined} />
+        <ListRow icon="school" iconTone="primary" title={a.escola_nome ?? 'Destino'} subtitle={a.endereco_entrega}
+          value={pai ? (a.entrega_latitude != null ? 'No mapa' : 'Marcar') : undefined} onPress={pai ? () => go.pin(a.id, 'entrega') : undefined} />
       </ListSection>
 
       {a.observacoes_medicas ? (

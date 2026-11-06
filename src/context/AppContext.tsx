@@ -75,6 +75,10 @@ interface AppContextType {
    * Só existe quando a rota é conhecida (modo demonstração); com dados reais é null — nunca inventamos um número.
    */
   estimativaRota: { km: number; minutos: number; progresso: number } | null;
+  /** trajeto conhecido da van (só no demo); com dados reais não há polilinha inventada */
+  rotaGeo: { latitude: number; longitude: number }[];
+  ajustarPino: (alunoId: string, tipo: 'busca' | 'entrega', latitude: number, longitude: number) => Promise<void>;
+  geocodificarEndereco: (alunoId: string, tipo: 'busca' | 'entrega') => Promise<{ ok: boolean; mensagem?: string }>;
 
   // Ações
   simularPassoGps: () => void;
@@ -409,6 +413,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }]);
   };
 
+  const ajustarPino = async (alunoId: string, tipo: 'busca' | 'entrega', latitude: number, longitude: number) => {
+    if (isDemo) {
+      const campos = tipo === 'busca' ? { latitude, longitude } : { entrega_latitude: latitude, entrega_longitude: longitude };
+      setAlunos((p) => p.map((a) => (a.id === alunoId ? { ...a, ...campos } : a)));
+      return;
+    }
+    exigirReal();
+    const a = alunos.find((x) => x.id === alunoId);
+    const eid = tipo === 'busca' ? a?.endereco_busca_id : a?.endereco_entrega_id;
+    if (!eid) throw new Error('Este endereço ainda não foi registrado.');
+    await DataService.ajustarPino(eid, latitude, longitude);
+    await recarregar();
+  };
+
+  const geocodificarEndereco = async (alunoId: string, tipo: 'busca' | 'entrega') => {
+    if (isDemo) return { ok: false, mensagem: 'Indisponível na demonstração. Toque no mapa para marcar.' };
+    exigirReal();
+    const a = alunos.find((x) => x.id === alunoId);
+    const eid = tipo === 'busca' ? a?.endereco_busca_id : a?.endereco_entrega_id;
+    if (!eid) return { ok: false, mensagem: 'Este endereço ainda não foi registrado.' };
+    const r = await DataService.geocodificar(eid);
+    await recarregar();
+    if (r.ok) return { ok: true };
+    return { ok: false, mensagem: r.motivo === 'impreciso' ? 'O endereço está vago demais. Inclua bairro ou CEP, ou toque no mapa.' : 'Não encontramos esse endereço. Toque no mapa para marcar.' };
+  };
+
   const sincronizarFilaOffline = async () => {
     const r = await BoardingService.sincronizarFilaOffline();
     await atualizarContadorOffline();
@@ -523,6 +553,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
     eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? gpsIndex : undefined,
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
+    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : [],
+    ajustarPino, geocodificarEndereco,
     simularPassoGps, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
     registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
