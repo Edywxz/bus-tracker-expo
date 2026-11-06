@@ -34,7 +34,7 @@ export interface MockDataState {
     destinatarioNome: string;
     texto: string;
     dataHora: string;
-    origem: 'PAIS' | 'MOTORISTA' | 'ESCOLA';
+    origem: 'PAIS' | 'MOTORISTA';
   }[];
   eventosCalendario: {
     id: string;
@@ -52,7 +52,7 @@ export const initialMockData: MockDataState = {
       id: 'aluno-1',
       responsavel_id: 'resp-1',
       transportador_id: 'transp-1',
-      instituicao_id: 'escola-1',
+      escola_nome: 'Colégio Santa Maria',
       nome: 'Lucas Silva',
       data_nascimento: '2016-04-12',
       documento: '52.341.987-X',
@@ -70,7 +70,7 @@ export const initialMockData: MockDataState = {
       id: 'aluno-2',
       responsavel_id: 'resp-2',
       transportador_id: 'transp-1',
-      instituicao_id: 'escola-1',
+      escola_nome: 'Colégio Santa Maria',
       nome: 'Beatriz Santos',
       data_nascimento: '2017-09-20',
       documento: '58.912.433-1',
@@ -88,7 +88,7 @@ export const initialMockData: MockDataState = {
       id: 'aluno-3',
       responsavel_id: 'resp-3',
       transportador_id: 'transp-1',
-      instituicao_id: 'escola-1',
+      escola_nome: 'Colégio Santa Maria',
       nome: 'Gabriel Costa',
       data_nascimento: '2015-11-05',
       documento: '49.882.110-8',
@@ -106,7 +106,7 @@ export const initialMockData: MockDataState = {
       id: 'aluno-4',
       responsavel_id: 'resp-4',
       transportador_id: 'transp-1',
-      instituicao_id: 'escola-1',
+      escola_nome: 'Colégio Santa Maria',
       nome: 'Sofia Lima',
       data_nascimento: '2018-03-14',
       documento: '61.402.771-5',
@@ -276,12 +276,12 @@ export const initialMockData: MockDataState = {
     },
     {
       id: 'msg-3',
-      remetenteId: 'escola-1',
-      remetenteNome: 'Coordenação Santa Maria',
-      destinatarioNome: 'Todos os Transportadores',
-      texto: 'Aviso: Hoje os portões 1 e 2 estarão operando normalmente para o desembarque matutino.',
+      remetenteId: 'transp-1',
+      remetenteNome: 'Tio Marcos (Motorista)',
+      destinatarioNome: 'Famílias da rota',
+      texto: 'Bom dia! Hoje o desembarque no Colégio Santa Maria será normal pelos portões 1 e 2.',
       dataHora: '2026-10-31T06:30:00Z',
-      origem: 'ESCOLA',
+      origem: 'MOTORISTA',
     },
   ],
 

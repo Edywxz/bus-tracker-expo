@@ -7,7 +7,7 @@ import {
   Avatar, Button, Card, confirm, EmptyState, IconButton, ListRow, ListSection, notify, PillTone, Screen, SectionFooter, SectionHeader, StatusPill,
 } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
-import { AuthorizedSheet, VehicleSheet } from '../sheets/Sheets';
+import { AuthorizedSheet, CalendarEventSheet, VehicleSheet } from '../sheets/Sheets';
 import { isoToBR, partesData } from '../utils/format';
 import { SecurityService } from '../services/security';
 
@@ -46,49 +46,49 @@ export const VehicleScreen: React.FC = () => {
 };
 
 /* ---------------------------------------------------------- Escola e contatos */
+// A escola não usa o app: é o destino da rota, informado no cadastro de cada aluno.
 export const SchoolScreen: React.FC = () => {
   const { alunos, pessoasAutorizadas, nomes, role, removerPessoaAutorizada } = useApp();
   const [add, setAdd] = useState(false);
   const pai = role === 'RESPONSAVEL';
+  const escolas = Array.from(new Map(alunos.map((a) => [a.escola_nome ?? a.endereco_entrega, a])).values());
   const remover = async (id: string, nome: string) => {
     const ok = await confirm({ title: 'Remover pessoa autorizada?', message: `${nome} não poderá mais buscar o aluno.`, confirmLabel: 'Remover', destructive: true });
     if (ok) removerPessoaAutorizada(id).catch((e) => notify('Erro', e.message));
   };
   return (
     <Screen title="Escola e contatos">
-      <SectionHeader title="Instituição" />
-      {nomes.escola || alunos[0]?.endereco_entrega ? (
+      <SectionHeader title={escolas.length > 1 ? 'Escolas' : 'Escola'} />
+      {escolas.length ? (
         <ListSection>
-          <ListRow icon="school" iconTone="primary" title={nomes.escola ?? 'Escola'} subtitle={alunos[0]?.endereco_entrega} />
-          {nomes.transportador ? <ListRow icon="van" iconTone="signal" title="Transportador" value={nomes.transportador} /> : null}
+          {escolas.map((a) => (
+            <ListRow key={a.id} icon="school" iconTone="primary" title={a.escola_nome ?? 'Escola'} subtitle={a.endereco_entrega} />
+          ))}
+          {pai && nomes.transportador ? <ListRow icon="van" iconTone="signal" title="Transportador" value={nomes.transportador} /> : null}
         </ListSection>
       ) : (
-        <Card><Text style={s.muted}>Nenhuma escola vinculada ainda. Informe o código da escola ao cadastrar o aluno.</Text></Card>
+        <Card><Text style={s.muted}>{pai ? 'A escola aparece aqui depois que você cadastrar o aluno.' : 'As escolas aparecem aqui quando os pais cadastram os alunos.'}</Text></Card>
       )}
 
-      {role !== 'INSTITUICAO' && (
-        <>
-          <SectionHeader title="Pessoas autorizadas" action={pai && alunos.length > 0 ? { label: 'Adicionar', onPress: () => setAdd(true) } : undefined} />
-          {pessoasAutorizadas.length === 0 ? (
-            <Card><Text style={s.muted}>Ninguém cadastrado além dos responsáveis.</Text></Card>
-          ) : (
-            <ListSection>
-              {pessoasAutorizadas.map((p) => (
-                <ListRow key={p.id} leading={<Avatar name={p.nome} />} title={p.nome}
-                  subtitle={`${p.grau_parentesco} · ${SecurityService.maskPhone(p.telefone)} · ${alunos.find((a) => a.id === p.aluno_id)?.nome.split(' ')[0] ?? ''}`}
-                  trailing={pai ? <IconButton icon="trash" label={`Remover ${p.nome}`} variant="plain" tint={colors.error} onPress={() => remover(p.id, p.nome)} /> : undefined} />
-              ))}
-            </ListSection>
-          )}
-          <SectionFooter>Só estas pessoas podem receber o aluno no ponto de desembarque.</SectionFooter>
-        </>
+      <SectionHeader title="Pessoas autorizadas" action={pai && alunos.length > 0 ? { label: 'Adicionar', onPress: () => setAdd(true) } : undefined} />
+      {pessoasAutorizadas.length === 0 ? (
+        <Card><Text style={s.muted}>Ninguém cadastrado além dos responsáveis.</Text></Card>
+      ) : (
+        <ListSection>
+          {pessoasAutorizadas.map((p) => (
+            <ListRow key={p.id} leading={<Avatar name={p.nome} />} title={p.nome}
+              subtitle={`${p.grau_parentesco} · ${SecurityService.maskPhone(p.telefone)} · ${alunos.find((a) => a.id === p.aluno_id)?.nome.split(' ')[0] ?? ''}`}
+              trailing={pai ? <IconButton icon="trash" label={`Remover ${p.nome}`} variant="plain" tint={colors.error} onPress={() => remover(p.id, p.nome)} /> : undefined} />
+          ))}
+        </ListSection>
       )}
+      <SectionFooter>Só estas pessoas podem receber o aluno no ponto de desembarque.</SectionFooter>
       <AuthorizedSheet visible={add} onClose={() => setAdd(false)} />
     </Screen>
   );
 };
 
-/* ---------------------------------------------------------- Calendário */
+/* ---------------------------------------------------------- Calendário (RF019: mantido pelo motorista) */
 const TIPO: Record<string, { tone: PillTone; label: string }> = {
   FERIADO: { tone: 'error', label: 'Feriado' },
   RECESSO: { tone: 'info', label: 'Recesso' },
@@ -96,11 +96,19 @@ const TIPO: Record<string, { tone: PillTone; label: string }> = {
   LETIVO: { tone: 'success', label: 'Letivo' },
 };
 export const CalendarScreen: React.FC = () => {
-  const { eventosCalendario } = useApp();
+  const { eventosCalendario, role, removerEventoCalendario } = useApp();
+  const [add, setAdd] = useState(false);
+  const motorista = role === 'TRANSPORTADOR';
+  const remover = async (id: string, titulo: string) => {
+    const ok = await confirm({ title: 'Remover data?', message: `“${titulo}” sai do calendário dos pais.`, confirmLabel: 'Remover', destructive: true });
+    if (ok) removerEventoCalendario(id).catch((e) => notify('Erro', e.message));
+  };
   return (
-    <Screen title="Calendário letivo" subtitle="Dias sem transporte aparecem aqui">
+    <Screen title="Calendário" subtitle="Dias sem transporte aparecem aqui">
+      {motorista && <SectionHeader title="Próximas datas" action={{ label: 'Adicionar', onPress: () => setAdd(true) }} />}
       {eventosCalendario.length === 0 ? (
-        <EmptyState icon="calendar" title="Sem eventos" message="Quando a escola publicar feriados, recessos e eventos, eles aparecem neste calendário." />
+        <EmptyState icon="calendar" title="Sem datas marcadas"
+          message={motorista ? 'Marque feriados, recessos e dias sem aula para avisar os pais de que a van não roda.' : 'Quando o motorista marcar feriados e dias sem aula, eles aparecem aqui.'} />
       ) : (
         <ListSection>
           {eventosCalendario.map((e) => {
@@ -109,11 +117,15 @@ export const CalendarScreen: React.FC = () => {
             return (
               <ListRow key={e.id}
                 leading={<View style={s.date}><Text style={s.dateDay}>{d.dia}</Text><Text style={s.dateMonth}>{d.mes}</Text></View>}
-                title={e.titulo} subtitle={e.descricao} trailing={<StatusPill tone={t.tone} label={t.label} />} />
+                title={e.titulo} subtitle={e.descricao}
+                trailing={motorista
+                  ? <IconButton icon="trash" label={`Remover ${e.titulo}`} variant="plain" tint={colors.error} onPress={() => remover(e.id, e.titulo)} />
+                  : <StatusPill tone={t.tone} label={t.label} />} />
             );
           })}
         </ListSection>
       )}
+      <CalendarEventSheet visible={add} onClose={() => setAdd(false)} />
     </Screen>
   );
 };

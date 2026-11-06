@@ -12,7 +12,6 @@ export default function TabsLayout() {
   const { role, notificacoes, offlineQueueCount } = useApp();
   const unread = notificacoes.filter((n) => !n.lida).length;
   const motorista = role === 'TRANSPORTADOR';
-  const escola = role === 'INSTITUICAO';
   const android = Platform.OS === 'android';
 
   return (
@@ -27,7 +26,7 @@ export default function TabsLayout() {
       badgeBackgroundColor={colors.error}
     >
       <NativeTabs.Trigger name="(inicio)">
-        <NativeTabs.Trigger.Label>{escola ? 'Chegadas' : 'Rota'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Rota</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} md="map" />
       </NativeTabs.Trigger>
 
@@ -43,7 +42,7 @@ export default function TabsLayout() {
         {unread > 0 ? <NativeTabs.Trigger.Badge>{unread > 9 ? '9+' : String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(financeiro)" hidden={escola}>
+      <NativeTabs.Trigger name="(financeiro)">
         <NativeTabs.Trigger.Label>{motorista ? 'Receber' : 'Pagar'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'wallet.bifold', selected: 'wallet.bifold.fill' }} md="account_balance_wallet" />
       </NativeTabs.Trigger>

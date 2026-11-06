@@ -30,7 +30,7 @@ export interface DadosCarregados {
   notificacoes: MockDataState['notificacoes'];
   mensagensChat: MockDataState['mensagensChat'];
   eventosCalendario: MockDataState['eventosCalendario'];
-  nomes: { transportador?: string; escola?: string };
+  nomes: { transportador?: string };
   /** Para pais: dados de recebimento do transportador. Para o transportador: os próprios. */
   recebimento: { chavePix: string | null; valor: number | null; diaVencimento: number | null };
 }
@@ -71,13 +71,10 @@ export class DataService {
     const p = check<any>(perfilR);
     const perfil: PerfilApp = { id: p.id, nome: p.nome, email: p.email, tipo: p.tipo_usuario };
 
-    // Código de convite (transportador / escola) — somente o próprio registro
+    // Código de convite do transportador — somente o próprio registro
     let codigoConvite: string | null = null;
     if (perfil.tipo === 'TRANSPORTADOR') {
       const r = await db.from('transportadores').select('codigo_convite').eq('id', userId).maybeSingle();
-      codigoConvite = r.data?.codigo_convite ?? null;
-    } else if (perfil.tipo === 'INSTITUICAO') {
-      const r = await db.from('instituicoes_ensino').select('codigo_convite').eq('id', userId).maybeSingle();
       codigoConvite = r.data?.codigo_convite ?? null;
     }
 
@@ -105,13 +102,11 @@ export class DataService {
     // Nomes de quem está vinculado (liberados pela política `perfis_select`)
     const nomes: DadosCarregados['nomes'] = {};
     const idTransp = alunos[0]?.transportador_id;
-    const idEscola = alunos.find((a) => a.instituicao_id)?.instituicao_id;
-    const ids = [idTransp, idEscola].filter((x): x is string => !!x && x !== userId);
+    const ids = [idTransp].filter((x): x is string => !!x && x !== userId);
     if (ids.length) {
       const r = await db.from('perfis').select('id,nome').in('id', ids);
       for (const row of r.data ?? []) {
         if (row.id === idTransp) nomes.transportador = row.nome;
-        if (row.id === idEscola) nomes.escola = row.nome;
       }
     }
 
@@ -160,13 +155,14 @@ export class DataService {
   static async cadastrarAluno(p: {
     nome: string; dataNascimento: string; documento?: string; turma: string; turno: string;
     enderecoBusca: string; enderecoEntrega: string; observacoes?: string;
-    codigoTransportador: string; codigoEscola?: string;
+    codigoTransportador: string; escolaNome?: string; escolaEndereco?: string;
   }): Promise<string> {
     const { data, error } = await db.rpc('cadastrar_aluno', {
       p_nome: p.nome, p_data_nascimento: p.dataNascimento, p_documento: p.documento ?? '',
       p_turma: p.turma, p_turno: p.turno, p_endereco_busca: p.enderecoBusca,
       p_endereco_entrega: p.enderecoEntrega, p_observacoes: p.observacoes ?? '',
-      p_codigo_transportador: p.codigoTransportador, p_codigo_escola: p.codigoEscola ?? null,
+      p_codigo_transportador: p.codigoTransportador,
+      p_escola_nome: p.escolaNome ?? null, p_escola_endereco: p.escolaEndereco ?? null,
     });
     if (error) throw error;
     return data as string;
@@ -241,8 +237,13 @@ export class DataService {
     if (error) throw error;
   }
 
-  static async salvarCalendario(instituicaoId: string, e: { data: string; titulo: string; tipo: string; descricao?: string }) {
-    const { error } = await db.from('calendario_escolar').insert({ instituicao_id: instituicaoId, ...e });
+  static async salvarCalendario(transportadorId: string, e: { data: string; titulo: string; tipo: string; descricao?: string }) {
+    const { error } = await db.from('calendario_escolar').insert({ transportador_id: transportadorId, ...e });
+    if (error) throw error;
+  }
+
+  static async removerCalendario(id: string) {
+    const { error } = await db.from('calendario_escolar').delete().eq('id', id);
     if (error) throw error;
   }
 

@@ -25,7 +25,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 /**
  * Rota — primeira tela (concept "First view").
  * Mapa em tela cheia · botões de vidro no topo · sheet de vidro flutuante com status, tempo, progresso,
- * o aluno e as duas ações. O conteúdo da sheet muda por perfil (pais, motorista, escola).
+ * o aluno e as duas ações. O conteúdo da sheet muda por perfil (pais ou motorista).
  */
 export const HomeScreen: React.FC = () => {
   const {
@@ -43,7 +43,6 @@ export const HomeScreen: React.FC = () => {
   const concluida = temViagem && viagemAtiva.status === 'CONCLUIDA';
   const motorista = role === 'TRANSPORTADOR';
   const pai = role === 'RESPONSAVEL';
-  const escola = role === 'INSTITUICAO';
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;
   const naEscola = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO').length;
   const ativos = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').length;
@@ -64,9 +63,6 @@ export const HomeScreen: React.FC = () => {
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
   const destaque = (() => {
-    if (escola) {
-      return { valor: `${naEscola}`, sufixo: `de ${ativos}`, legenda: 'alunos chegaram à escola', lado: emRota ? (est ? horaPrevista(est.minutos) : '') : '', ladoSub: emRota ? 'chegada prevista' : '' };
-    }
     if (motorista && !emRota) {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'aluno' : 'alunos', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
@@ -158,7 +154,7 @@ export const HomeScreen: React.FC = () => {
               <Button style={{ flex: 1 }} label="Mensagem" icon="chat" onPress={() => router.push('/conversa')} />
               <Button style={{ flex: 1 }} variant="bordered" label="Avisar ausência" onPress={() => setAbsence(true)} />
             </View>
-          ) : motorista ? (
+          ) : (
             emRota ? (
               <View style={s.actions}>
                 <Button style={{ flex: 1 }} label="Concluir rota" icon="flag" onPress={concluir} loading={finishing} />
@@ -169,10 +165,6 @@ export const HomeScreen: React.FC = () => {
                 <Button style={{ flex: 1 }} variant="filled" label="Iniciar rota" icon="play" onPress={() => setStart(true)} disabled={!temVeiculo && !isDemo} />
               </View>
             )
-          ) : (
-            <View style={s.actions}>
-              <Button style={{ flex: 1 }} variant="bordered" label="Ver alunos" icon="people" onPress={() => router.navigate('/(tabs)/(alunos)')} />
-            </View>
           )}
         </>
       )}
@@ -194,7 +186,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.mapLand }}>
-      <Stack.Screen options={{ headerShown: false, title: motorista ? 'Rota' : escola ? 'Chegadas' : 'Rota' }} />
+      <Stack.Screen options={{ headerShown: false, title: 'Rota' }} />
       <RouteMap
         step={gpsStep}
         ativo={emRota && gpsAtivo}

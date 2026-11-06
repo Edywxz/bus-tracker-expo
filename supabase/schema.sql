@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- 2. Enums do Domínio
 DO $$ BEGIN
-    CREATE TYPE tipo_usuario_enum AS ENUM ('RESPONSAVEL', 'TRANSPORTADOR', 'INSTITUICAO');
+    CREATE TYPE tipo_usuario_enum AS ENUM ('RESPONSAVEL', 'TRANSPORTADOR');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
@@ -45,7 +45,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- ==============================================================================
--- 3. MÓDULO DE USUÁRIOS E PERFIS (RF001, RF010, RF014, RF015, RF021)
+-- 3. MÓDULO DE USUÁRIOS E PERFIS (RF001, RF010, RF014, RF021)
 -- ==============================================================================
 
 -- Tabela Central de Perfis (vinculada ao auth.users do Supabase)
@@ -77,15 +77,6 @@ CREATE TABLE IF NOT EXISTS public.transportadores (
     foto_url TEXT
 );
 
--- Especialização: Instituição de Ensino (RF015)
-CREATE TABLE IF NOT EXISTS public.instituicoes_ensino (
-    id UUID PRIMARY KEY REFERENCES public.perfis(id) ON DELETE CASCADE,
-    cnpj VARCHAR(18) UNIQUE NOT NULL,
-    razao_social VARCHAR(150) NOT NULL,
-    endereco TEXT NOT NULL,
-    telefone_contato VARCHAR(20) NOT NULL
-);
-
 -- ==============================================================================
 -- 4. MÓDULO DE ALUNOS E SEGURANÇA (RF002, RF009, RF017, RF018)
 -- ==============================================================================
@@ -94,7 +85,9 @@ CREATE TABLE IF NOT EXISTS public.alunos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     responsavel_id UUID NOT NULL REFERENCES public.responsaveis(id) ON DELETE CASCADE,
     transportador_id UUID NOT NULL REFERENCES public.transportadores(id) ON DELETE RESTRICT,
-    instituicao_id UUID REFERENCES public.instituicoes_ensino(id) ON DELETE SET NULL,
+    -- Escola que o aluno frequenta: é só o destino da rota, não um usuário do sistema
+    escola_nome VARCHAR(150),
+    escola_endereco TEXT,
     nome VARCHAR(150) NOT NULL,
     data_nascimento DATE NOT NULL,
     documento VARCHAR(20) NOT NULL,
@@ -262,7 +255,6 @@ CREATE TABLE IF NOT EXISTS public.pagamentos (
 ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.responsaveis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transportadores ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.instituicoes_ensino ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alunos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pessoas_autorizadas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comunicados_ausencia ENABLE ROW LEVEL SECURITY;

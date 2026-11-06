@@ -41,7 +41,7 @@ export const StudentsScreen: React.FC = () => {
     } finally { setBusy(null); }
   };
 
-  const title = motorista ? 'Embarque' : role === 'INSTITUICAO' ? 'Alunos' : 'Meus alunos';
+  const title = motorista ? 'Embarque' : 'Meus alunos';
   const subtitle = motorista ? (emRota ? 'Toque para registrar entrada e saída' : undefined) : undefined;
 
   return (
@@ -87,7 +87,7 @@ export const StudentsScreen: React.FC = () => {
             const embarcado = a.statusEmbarque === 'EMBARCADO';
             return (
               <FadeInUp key={a.id} index={i}>
-                <Card onPress={role === 'INSTITUICAO' ? undefined : () => go.student(a.id)} accessibilityLabel={`${a.nome}, ${st.label}`}>
+                <Card onPress={() => go.student(a.id)} accessibilityLabel={`${a.nome}, ${st.label}`}>
                   <View style={s.head}>
                     <Avatar name={a.nome} size={44} onBoard={embarcado} />
                     <View style={{ flex: 1 }}>

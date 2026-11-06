@@ -1,6 +1,6 @@
 # 🚌 VanEscolar GPS — Software de Rastreamento e Gestão Escolar
 
-Aplicativo mobile desenvolvido em **React Native** com **Expo** e **TypeScript**, voltado para **Transportadores Escolares Autônomos (Motoristas Independentes)**, **Pais/Responsáveis** e **Instituições de Ensino**.
+Aplicativo mobile desenvolvido em **React Native** com **Expo** e **TypeScript**, voltado para **Transportadores Escolares Autônomos (Motoristas Independentes)**, e **Pais/Responsáveis**. A escola não usa o app: é o destino da rota, informado no cadastro de cada aluno.
 
 A interface visual foi concebida seguindo rigorosamente as diretrizes da **Apple Human Interface Guidelines (HIG)**, entregando uma experiência minimalista, limpa, fluida e com padrão nativo premium para **iOS** e **Android**.
 
@@ -22,8 +22,8 @@ A interface visual foi concebida seguindo rigorosamente as diretrizes da **Apple
 | **Embarque** | Lista de alunos atendidos no roteiro, registro de entrada e saída na van em 1 toque, suporte completo a **operação offline** com fila local no AsyncStorage e sincronização em lote (**RF007, RF017, RNF005**). |
 | **Financeiro** | Resumo financeiro anual, histórico de mensalidades e liquidação via **PIX** (QR Code + Copia e Cola), **Cartão de Crédito** (prévia Apple Card) e **Boleto Bancário**, com emissão de **Recibo Digital Autenticado com Hash** e consulta de **Contrato de Transporte** (**RF005, RF006, RF012, RF016**). |
 | **Recados & Chat** | Alertas automáticos do sistema (aproximação da van, confirmação de embarque, avisos de trânsito) e canal de **Chat Direto operacional** no estilo iMessage entre pais, motorista e coordenação (**RF004, RF008**). |
-| **Escola & Contatos** | Cadastro e gerenciamento de **Pessoas Autorizadas** com documentos e parentesco, dados da instituição de ensino vinculada e **Calendário Escolar Oficial** com feriados e recessos (**RF018, RF015, RF019**). |
-| **Perfil & Frota** | Identificação estilo Apple ID, alternador rápido de atores (Pais, Motorista e Escola), gestão do veículo (Placa Mercosul, Alvará e vistoria) e dados de condutor substituto (**RF001, RF010, RF013, RF014, RF021**). |
+| **Escola & Contatos** | Cadastro e gerenciamento de **Pessoas Autorizadas** com documentos e parentesco, escola de cada aluno (destino da rota) e **Calendário** de dias sem transporte, mantido pelo motorista (**RF002, RF018, RF019**). |
+| **Perfil & Frota** | Identificação estilo Apple ID, alternador rápido de atores no modo de exemplo (Pais e Motorista), gestão do veículo (Placa Mercosul, Alvará e vistoria) e dados de condutor substituto (**RF001, RF010, RF013, RF014, RF021**). |
 
 ---
 

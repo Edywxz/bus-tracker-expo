@@ -21,7 +21,7 @@ const TIPO: Record<string, { icon: IconName; tone: IconTone }> = {
   AVISO: { icon: 'megaphone', tone: 'gray' },
 };
 
-const ORIGEM: Record<string, string> = { MOTORISTA: 'Motorista', PAIS: 'Família', ESCOLA: 'Escola' };
+const ORIGEM: Record<string, string> = { MOTORISTA: 'Motorista', PAIS: 'Família' };
 
 /* ------------------------------------------------------------------ Recados (alertas + atalho da conversa) */
 export const MessagesScreen: React.FC = () => {
@@ -38,8 +38,8 @@ export const MessagesScreen: React.FC = () => {
         <ListRow
           leading={<IconTile name="messages" tone="primary" />}
           title="Conversa da rota"
-          subtitle={semCanal ? 'Cadastre um aluno para conversar com o motorista e a escola.'
-            : ultima ? `${ultima.remetenteNome}: ${ultima.texto}` : 'Motorista, famílias e escola da mesma rota.'}
+          subtitle={semCanal ? 'Cadastre um aluno para conversar com o motorista.'
+            : ultima ? `${ultima.remetenteNome}: ${ultima.texto}` : 'Motorista e famílias da mesma rota.'}
           subtitleLines={2}
           disabled={semCanal}
           onPress={() => router.push('/conversa')}
@@ -82,7 +82,7 @@ export const ChatScreen: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  const meuOrigem = role === 'TRANSPORTADOR' ? 'MOTORISTA' : role === 'INSTITUICAO' ? 'ESCOLA' : 'PAIS';
+  const meuOrigem = role === 'TRANSPORTADOR' ? 'MOTORISTA' : 'PAIS';
   const semCanal = !isDemo && role !== 'TRANSPORTADOR' && alunos.length === 0;
 
   useEffect(() => { setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 60); }, [mensagensChat.length]);
@@ -101,9 +101,9 @@ export const ChatScreen: React.FC = () => {
       <ScrollView ref={scroll} style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic" keyboardDismissMode="interactive"
         contentContainerStyle={c.list}>
         {semCanal ? (
-          <EmptyState icon="messages" title="Conversa indisponível" message="Cadastre um aluno com o código do motorista para conversar com ele e com a escola." />
+          <EmptyState icon="messages" title="Conversa indisponível" message="Cadastre um aluno com o código do motorista para conversar com ele." />
         ) : mensagensChat.length === 0 ? (
-          <EmptyState icon="chat" title="Comece a conversa" message="Mensagens aqui são visíveis para o motorista, as famílias e a escola ligados à mesma rota." />
+          <EmptyState icon="chat" title="Comece a conversa" message="Mensagens aqui são visíveis para o motorista e as famílias da mesma rota." />
         ) : (
           mensagensChat.map((m) => {
             const meu = m.origem === meuOrigem && (isDemo || m.remetenteId === perfil?.id);

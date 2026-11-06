@@ -31,7 +31,7 @@ export class AuthService {
   }
 
   /**
-   * Cria a conta. O perfil (e a linha de Responsável/Transportador/Escola)
+   * Cria a conta. O perfil (e a linha de Responsável/Transportador)
    * é criado pelo gatilho `handle_new_user` no banco, a partir do metadata.
    * Retorna `precisaConfirmar = true` quando o projeto exige confirmação de e-mail.
    */

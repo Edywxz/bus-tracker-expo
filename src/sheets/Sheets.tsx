@@ -61,7 +61,7 @@ export const EmergencySheet: React.FC<BaseProps> = ({ visible, onClose }) => {
     if (await run(() => registrarEventoRota(tipo, desc.trim(), sev))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Avisar ocorrência" subtitle="Pais e escola recebem o alerta agora."
+    <Sheet visible={visible} onClose={onClose} title="Avisar ocorrência" subtitle="Os pais da rota recebem o alerta agora."
       footer={<Button size="lg" role="destructive" label="Disparar alerta" onPress={enviar} loading={loading} />}>
       <Label>O que aconteceu?</Label>
       <Row2>{TIPOS_EVENTO.map((t) => <Chip key={t} label={t} selected={tipo === t} onPress={() => setTipo(t)} />)}</Row2>
@@ -128,13 +128,14 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
     if (!iso) e.nasc = 'Use o formato DD/MM/AAAA.';
     if (!f.turma.trim()) e.turma = 'Informe a turma.';
     if (f.busca.trim().length < 5) e.busca = 'Informe o endereço de embarque.';
+    if (f.escola.trim().length < 2) e.escola = 'Informe a escola do aluno.';
     if (f.entrega.trim().length < 3) e.entrega = 'Informe o destino.';
     setErros(e);
     if (Object.keys(e).length) return;
     if (await run(() => cadastrarAluno({
       nome: f.nome.trim(), dataNascimento: iso!, turma: f.turma.trim(), turno: f.turno,
       enderecoBusca: f.busca.trim(), enderecoEntrega: f.entrega.trim(), observacoes: f.obs.trim(),
-      codigoTransportador: codigo, codigoEscola: f.escola.trim() || undefined,
+      codigoTransportador: codigo, escolaNome: f.escola.trim() || undefined, escolaEndereco: f.entrega.trim(),
     }))) onClose();
   };
 
@@ -165,8 +166,8 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
           <Label>Turno</Label>
           <Row2>{TURNOS.map((t) => <Chip key={t.v} label={t.l} selected={f.turno === t.v} onPress={() => setF((p) => ({ ...p, turno: t.v }))} />)}</Row2>
           <TextField label="Onde o aluno embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" />
-          <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="school" placeholder="Nome da escola e portão" />
-          <TextField label="Código da escola (opcional)" value={f.escola} onChangeText={(v) => set('escola')(v.toUpperCase())} autoCapitalize="characters" maxLength={8} helper="Se a escola já usa o app, ela passa a ver as chegadas." />
+          <TextField label="Escola" value={f.escola} onChangeText={set('escola')} error={erros.escola} icon="school" autoCapitalize="words" placeholder="Ex.: Colégio Santa Maria" />
+          <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="location" placeholder="Endereço da escola e portão" />
           <TextField label="Observações de saúde (opcional)" value={f.obs} onChangeText={set('obs')} multiline helper="Alergias ou cuidados. Só você e o motorista veem." />
           {error && <Notice tone="error" message={error} />}
         </>
@@ -203,6 +204,39 @@ export const AuthorizedSheet: React.FC<BaseProps & { alunoId?: string }> = ({ vi
       <TextField label="Telefone" value={tel} onChangeText={(v) => setTel(maskPhone(v))} error={erros.tel} keyboardType="phone-pad" placeholder="(11) 90000-0000" autoComplete="tel" />
       <Label>Parentesco</Label>
       <Row2>{PARENTESCOS.map((p) => <Chip key={p} label={p} selected={par === p} onPress={() => setPar(p)} />)}</Row2>
+      {error && <Notice tone="error" message={error} />}
+    </Sheet>
+  );
+};
+
+/* ------------------------------------------------------------ Calendário (motorista) */
+const TIPOS_DIA = [
+  { value: 'FERIADO', label: 'Feriado' }, { value: 'RECESSO', label: 'Recesso' }, { value: 'EVENTO', label: 'Evento' },
+] as const;
+export const CalendarEventSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
+  const { adicionarEventoCalendario } = useApp();
+  const { run, loading, error, setError } = useAction();
+  const [data, setData] = useState(''); const [titulo, setTitulo] = useState('');
+  const [tipo, setTipo] = useState<'FERIADO' | 'RECESSO' | 'EVENTO'>('FERIADO');
+  const [erros, setErros] = useState<Record<string, string>>({});
+  useEffect(() => { if (visible) { setData(''); setTitulo(''); setTipo('FERIADO'); setErros({}); setError(null); } }, [visible]); // eslint-disable-line
+
+  const salvar = async () => {
+    const e: Record<string, string> = {};
+    const iso = dateToISO(data);
+    if (!iso) e.data = 'Use o formato DD/MM/AAAA.';
+    if (titulo.trim().length < 2) e.titulo = 'Dê um nome para a data.';
+    setErros(e);
+    if (Object.keys(e).length) return;
+    if (await run(() => adicionarEventoCalendario({ data: iso!, titulo: titulo.trim(), tipo }))) onClose();
+  };
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Marcar data" subtitle="Os pais veem no calendário que a van não roda."
+      footer={<Button size="lg" label="Adicionar" onPress={salvar} loading={loading} />}>
+      <TextField label="Data" value={data} onChangeText={(v) => setData(maskDate(v))} error={erros.data} keyboardType="number-pad" placeholder="DD/MM/AAAA" />
+      <TextField label="Descrição" value={titulo} onChangeText={setTitulo} error={erros.titulo} placeholder="Ex.: Recesso escolar" />
+      <Label>Tipo</Label>
+      <SegmentedControl value={tipo} onChange={setTipo} options={[...TIPOS_DIA]} />
       {error && <Notice tone="error" message={error} />}
     </Sheet>
   );

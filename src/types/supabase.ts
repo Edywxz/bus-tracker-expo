@@ -22,9 +22,10 @@ export type Database = {
           documento: string
           endereco_busca: string
           endereco_entrega: string
+          escola_endereco: string | null
+          escola_nome: string | null
           foto_url: string | null
           id: string
-          instituicao_id: string | null
           nome: string
           observacoes_medicas: string | null
           responsavel_id: string
@@ -39,9 +40,10 @@ export type Database = {
           documento: string
           endereco_busca: string
           endereco_entrega: string
+          escola_endereco?: string | null
+          escola_nome?: string | null
           foto_url?: string | null
           id?: string
-          instituicao_id?: string | null
           nome: string
           observacoes_medicas?: string | null
           responsavel_id: string
@@ -56,9 +58,10 @@ export type Database = {
           documento?: string
           endereco_busca?: string
           endereco_entrega?: string
+          escola_endereco?: string | null
+          escola_nome?: string | null
           foto_url?: string | null
           id?: string
-          instituicao_id?: string | null
           nome?: string
           observacoes_medicas?: string | null
           responsavel_id?: string
@@ -68,13 +71,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "alunos_instituicao_id_fkey"
-            columns: ["instituicao_id"]
-            isOneToOne: false
-            referencedRelation: "instituicoes_ensino"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "alunos_responsavel_id_fkey"
             columns: ["responsavel_id"]
             isOneToOne: false
@@ -83,6 +79,41 @@ export type Database = {
           },
           {
             foreignKeyName: "alunos_transportador_id_fkey"
+            columns: ["transportador_id"]
+            isOneToOne: false
+            referencedRelation: "transportadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendario_escolar: {
+        Row: {
+          data: string
+          descricao: string | null
+          id: string
+          tipo: string
+          titulo: string
+          transportador_id: string
+        }
+        Insert: {
+          data: string
+          descricao?: string | null
+          id?: string
+          tipo?: string
+          titulo: string
+          transportador_id: string
+        }
+        Update: {
+          data?: string
+          descricao?: string | null
+          id?: string
+          tipo?: string
+          titulo?: string
+          transportador_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendario_escolar_transportador_id_fkey"
             columns: ["transportador_id"]
             isOneToOne: false
             referencedRelation: "transportadores"
@@ -266,38 +297,6 @@ export type Database = {
           },
         ]
       }
-      instituicoes_ensino: {
-        Row: {
-          cnpj: string
-          endereco: string
-          id: string
-          razao_social: string
-          telefone_contato: string
-        }
-        Insert: {
-          cnpj: string
-          endereco: string
-          id: string
-          razao_social: string
-          telefone_contato: string
-        }
-        Update: {
-          cnpj?: string
-          endereco?: string
-          id?: string
-          razao_social?: string
-          telefone_contato?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "instituicoes_ensino_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "perfis"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       localizacoes_gps: {
         Row: {
           direcao: number | null
@@ -342,6 +341,51 @@ export type Database = {
             columns: ["viagem_id"]
             isOneToOne: false
             referencedRelation: "viagens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens: {
+        Row: {
+          criado_em: string
+          id: string
+          origem: string
+          remetente_id: string
+          remetente_nome: string
+          texto: string
+          transportador_id: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          origem: string
+          remetente_id: string
+          remetente_nome: string
+          texto: string
+          transportador_id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          origem?: string
+          remetente_id?: string
+          remetente_nome?: string
+          texto?: string
+          transportador_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_remetente_id_fkey"
+            columns: ["remetente_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_transportador_id_fkey"
+            columns: ["transportador_id"]
+            isOneToOne: false
+            referencedRelation: "transportadores"
             referencedColumns: ["id"]
           },
         ]
@@ -410,6 +454,44 @@ export type Database = {
           },
         ]
       }
+      notificacoes: {
+        Row: {
+          criado_em: string
+          id: string
+          lida: boolean
+          mensagem: string
+          tipo: string
+          titulo: string
+          usuario_id: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          mensagem: string
+          tipo: string
+          titulo: string
+          usuario_id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          tipo?: string
+          titulo?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagamentos: {
         Row: {
           data_pagamento: string | null
@@ -455,34 +537,34 @@ export type Database = {
         Row: {
           ativo: boolean | null
           atualizado_em: string | null
-          cpf: string
+          cpf: string | null
           criado_em: string | null
           email: string
           id: string
           nome: string
-          telefone: string
+          telefone: string | null
           tipo_usuario: Database["public"]["Enums"]["tipo_usuario_enum"]
         }
         Insert: {
           ativo?: boolean | null
           atualizado_em?: string | null
-          cpf: string
+          cpf?: string | null
           criado_em?: string | null
           email: string
           id: string
           nome: string
-          telefone: string
+          telefone?: string | null
           tipo_usuario: Database["public"]["Enums"]["tipo_usuario_enum"]
         }
         Update: {
           ativo?: boolean | null
           atualizado_em?: string | null
-          cpf?: string
+          cpf?: string | null
           criado_em?: string | null
           email?: string
           id?: string
           nome?: string
-          telefone?: string
+          telefone?: string | null
           tipo_usuario?: Database["public"]["Enums"]["tipo_usuario_enum"]
         }
         Relationships: []
@@ -584,15 +666,15 @@ export type Database = {
       }
       responsaveis: {
         Row: {
-          endereco_residencial: string
+          endereco_residencial: string | null
           id: string
         }
         Insert: {
-          endereco_residencial: string
+          endereco_residencial?: string | null
           id: string
         }
         Update: {
-          endereco_residencial?: string
+          endereco_residencial?: string | null
           id?: string
         }
         Relationships: [
@@ -631,28 +713,40 @@ export type Database = {
       }
       transportadores: {
         Row: {
-          alvara_autonomo: string
-          categoria_cnh: string
-          cnh: string
+          alvara_autonomo: string | null
+          categoria_cnh: string | null
+          chave_pix: string | null
+          cnh: string | null
+          codigo_convite: string | null
+          dia_vencimento_padrao: number | null
           foto_url: string | null
           id: string
           numero_credencial: string | null
+          valor_mensalidade_padrao: number | null
         }
         Insert: {
-          alvara_autonomo: string
-          categoria_cnh: string
-          cnh: string
+          alvara_autonomo?: string | null
+          categoria_cnh?: string | null
+          chave_pix?: string | null
+          cnh?: string | null
+          codigo_convite?: string | null
+          dia_vencimento_padrao?: number | null
           foto_url?: string | null
           id: string
           numero_credencial?: string | null
+          valor_mensalidade_padrao?: number | null
         }
         Update: {
-          alvara_autonomo?: string
-          categoria_cnh?: string
-          cnh?: string
+          alvara_autonomo?: string | null
+          categoria_cnh?: string | null
+          chave_pix?: string | null
+          cnh?: string | null
+          codigo_convite?: string | null
+          dia_vencimento_padrao?: number | null
           foto_url?: string | null
           id?: string
           numero_credencial?: string | null
+          valor_mensalidade_padrao?: number | null
         }
         Relationships: [
           {
@@ -941,6 +1035,43 @@ export type Database = {
             }
             Returns: string
           }
+      atualizar_mensalidades_vencidas: { Args: never; Returns: number }
+      buscar_transportador_por_codigo: {
+        Args: { p_codigo: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
+      cadastrar_aluno: {
+        Args: {
+          p_codigo_transportador: string
+          p_data_nascimento: string
+          p_documento: string
+          p_endereco_busca: string
+          p_endereco_entrega: string
+          p_escola_endereco?: string
+          p_escola_nome?: string
+          p_nome: string
+          p_observacoes: string
+          p_turma: string
+          p_turno: Database["public"]["Enums"]["turno_enum"]
+        }
+        Returns: string
+      }
+      confirmar_recebimento: {
+        Args: { p_aceitar?: boolean; p_pagamento: string }
+        Returns: undefined
+      }
+      dados_recebimento: {
+        Args: { p_transportador: string }
+        Returns: {
+          chave_pix: string
+          dia_vencimento: number
+          nome: string
+          valor_mensalidade: number
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -1074,6 +1205,15 @@ export type Database = {
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      notificar: {
+        Args: {
+          p_mensagem: string
+          p_tipo: string
+          p_titulo: string
+          p_usuario: string
+        }
+        Returns: undefined
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -1114,6 +1254,16 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      registrar_pagamento: {
+        Args: {
+          p_detalhes?: Json
+          p_mensalidade: string
+          p_metodo: Database["public"]["Enums"]["metodo_pagamento_enum"]
+          p_transacao: string
+        }
+        Returns: string
+      }
+      relacionado_com: { Args: { p_outro: string }; Returns: boolean }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -1706,6 +1856,10 @@ export type Database = {
         }
         Returns: string
       }
+      vinculado_ao_transportador: {
+        Args: { p_transportador: string }
+        Returns: boolean
+      }
     }
     Enums: {
       metodo_pagamento_enum: "PIX" | "CARTAO" | "BOLETO"
@@ -1718,7 +1872,7 @@ export type Database = {
         | "CONCLUIDA"
         | "CANCELADA"
       tipo_embarque_enum: "EMBARQUE" | "DESEMBARQUE"
-      tipo_usuario_enum: "RESPONSAVEL" | "TRANSPORTADOR" | "INSTITUICAO"
+      tipo_usuario_enum: "RESPONSAVEL" | "TRANSPORTADOR"
       tipo_viagem_enum: "IDA" | "VOLTA"
       turno_enum: "MANHA" | "TARDE" | "INTEGRAL" | "NOITE"
     }
@@ -1867,7 +2021,7 @@ export const Constants = {
         "CANCELADA",
       ],
       tipo_embarque_enum: ["EMBARQUE", "DESEMBARQUE"],
-      tipo_usuario_enum: ["RESPONSAVEL", "TRANSPORTADOR", "INSTITUICAO"],
+      tipo_usuario_enum: ["RESPONSAVEL", "TRANSPORTADOR"],
       tipo_viagem_enum: ["IDA", "VOLTA"],
       turno_enum: ["MANHA", "TARDE", "INTEGRAL", "NOITE"],
     },

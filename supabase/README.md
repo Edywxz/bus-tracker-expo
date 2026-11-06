@@ -17,8 +17,10 @@
 ## Como funciona
 | Fluxo | Onde |
 |---|---|
-| Cadastro → perfil e papel (Responsável / Transportador / Escola) | gatilho `handle_new_user` lê o metadata do `signUp` |
-| Vínculo pai ↔ motorista ↔ escola | código de convite (`transportadores.codigo_convite`, `instituicoes_ensino.codigo_convite`) |
+| Cadastro → perfil e papel (Responsável / Transportador) | gatilho `handle_new_user` lê o metadata do `signUp` |
+| Vínculo pai ↔ motorista | código de convite (`transportadores.codigo_convite`) |
+| Escola do aluno | campos `alunos.escola_nome` / `escola_endereco` (a escola não é usuária) |
+| Calendário (dias sem transporte) | `calendario_escolar`, escrito só pelo transportador, lido pelos pais vinculados |
 | Cadastrar aluno + contrato + mensalidades do ano | RPC `cadastrar_aluno` |
 | Pagamento | pai informa (`registrar_pagamento`, fica PENDENTE) → motorista confirma (`confirmar_recebimento`) |
 | Avisos (embarque, rota, ocorrência, falta, pagamento) | gatilhos criam linhas em `notificacoes` |
@@ -36,5 +38,5 @@ Todas as tabelas têm RLS. Pontos de atenção:
   (`npx expo install expo-location`) chamando `LocationTrackerService.enviarLocalizacao`.
 - **Cobrança automática (PSP):** hoje o pagamento é confirmado manualmente pelo motorista.
 - **Push notifications** com o app fechado (`expo-notifications`).
-- **Tipos TypeScript:** `src/types/supabase.ts` não conhece as tabelas novas. Gere de novo com
+- **Tipos TypeScript:** `src/types/supabase.ts` foi gerado do banco em 06/11/2026. Se mudar o schema, gere de novo com
   `npx supabase gen types typescript --project-id <id> > src/types/supabase.ts`.

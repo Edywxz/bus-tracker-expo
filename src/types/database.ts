@@ -3,7 +3,7 @@
  * Baseado no Diagrama de Classes UML (DIAGRAMA_CLASSES.md) e Requisitos (REQUISITOS.md)
  */
 
-export type TipoUsuario = 'RESPONSAVEL' | 'TRANSPORTADOR' | 'INSTITUICAO';
+export type TipoUsuario = 'RESPONSAVEL' | 'TRANSPORTADOR';
 export type Turno = 'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE';
 export type TipoViagem = 'IDA' | 'VOLTA';
 export type StatusViagem = 'AGENDADA' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA';
@@ -40,19 +40,12 @@ export interface TransportadorProfile {
   foto_url?: string;
 }
 
-export interface InstituicaoEnsinoProfile {
-  id: string; // FK -> profiles.id
-  cnpj: string;
-  razao_social: string;
-  endereco: string;
-  telefone_contato: string;
-}
-
 export interface Aluno {
   id: string;
   responsavel_id: string;
   transportador_id: string;
-  instituicao_id?: string;
+  escola_nome?: string; // escola que o aluno frequenta (destino da rota, não é usuário)
+  escola_endereco?: string;
   nome: string;
   data_nascimento: string;
   documento: string;

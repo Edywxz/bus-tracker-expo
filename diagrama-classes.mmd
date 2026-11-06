@@ -49,17 +49,7 @@ classDiagram
         +registrarDesembarque(alunoId, viagemId, localizacao) RegistroEmbarqueDesembarque
         +registrarEventoRota(viagemId, tipo, desc) EventoRota
         +emitirContrato(responsavelId, alunoId, valor) ContratoServico
-    }
-
-    class InstituicaoEnsino {
-        -String cnpj
-        -String razaoSocial
-        -String endereco
-        -String telefoneContato
-        -String horarioTurnos
         +manterCalendarioEscolar(ano, eventos) CalendarioEscolar
-        +consultarAlunosTransportados() List~Aluno~
-        +acompanharTransporte() List~ViagemTransporte~
     }
 
     class MotoristaSubstituto {
@@ -78,7 +68,6 @@ classDiagram
         <<enumeration>>
         PAIS
         TRANSPORTADOR
-        INSTITUICAO_ENSINO
     }
 
     %% ==========================================
@@ -94,6 +83,8 @@ classDiagram
         -Turno turno
         -String enderecoBusca
         -String enderecoEntrega
+        -String escolaNome
+        -String escolaEndereco
         -String observacoesMedicas
         -Boolean ativo
         +adicionarAusencia(comunicado) void
@@ -197,7 +188,6 @@ classDiagram
         -DateTime dataHora
         -SeveridadeEvento severidade
         +notificarResponsaveis() void
-        +notificarEscola() void
     }
 
     class CalendarioEscolar {
@@ -405,7 +395,6 @@ classDiagram
     %% Heranças de Usuário
     Usuario <|-- Responsavel : herda
     Usuario <|-- Transportador : herda
-    Usuario <|-- InstituicaoEnsino : herda
 
     %% Dependência de TipoUsuario
     Usuario ..> TipoUsuario : classifica
@@ -422,9 +411,8 @@ classDiagram
     Transportador "1" o-- "0..1" MotoristaSubstituto : possui_substituto
     Transportador "1" o-- "0..*" Aluno : transporta_em_rota
 
-    %% Relacionamentos da Escola
-    InstituicaoEnsino "1" o-- "0..*" Aluno : matricula
-    InstituicaoEnsino "1" *-- "1" CalendarioEscolar : mantem
+    %% Calendário (dias sem transporte) mantido pelo Transportador
+    Transportador "1" *-- "0..1" CalendarioEscolar : mantem
     CalendarioEscolar "1" *-- "0..*" EventoCalendario : contem
 
     %% Relacionamentos de Viagem e Operação

@@ -1,6 +1,6 @@
 # 📐 Diagrama de Classes UML — VanEscolar GPS
 
-Este documento detalha o **Diagrama de Classes UML** desenvolvido para o sistema **VanEscolar GPS**, integrando os requisitos do domínio, o Diagrama de Casos de Uso (DCU) e os requisitos funcionais (**RF001 a RF021**) e não funcionais (**RNF001 a RNF008**).
+Este documento detalha o **Diagrama de Classes UML** desenvolvido para o sistema **VanEscolar GPS**, integrando os requisitos do domínio (atores: **Responsável** e **Transportador**), o Diagrama de Casos de Uso (DCU) e os requisitos funcionais (**RF001 a RF021**, exceto o RF015, removido) e não funcionais (**RNF001 a RNF008**).
 
 ---
 
@@ -30,9 +30,9 @@ O sistema foi estruturado em **5 módulos principais coesos**, refletindo os ato
 │   • Usuario (abs)   │   • Aluno                │   • Veiculo           │
 │   • Responsavel     │   • PessoaAutorizada     │   • ViagemTransporte  │
 │   • Transportador   │   • ComunicadoAusencia   │   • LocalizacaoGPS    │
-│   • Instituicao     │   • Turno (enum)         │   • RegEmbarqueDesemb │
-│   • MotoristaSubst  │   • PeriodoAusencia(enum)│   • EventoRota        │
-│   • TipoUsuario     │                          │   • CalendarioEscolar │
+│   • MotoristaSubst  │   • Turno (enum)         │   • RegEmbarqueDesemb │
+│   • TipoUsuario     │   • PeriodoAusencia(enum)│   • EventoRota        │
+│                     │                          │   • CalendarioEscolar │
 ├─────────────────────┴──────────────────────────┴───────────────────────┤
 │ 4. Financeiro & Contratos                      │ 5. Comunicação        │
 │   • ContratoServico     • Pagamento (abs)      │   • Mensagem          │
@@ -56,17 +56,15 @@ O sistema foi estruturado em **5 módulos principais coesos**, refletindo os ato
   - *Métodos:* `cadastrarAluno()`, `vincularPessoaAutorizada()`, `comunicarAusencia()`, `pagarMensalidade()`, `consultarHistoricoFinanceiro()`, `visualizarRecibo()`, `visualizarContrato()`, `acompanharTransporte()`.
 - **`Transportador` (Especialização de Usuario):** Motorista autônomo escolar independente (`RF014`).
   - *Atributos:* `cnh`, `categoriaCnh` (D/E com EAR), `numeroCredencial`, `alvaraAutonomo`, `fotoUrl`.
-  - *Métodos:* `cadastrarVeiculo()`, `cadastrarMotoristaSubstituto()`, `iniciarViagem()`, `finalizarViagem()`, `registrarEmbarque()`, `registrarDesembarque()`, `registrarEventoRota()`, `emitirContrato()`.
-- **`InstituicaoEnsino` (Especialização de Usuario):** Colégio ou escola onde os alunos estudam (`RF015`).
-  - *Atributos:* `cnpj`, `razaoSocial`, `endereco`, `telefoneContato`, `horarioTurnos`.
-  - *Métodos:* `manterCalendarioEscolar()`, `consultarAlunosTransportados()`, `acompanharTransporte()`.
+  - *Métodos:* `cadastrarVeiculo()`, `cadastrarMotoristaSubstituto()`, `iniciarViagem()`, `finalizarViagem()`, `registrarEmbarque()`, `registrarDesembarque()`, `registrarEventoRota()`, `emitirContrato()`, `manterCalendarioEscolar()`.
 - **`MotoristaSubstituto`:** Condutor substituto homologado pelo transportador para coberturas emergenciais (`RF014`).
 
 ---
 
 ### 2. Módulo de Alunos e Segurança
 - **`Aluno`:** Aluno dependente atendido no transporte escolar (`RF002`, `RF017`).
-  - *Atributos:* `id`, `nome`, `dataNascimento`, `documento`, `turma`, `turno`, `enderecoBusca`, `enderecoEntrega`, `observacoesMedicas`.
+  - *Atributos:* `id`, `nome`, `dataNascimento`, `documento`, `turma`, `turno`, `enderecoBusca`, `enderecoEntrega`, `escolaNome`, `escolaEndereco`, `observacoesMedicas`.
+  - A escola é apenas o **destino** da rota, registrada nos dados do aluno; ela não é um usuário do sistema.
 - **`PessoaAutorizada`:** Pessoas de confiança autorizadas pelos pais para entregar ou receber o aluno na van (`RF018`).
   - *Atributos:* `id`, `nome`, `cpf`, `telefone`, `grauParentesco`, `fotoUrl`.
 - **`ComunicadoAusencia`:** Registro de falta do aluno comunicado previamente pelos pais (`RF009`).
@@ -85,7 +83,7 @@ O sistema foi estruturado em **5 módulos principais coesos**, refletindo os ato
   - *Atributos:* `id`, `tipo` (`EMBARQUE`, `DESEMBARQUE`), `dataHora`, `registradoOffline`, `sincronizadoEm`.
 - **`EventoRota`:** Registro de incidentes ou emergências pelo motorista (`RF011`).
   - *Atributos:* `id`, `tipo` (Trânsito, Quebra Mecânica, Acidente, etc.), `descricao`, `dataHora`, `severidade`.
-- **`CalendarioEscolar` e `EventoCalendario`:** Controle do ano letivo pela escola para planejamento das viagens (`RF019`).
+- **`CalendarioEscolar` e `EventoCalendario`:** Feriados, recessos e dias sem aula marcados pelo transportador, para os pais saberem quando a van não roda (`RF019`).
 
 ---
 
@@ -103,7 +101,7 @@ O sistema foi estruturado em **5 módulos principais coesos**, refletindo os ato
 ---
 
 ### 5. Módulo de Comunicação e Mensageria
-- **`Mensagem`:** Canal direto de troca de recados operacionais entre pais, transportador e colégio (`RF008`).
+- **`Mensagem`:** Canal direto de troca de recados operacionais entre os pais e o transportador (`RF008`).
 - **`Notificacao`:** Alertas automáticos do sistema (van se aproximando, embarque realizado, avisos financeiros, emergências) (`RF004`).
 
 ---
@@ -121,18 +119,17 @@ O sistema foi estruturado em **5 módulos principais coesos**, refletindo os ato
 | **RF007 — Registrar Embarque/Desembarque** | `RegistroEmbarqueDesembarque`, `Aluno`, `PessoaAutorizada` |
 | **RF008 — Enviar e Receber Mensagens** | `Mensagem`, `Usuario` |
 | **RF009 — Comunicar Ausência** | `ComunicadoAusencia`, `Aluno`, `PeriodoAusencia` |
-| **RF010 — Gerenciamento de Perfis e Permissões** | `Usuario`, `TipoUsuario`, `Responsavel`, `Transportador`, `InstituicaoEnsino` |
+| **RF010 — Gerenciamento de Perfis e Permissões** | `Usuario`, `TipoUsuario`, `Responsavel`, `Transportador` |
 | **RF011 — Registrar Evento de Rota / Emergência** | `EventoRota`, `TipoEvento`, `SeveridadeEvento`, `ViagemTransporte` |
 | **RF012 — Visualizar Recibo** | `Recibo`, `Pagamento` |
 | **RF013 — Manter Veículo** | `Veiculo`, `Transportador` |
 | **RF014 — Manter Motorista** | `Transportador`, `MotoristaSubstituto` |
-| **RF015 — Manter Dados da Instituição** | `InstituicaoEnsino` |
 | **RF016 — Visualizar Contrato** | `ContratoServico`, `StatusContrato` |
 | **RF017 — Gerenciar Alunos de Transporte** | `Aluno`, `Transportador` |
 | **RF018 — Manter Pessoas Autorizadas** | `PessoaAutorizada`, `Aluno` |
-| **RF019 — Manter Calendário Escolar** | `CalendarioEscolar`, `EventoCalendario`, `InstituicaoEnsino` |
+| **RF019 — Manter Calendário Escolar** | `CalendarioEscolar`, `EventoCalendario`, `Transportador` |
 | **RF020 — Iniciar Serviço de Transporte** | `ViagemTransporte`, `StatusViagem`, `TipoViagem` |
-| **RF021 — Efetuar Login / Autenticação** | `Usuario`, `Responsavel`, `Transportador`, `InstituicaoEnsino` |
+| **RF021 — Efetuar Login / Autenticação** | `Usuario`, `Responsavel`, `Transportador` |
 
 ---
 

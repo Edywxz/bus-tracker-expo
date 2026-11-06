@@ -13,13 +13,13 @@ import { EditProfileSheet, ReceiptSettingsSheet } from '../sheets/Sheets';
 import { TipoUsuario } from '../types/database';
 import { brl, mensagemErro } from '../utils/format';
 
-const ROTULO: Record<TipoUsuario, string> = { RESPONSAVEL: 'Responsável', TRANSPORTADOR: 'Motorista', INSTITUICAO: 'Escola' };
+const ROTULO: Record<TipoUsuario, string> = { RESPONSAVEL: 'Responsável', TRANSPORTADOR: 'Motorista' };
 
 export const AccountScreen: React.FC = () => {
   const { role, perfil, isDemo, setRole, sair, excluirConta, codigoConvite, nomes, veiculo, temVeiculo, recebimento, recarregar } = useApp();
   const [edit, setEdit] = useState(false);
   const [receipt, setReceipt] = useState(false);
-  const nome = perfil?.nome ?? (role === 'TRANSPORTADOR' ? 'Tio Marcos' : role === 'INSTITUICAO' ? 'Colégio Santa Maria' : 'Carlos Silva');
+  const nome = perfil?.nome ?? (role === 'TRANSPORTADOR' ? 'Tio Marcos' : 'Carlos Silva');
 
   const confirmarSair = async () => {
     const ok = await confirm({ title: 'Sair da conta?', message: isDemo ? 'Você volta para a tela inicial.' : 'Você precisará entrar de novo para ver a van.', confirmLabel: 'Sair', destructive: true });
@@ -42,7 +42,7 @@ export const AccountScreen: React.FC = () => {
           <View style={{ flex: 1, gap: spacing.xs }}>
             <Text style={s.name} numberOfLines={1}>{nome}</Text>
             {perfil?.email ? <Text style={s.mail} numberOfLines={1}>{perfil.email}</Text> : null}
-            <StatusPill tone="neutral" label={ROTULO[role]} icon={role === 'TRANSPORTADOR' ? 'van' : role === 'INSTITUICAO' ? 'school' : 'people'} />
+            <StatusPill tone="neutral" label={ROTULO[role]} icon={role === 'TRANSPORTADOR' ? 'van' : 'people'} />
           </View>
         </Card>
       </FadeInUp>
@@ -51,16 +51,16 @@ export const AccountScreen: React.FC = () => {
         <FadeInUp index={1} style={{ marginTop: spacing.lg, gap: spacing.md }}>
           <Notice tone="info" message="Modo de exemplo: os dados não são salvos. Troque o perfil para ver cada experiência." />
           <SegmentedControl<TipoUsuario> value={role} onChange={setRole} accessibilityLabel="Perfil de exemplo"
-            options={[{ value: 'RESPONSAVEL', label: 'Pais' }, { value: 'TRANSPORTADOR', label: 'Motorista' }, { value: 'INSTITUICAO', label: 'Escola' }]} />
+            options={[{ value: 'RESPONSAVEL', label: 'Pais' }, { value: 'TRANSPORTADOR', label: 'Motorista' }]} />
         </FadeInUp>
       )}
 
-      {(role === 'TRANSPORTADOR' || role === 'INSTITUICAO') && codigoConvite && (
+      {role === 'TRANSPORTADOR' && codigoConvite && (
         <FadeInUp index={1} style={{ marginTop: spacing.lg }}>
           <Card style={{ alignItems: 'center', gap: spacing.s6 }}>
             <Text style={s.cap}>Seu código de convite</Text>
             <Text selectable style={s.code} accessibilityLabel={`Código ${codigoConvite.split('').join(' ')}`}>{codigoConvite}</Text>
-            <Text style={s.muted}>Passe este código para {role === 'TRANSPORTADOR' ? 'os pais' : 'os pais dos alunos'} se vincularem.</Text>
+            <Text style={s.muted}>Passe este código para os pais se vincularem.</Text>
           </Card>
           <ListSection style={{ marginTop: spacing.sm }}>
             <ListRow icon="share" iconTone="gray" title="Compartilhar código" role="action"
@@ -84,8 +84,8 @@ export const AccountScreen: React.FC = () => {
 
         <SectionHeader title="Escola" />
         <ListSection>
-          <ListRow icon="school" iconTone="primary" title="Escola e contatos" subtitle="Instituição, pessoas autorizadas" onPress={go.school} />
-          <ListRow icon="calendar" iconTone="error" title="Calendário letivo" subtitle="Feriados, recessos e eventos" onPress={go.calendar} />
+          <ListRow icon="school" iconTone="primary" title="Escola e contatos" subtitle={role === 'TRANSPORTADOR' ? 'Escolas atendidas e autorizados' : 'Escola do aluno e pessoas autorizadas'} onPress={go.school} />
+          <ListRow icon="calendar" iconTone="error" title="Calendário letivo" subtitle={role === 'TRANSPORTADOR' ? 'Marque os dias sem transporte' : 'Dias sem transporte'} onPress={go.calendar} />
         </ListSection>
 
         <SectionHeader title="Privacidade" />

@@ -51,10 +51,10 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
       <SectionHeader title="Trajeto" />
       <ListSection>
         <ListRow icon="home" iconTone="primary" title="Embarque" subtitle={a.endereco_busca} />
-        <ListRow icon="school" iconTone="primary" title="Destino" subtitle={a.endereco_entrega} />
+        <ListRow icon="school" iconTone="primary" title={a.escola_nome ?? 'Destino'} subtitle={a.endereco_entrega} />
       </ListSection>
 
-      {a.observacoes_medicas && role !== 'INSTITUICAO' ? (
+      {a.observacoes_medicas ? (
         <>
           <SectionHeader title="Saúde" />
           <ListSection><ListRow icon="medical" iconTone="error" title="Observações" subtitle={a.observacoes_medicas} subtitleLines={6} /></ListSection>
@@ -62,8 +62,7 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
         </>
       ) : null}
 
-      {role !== 'INSTITUICAO' && (
-        <>
+      <>
           <SectionHeader title="Pessoas autorizadas" action={pai ? { label: 'Adicionar', onPress: () => setAddPessoa(true) } : undefined} />
           {pessoas.length === 0 ? (
             <Card><Text style={s.muted}>Ninguém além dos responsáveis foi autorizado a buscar o aluno.</Text></Card>
@@ -77,8 +76,7 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
             </ListSection>
           )}
           <SectionFooter>Só estas pessoas podem receber o aluno no ponto. O motorista confere o documento.</SectionFooter>
-        </>
-      )}
+      </>
 
       {contrato && (
         <>

@@ -25,7 +25,7 @@ export class LocationTrackerService {
     const { viagemId, transportadorId, latitude, longitude, velocidade, direcao, precisaoMetros } =
       params;
 
-    // 1. Broadcast em tempo real para os pais/escola (baixa latência sem custo de IOPS excessivo)
+    // 1. Broadcast em tempo real para os pais (baixa latência sem custo de IOPS excessivo)
     const channelName = `viagem:${viagemId}`;
     let channel = this.activeChannels.get(channelName);
 
@@ -67,7 +67,7 @@ export class LocationTrackerService {
   }
 
   /**
-   * Permite que responsáveis e escolas assinem a transmissão ao vivo da van
+   * Permite que os responsáveis assinem a transmissão ao vivo da van
    */
   static assinarRastreamentoViagem(
     viagemId: string,

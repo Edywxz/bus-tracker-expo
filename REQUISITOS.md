@@ -8,19 +8,20 @@ Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos
 
 | Categoria | Total | Concluídos `[x]` | Em Andamento `[/]` | Pendentes `[ ]` | % Progresso |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Requisitos Funcionais (RF)** | 21 | 21 | 0 | 0 | **100%** |
+| **Requisitos Funcionais (RF)** | 20 | 20 | 0 | 0 | **100%** |
 | **Requisitos Não Funcionais (RNF)** | 8 | 8 | 0 | 0 | **100%** |
-| **Total Geral** | **29** | **29** | **0** | **0** | **100%** |
+| **Total Geral** | **28** | **28** | **0** | **0** | **100%** |
 
 ---
 
 ## 👥 Atores do Sistema (Conforme DCU)
 
-O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
+O Diagrama de Casos de Uso (DCU) define estritamente dois atores primários:
 
 1. **Pais (Responsáveis):** Usuários responsáveis pelos alunos, com permissão para gerenciar seus dados, alunos, pessoas autorizadas, pagamentos diretos ao motorista, comunicação de ausência, visualização de contrato e acompanhamento da van em tempo real.
-2. **Transportador (Motorista Escolar Autônomo):** Profissional autônomo que atua de forma independente (sem intermédio de empresa distribuidora de serviços). É o próprio operador e condutor do serviço, responsável pelo gerenciamento de seu veículo, seus dados de condutor/substituto, lista de alunos atendidos, início de rotas, registro de embarque/desembarque e eventos de rota/emergência.
-3. **Instituição de Ensino:** Escola ou colégio que mantém seus dados institucionais, calendário letivo e acompanha a movimentação do transporte escolar de seus alunos matriculados.
+2. **Transportador (Motorista Escolar Autônomo):** Profissional autônomo que atua de forma independente (sem intermédio de empresa distribuidora de serviços). É o próprio operador e condutor do serviço, responsável pelo gerenciamento de seu veículo, seus dados de condutor/substituto, lista de alunos atendidos, calendário de dias sem transporte, início de rotas, registro de embarque/desembarque e eventos de rota/emergência.
+
+> **Escola não é ator.** A instituição de ensino não acessa o sistema. Ela aparece apenas como **destino da rota**: o responsável informa a escola (nome e endereço de desembarque) no cadastro de cada aluno.
 
 ---
 
@@ -38,14 +39,14 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
 - [x] **RF002 — Manter Alunos**
   - **Caso de Uso (DCU):** `Manter Alunos`
   - **Ator(es):** Pais
-  - **Descrição:** O sistema deverá permitir cadastrar, consultar, atualizar e excluir os dados dos alunos (dependentes) vinculados à conta do responsável.
+  - **Descrição:** O sistema deverá permitir cadastrar, consultar, atualizar e excluir os dados dos alunos (dependentes) vinculados à conta do responsável, incluindo a escola que o aluno frequenta (nome e endereço de desembarque).
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
 - [x] **RF003 — Acompanhar Transporte em Tempo Real**
   - **Caso de Uso (DCU):** `Acompanhar transporte`
-  - **Ator(es):** Pais, Instituição de Ensino
-  - **Descrição:** O sistema deverá permitir que os pais/responsáveis e a instituição de ensino acompanhem a localização geográfica da van do motorista em tempo real durante os trajetos de ida e volta por meio de mapa interativo.
+  - **Ator(es):** Pais
+  - **Descrição:** O sistema deverá permitir que os pais/responsáveis acompanhem a localização geográfica da van do motorista em tempo real durante os trajetos de ida e volta por meio de mapa interativo.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
@@ -79,8 +80,8 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
 
 - [x] **RF008 — Enviar e Receber Mensagens**
   - **Caso de Uso (DCU):** `Enviar/Receber Mensagens`
-  - **Ator(es):** Pais, Transportador, Instituição de Ensino
-  - **Descrição:** O sistema deverá disponibilizar canal de comunicação direta por mensagens entre pais, o transportador autônomo e a instituição de ensino para troca de recados e avisos operacionais.
+  - **Ator(es):** Pais, Transportador
+  - **Descrição:** O sistema deverá disponibilizar canal de comunicação direta por mensagens entre os pais e o transportador autônomo para troca de recados e avisos operacionais.
   - **Prioridade:** Média
   - **Status:** `[x] Concluído`
 
@@ -93,15 +94,15 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
 
 - [x] **RF010 — Gerenciamento de Perfis e Permissões**
   - **Caso de Uso (DCU):** Representado pela segregação de papéis dos atores
-  - **Ator(es):** Pais, Transportador, Instituição de Ensino
-  - **Descrição:** O sistema deverá disponibilizar funcionalidades e visões restritas compatíveis com o perfil do usuário logado (Pais, Transportador Autônomo ou Instituição de Ensino), resguardando a privacidade das informações.
+  - **Ator(es):** Pais, Transportador
+  - **Descrição:** O sistema deverá disponibilizar funcionalidades e visões restritas compatíveis com o perfil do usuário logado (Pais ou Transportador Autônomo), resguardando a privacidade das informações.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
 - [x] **RF011 — Registrar Evento de Rota / Emergência**
   - **Caso de Uso (DCU):** `Registrar evento de rota/emergência`
   - **Ator(es):** Transportador
-  - **Descrição:** O sistema deverá permitir que o transportador autônomo registre imprevistos de trânsito, quebras mecânicas ou situações de emergência, disparando alertas imediatos aos pais dos alunos da rota e à escola.
+  - **Descrição:** O sistema deverá permitir que o transportador autônomo registre imprevistos de trânsito, quebras mecânicas ou situações de emergência, disparando alertas imediatos aos pais dos alunos da rota.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
@@ -123,13 +124,6 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
   - **Caso de Uso (DCU):** `Manter Motorista`
   - **Ator(es):** Transportador
   - **Descrição:** O sistema deverá permitir que o transportador autônomo cadastre e gerencie seus dados profissionais de condutor (CNH categoria D/E com EAR, credencial de transporte escolar, alvará de autônomo e foto), além de viabilizar o cadastro de condutor auxiliar/substituto previamente autorizado para coberturas emergenciais.
-  - **Prioridade:** Alta
-  - **Status:** `[x] Concluído`
-
-- [x] **RF015 — Manter Dados da Instituição**
-  - **Caso de Uso (DCU):** `Manter dados da instituição`
-  - **Ator(es):** Instituição de Ensino
-  - **Descrição:** O sistema deverá permitir que a instituição de ensino mantenha atualizados seus dados cadastrais, endereço, horários de entrada/saída dos turnos e contatos da coordenação.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
@@ -156,21 +150,21 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
 
 - [x] **RF019 — Manter Calendário Escolar**
   - **Caso de Uso (DCU):** `Manter Calendário escolar`
-  - **Ator(es):** Instituição de Ensino
-  - **Descrição:** O sistema deverá permitir que a instituição de ensino cadastre e atualize as datas do ano letivo, incluindo feriados, recessos, eventos e dias sem aula, auxiliando o motorista no planejamento de dias úteis de trabalho.
+  - **Ator(es):** Transportador (manutenção), Pais (consulta)
+  - **Descrição:** O sistema deverá permitir que o transportador autônomo cadastre e remova as datas em que não haverá transporte (feriados, recessos, eventos e dias sem aula), e que os pais dos alunos da sua rota consultem esse calendário.
   - **Prioridade:** Média
   - **Status:** `[x] Concluído`
 
 - [x] **RF020 — Iniciar Serviço de Transporte**
   - **Caso de Uso (DCU):** `Iniciar serviço`
   - **Ator(es):** Transportador
-  - **Descrição:** O sistema deverá permitir que o transportador autônomo inicie formalmente o percurso de transporte pelo aplicativo, acionando a transmissão de geolocalização e os alertas em tempo real para os pais e a escola.
+  - **Descrição:** O sistema deverá permitir que o transportador autônomo inicie formalmente o percurso de transporte pelo aplicativo, acionando a transmissão de geolocalização e os alertas em tempo real para os pais.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
 
 - [x] **RF021 — Efetuar Login / Autenticação**
   - **Caso de Uso (DCU):** `Efetuar Login`
-  - **Ator(es):** Pais, Transportador, Instituição de Ensino
+  - **Ator(es):** Pais, Transportador
   - **Descrição:** O sistema deverá permitir que todos os atores cadastrados realizem autenticação segura por meio de credenciais (e-mail/CPF e senha ou autenticação biométrica), obtendo acesso seguro às funções de seu respectivo perfil.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
@@ -193,11 +187,10 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
 | `Visualizar Recibo` | Pais *(<<extends>> de Pagar Mensalidade)* | **RF012** — Visualizar Recibo |
 | `Visualizar Contrato` | Pais, Transportador | **RF016** — Visualizar Contrato |
 | `Receber notificações/Alertas` | Pais, Transportador | **RF004** — Receber Notificações e Alertas |
-| `Efetuar Login` | Pais, Transportador, Instituição de Ensino | **RF021** — Efetuar Login / Autenticação |
-| `Enviar/Receber Mensagens` | Pais, Transportador, Instituição de Ensino | **RF008** — Enviar e Receber Mensagens |
-| `Acompanhar transporte` | Pais, Instituição de Ensino | **RF003** — Acompanhar Transporte em Tempo Real |
-| `Manter dados da instituição`| Instituição de Ensino | **RF015** — Manter Dados da Instituição |
-| `Manter Calendário escolar` | Instituição de Ensino | **RF019** — Manter Calendário Escolar |
+| `Efetuar Login` | Pais, Transportador | **RF021** — Efetuar Login / Autenticação |
+| `Enviar/Receber Mensagens` | Pais, Transportador | **RF008** — Enviar e Receber Mensagens |
+| `Acompanhar transporte` | Pais | **RF003** — Acompanhar Transporte em Tempo Real |
+| `Manter Calendário escolar` | Transportador | **RF019** — Manter Calendário Escolar |
 | `Iniciar serviço` | Transportador | **RF020** — Iniciar Serviço de Transporte |
 | `Gerenciar alunos de transporte` | Transportador | **RF017** — Gerenciar Alunos de Transporte |
 | `Registrar embarque/desembarque` | Transportador | **RF007** — Registrar Embarque e Desembarque |
@@ -250,3 +243,11 @@ O Diagrama de Casos de Uso (DCU) define estritamente três atores primários:
   - **Descrição:** O sistema deverá garantir que as informações de rotas, localização, alunos, responsáveis, contratos e histórico financeiro de um transportador autônomo sejam estritamente isoladas e confidenciais, não sendo acessíveis por outros motoristas cadastrados na plataforma.
   - **Prioridade:** Alta
   - **Status:** `[x] Concluído`
+
+---
+
+## 📝 Histórico de Mudanças de Escopo
+
+| Data | Mudança |
+| :--- | :--- |
+| 06/11/2026 | **Instituição de Ensino deixa de ser ator.** Removidos o ator e o caso de uso `Manter dados da instituição` (**RF015**, numeração não reaproveitada). **RF019** passa ao Transportador. RF003, RF008, RF010, RF011, RF020 e RF021 deixam de citar a escola. A escola passa a ser um dado do aluno (RF002). |

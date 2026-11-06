@@ -27,7 +27,7 @@ export interface NovoAluno {
   nome: string; dataNascimento: string; documento?: string; turma: string;
   turno: 'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE';
   enderecoBusca: string; enderecoEntrega: string; observacoes?: string;
-  codigoTransportador: string; codigoEscola?: string;
+  codigoTransportador: string; escolaNome?: string; escolaEndereco?: string;
 }
 
 interface AppContextType {
@@ -36,7 +36,7 @@ interface AppContextType {
   isDemo: boolean;
   perfil: PerfilApp | null;
   codigoConvite: string | null;
-  nomes: { transportador?: string; escola?: string };
+  nomes: { transportador?: string };
   recebimento: { chavePix: string | null; valor: number | null; diaVencimento: number | null };
   carregandoDados: boolean;
   entrarDemo: (role: TipoUsuario) => void;
@@ -93,6 +93,8 @@ interface AppContextType {
   registrarEventoRota: (tipo: string, descricao: string, severidade: SeveridadeEvento) => Promise<void>;
   adicionarPessoaAutorizada: (pessoa: Omit<PessoaAutorizada, 'id' | 'ativo'>) => Promise<void>;
   removerPessoaAutorizada: (id: string) => Promise<void>;
+  adicionarEventoCalendario: (e: { data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
+  removerEventoCalendario: (id: string) => Promise<void>;
   atualizarVeiculo: (dados: Partial<Veiculo>) => Promise<void>;
   marcarNotificacoesComoLidas: () => Promise<void>;
   atualizarPerfil: (d: { nome?: string; telefone?: string }) => Promise<void>;
@@ -127,7 +129,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [perfil, setPerfil] = useState<PerfilApp | null>(null);
   const [demoRole, setDemoRole] = useState<TipoUsuario>('RESPONSAVEL');
   const [codigoConvite, setCodigoConvite] = useState<string | null>(null);
-  const [nomes, setNomes] = useState<{ transportador?: string; escola?: string }>({});
+  const [nomes, setNomes] = useState<{ transportador?: string }>({});
   const [recebimento, setRecebimento] = useState<AppContextType['recebimento']>({ chavePix: null, valor: null, diaVencimento: null });
   const [carregandoDados, setCarregandoDados] = useState(false);
 
@@ -163,7 +165,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setAlunos(d.alunos); setPessoas(d.pessoasAutorizadas); setVeiculo(d.veiculo);
     setViagemAtiva(d.viagemAtiva); setContratos(d.contratos); setMensalidades(d.mensalidades);
     setNotificacoes(d.notificacoes); setMensagensChat(d.mensagensChat); setEventos(d.eventosCalendario);
-    setNomes({ transportador: 'Tio Marcos', escola: 'Colégio Santa Maria' });
+    setNomes({ transportador: 'Tio Marcos' });
     setCodigoConvite('DEMO42');
     setRecebimento({ chavePix: 'marcos.van@exemplo.com', valor: 350, diaVencimento: 10 });
     setAuthStatus('logado');
@@ -220,7 +222,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => { off(); if (recarregarTimer.current) clearTimeout(recarregarTimer.current); };
   }, [isDemo, userId, recarregar]);
 
-  // Posição ao vivo da van (pais e escola)
+  // Posição ao vivo da van (pais)
   useEffect(() => {
     if (isDemo || role === 'TRANSPORTADOR' || !viagemAtiva.id || viagemAtiva.status !== 'EM_ANDAMENTO') return;
     return LocationTrackerService.assinarRastreamentoViagem(viagemAtiva.id, (p) =>
@@ -252,7 +254,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // ---------- Ações de negócio ------------------------------------------------
   const exigirReal = () => { if (!userId) throw new Error('Sessão expirada. Entre novamente.'); };
-  const rotulo = () => (role === 'TRANSPORTADOR' ? perfil?.nome ?? 'Motorista' : role === 'INSTITUICAO' ? perfil?.nome ?? 'Escola' : perfil?.nome ?? 'Responsável');
+  const rotulo = () => (role === 'TRANSPORTADOR' ? perfil?.nome ?? 'Motorista' : perfil?.nome ?? 'Responsável');
   const canalTransportador = () =>
     role === 'TRANSPORTADOR' ? userId : alunos[0]?.transportador_id ?? '';
 
@@ -375,7 +377,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const enviarMensagem = async (texto: string) => {
     const t = texto.trim();
     if (!t) return;
-    const origem = role === 'TRANSPORTADOR' ? 'MOTORISTA' : role === 'INSTITUICAO' ? 'ESCOLA' : 'PAIS';
+    const origem = role === 'TRANSPORTADOR' ? 'MOTORISTA' : 'PAIS';
     if (!isDemo) {
       exigirReal();
       const canal = canalTransportador();
@@ -387,7 +389,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     animateNextLayout();
     setMensagensChat((p) => [...p, {
       id: novoId('msg'), remetenteId: userId || role, remetenteNome: isDemo
-        ? (role === 'TRANSPORTADOR' ? 'Tio Marcos (Motorista)' : role === 'INSTITUICAO' ? 'Coordenação Santa Maria' : 'Carlos Silva (Pai)')
+        ? (role === 'TRANSPORTADOR' ? 'Tio Marcos (Motorista)' : 'Carlos Silva (Pai)')
         : rotulo(),
       destinatarioNome: '', texto: t, dataHora: new Date().toISOString(), origem,
     }]);
@@ -449,6 +451,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await recarregar();
   };
 
+  // Calendário (RF019): o transportador marca feriados, recessos e dias sem aula
+  const adicionarEventoCalendario: AppContextType['adicionarEventoCalendario'] = async (e) => {
+    if (role !== 'TRANSPORTADOR') throw new Error('Só o motorista edita o calendário.');
+    if (!isDemo) { exigirReal(); await DataService.salvarCalendario(userId, e); await recarregar(); return; }
+    animateNextLayout();
+    setEventos((p) => [...p, { id: novoId('cal'), descricao: '', ...e }].sort((a, b) => a.data.localeCompare(b.data)));
+  };
+  const removerEventoCalendario = async (id: string) => {
+    if (!isDemo) { exigirReal(); await DataService.removerCalendario(id); }
+    animateNextLayout();
+    setEventos((p) => p.filter((x) => x.id !== id));
+  };
+
   const removerPessoaAutorizada = async (id: string) => {
     if (!isDemo) { exigirReal(); await DataService.removerPessoa(id); }
     animateNextLayout();
@@ -496,7 +511,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     simularPassoGps, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
-    registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, atualizarVeiculo,
+    registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
     marcarNotificacoesComoLidas, atualizarPerfil, salvarConfigRecebimento,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
