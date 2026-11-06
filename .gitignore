@@ -10,3 +10,6 @@ coverage
 
 expo-env.d.ts
 # @end expo-cli
+# macOS e arquivos gerados pelo Expo
+.DS_Store
+.expo/
