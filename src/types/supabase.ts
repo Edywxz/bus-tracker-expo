@@ -22,12 +22,10 @@ export type Database = {
           documento: string
           endereco_busca: string
           endereco_entrega: string
+          endereco_busca_id: string | null
+          endereco_entrega_id: string | null
           escola_endereco: string | null
           escola_nome: string | null
-          latitude: number | null
-          longitude: number | null
-          entrega_latitude: number | null
-          entrega_longitude: number | null
           foto_url: string | null
           id: string
           nome: string
@@ -44,12 +42,10 @@ export type Database = {
           documento: string
           endereco_busca: string
           endereco_entrega: string
+          endereco_busca_id?: string | null
+          endereco_entrega_id?: string | null
           escola_endereco?: string | null
           escola_nome?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          entrega_latitude?: number | null
-          entrega_longitude?: number | null
           foto_url?: string | null
           id?: string
           nome: string
@@ -66,12 +62,10 @@ export type Database = {
           documento?: string
           endereco_busca?: string
           endereco_entrega?: string
+          endereco_busca_id?: string | null
+          endereco_entrega_id?: string | null
           escola_endereco?: string | null
           escola_nome?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          entrega_latitude?: number | null
-          entrega_longitude?: number | null
           foto_url?: string | null
           id?: string
           nome?: string
@@ -257,6 +251,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      enderecos_responsavel: {
+        Row: {
+          ajustado_manual: boolean
+          criado_em: string
+          endereco_texto: string
+          geocodificado_em: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          origem: string | null
+          precisao: string | null
+          responsavel_id: string
+          rotulo: string | null
+        }
+        Insert: {
+          ajustado_manual?: boolean
+          criado_em?: string
+          endereco_texto: string
+          geocodificado_em?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          origem?: string | null
+          precisao?: string | null
+          responsavel_id: string
+          rotulo?: string | null
+        }
+        Update: {
+          ajustado_manual?: boolean
+          criado_em?: string
+          endereco_texto?: string
+          geocodificado_em?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          origem?: string | null
+          precisao?: string | null
+          responsavel_id?: string
+          rotulo?: string | null
+        }
+        Relationships: []
       }
       eventos_rota: {
         Row: {

@@ -165,7 +165,7 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
           <TextField label="Turma" value={f.turma} onChangeText={set('turma')} error={erros.turma} placeholder="Ex.: 5º Ano B" />
           <Label>Turno</Label>
           <Row2>{TURNOS.map((t) => <Chip key={t.v} label={t.l} selected={f.turno === t.v} onPress={() => setF((p) => ({ ...p, turno: t.v }))} />)}</Row2>
-          <TextField label="Onde o dependente embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" />
+          <TextField label="Onde o dependente embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" helper="Usamos este endereço seu para localizar o ponto no mapa (powered by Geoapify)." />
           <TextField label="Escola" value={f.escola} onChangeText={set('escola')} error={erros.escola} icon="school" autoCapitalize="words" placeholder="Ex.: Colégio Santa Maria" />
           <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="location" placeholder="Endereço da escola e portão" />
           <TextField label="Observações de saúde (opcional)" value={f.obs} onChangeText={set('obs')} multiline helper="Alergias ou cuidados. Só você e o motorista veem." />

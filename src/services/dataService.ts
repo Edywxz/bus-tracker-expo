@@ -49,7 +49,7 @@ export class DataService {
     inicioDia.setHours(0, 0, 0, 0);
     const hoje = new Date().toISOString().slice(0, 10);
 
-    const [perfilR, alunosR, pessoasR, veicR, viagemR, contR, mensR, notifR, msgR, calR, regR, ausR, pagR] =
+    const [perfilR, alunosR, pessoasR, veicR, viagemR, contR, mensR, notifR, msgR, calR, regR, ausR, pagR, endR] =
       await Promise.all([
         db.from('perfis').select('id,nome,email,tipo_usuario').eq('id', userId).single(),
         db.from('alunos').select('*').eq('ativo', true).order('nome'),
@@ -66,6 +66,7 @@ export class DataService {
         db.from('comunicados_ausencia').select('aluno_id,periodo,motivo,data_inicio,data_fim')
           .lte('data_inicio', hoje).gte('data_fim', hoje),
         db.from('pagamentos').select('*').order('data_pagamento', { ascending: false }),
+        db.from('enderecos_responsavel').select('id,latitude,longitude'),
       ]);
 
     const p = check<any>(perfilR);
@@ -84,7 +85,12 @@ export class DataService {
     const ausentes = new Map<string, any>();
     for (const a of (check<any[]>(ausR) ?? [])) ausentes.set(a.aluno_id, a);
 
+    // Coordenadas vêm dos endereços do responsável (RLS: cada um só recebe os que pode ver)
+    const coords = new Map<string, { lat: number; lng: number }>();
+    for (const e of (check<any[]>(endR) ?? [])) if (e.latitude != null && e.longitude != null) coords.set(e.id, { lat: e.latitude, lng: e.longitude });
     const alunos: AlunoApp[] = (check<any[]>(alunosR) ?? []).map((a) => {
+      const casa = a.endereco_busca_id ? coords.get(a.endereco_busca_id) : undefined;
+      const entrega = a.endereco_entrega_id ? coords.get(a.endereco_entrega_id) : undefined;
       const reg = ultimoPorAluno.get(a.id);
       const aus = ausentes.get(a.id);
       let statusEmbarque: AlunoApp['statusEmbarque'] = 'AGUARDANDO';
@@ -96,7 +102,11 @@ export class DataService {
         statusEmbarque = 'AUSENTE';
         ultimoRegistro = `Falta comunicada (${aus.periodo})${aus.motivo ? `: ${aus.motivo}` : ''}`;
       }
-      return { ...a, statusEmbarque, ultimoRegistro } as AlunoApp;
+      return {
+        ...a, statusEmbarque, ultimoRegistro,
+        latitude: casa?.lat ?? null, longitude: casa?.lng ?? null,
+        entrega_latitude: entrega?.lat ?? null, entrega_longitude: entrega?.lng ?? null,
+      } as AlunoApp;
     });
 
     // Nomes de quem está vinculado (liberados pela política `perfis_select`)
@@ -157,15 +167,50 @@ export class DataService {
     enderecoBusca: string; enderecoEntrega: string; observacoes?: string;
     codigoTransportador: string; escolaNome?: string; escolaEndereco?: string;
   }): Promise<string> {
+    // Endereços pertencem ao responsável: reaproveita o já cadastrado (irmãos) ou cria um novo.
+    const [buscaId, entregaId] = await Promise.all([this.garantirEndereco(p.enderecoBusca, 'Embarque'), this.garantirEndereco(p.enderecoEntrega, 'Entrega')]);
     const { data, error } = await db.rpc('cadastrar_aluno', {
       p_nome: p.nome, p_data_nascimento: p.dataNascimento, p_documento: p.documento ?? '',
       p_turma: p.turma, p_turno: p.turno, p_endereco_busca: p.enderecoBusca,
       p_endereco_entrega: p.enderecoEntrega, p_observacoes: p.observacoes ?? '',
       p_codigo_transportador: p.codigoTransportador,
       p_escola_nome: p.escolaNome ?? null, p_escola_endereco: p.escolaEndereco ?? null,
+      p_endereco_busca_id: buscaId, p_endereco_entrega_id: entregaId,
     });
     if (error) throw error;
+    // Geocodifica em segundo plano; se falhar, o aluno continua cadastrado (sem coordenadas até ajustar o pino).
+    for (const id of new Set([buscaId, entregaId])) this.geocodificar(id).catch(() => {});
     return data as string;
+  }
+
+  /** Devolve o id do endereço do responsável logado, criando-o se ainda não existir (mesmo texto = mesmo endereço). */
+  static async garantirEndereco(texto: string, rotulo: string): Promise<string> {
+    const { data: u } = await db.auth.getUser();
+    const uid = u?.user?.id;
+    if (!uid) throw new Error('Sessão expirada. Entre novamente.');
+    const limpo = texto.trim();
+    const { data: achados } = await db.from('enderecos_responsavel').select('id,endereco_texto').eq('responsavel_id', uid);
+    const igual = (achados ?? []).find((e: any) => e.endereco_texto.trim().toLowerCase() === limpo.toLowerCase());
+    if (igual) return igual.id as string;
+    const { data, error } = await db.from('enderecos_responsavel')
+      .insert({ responsavel_id: uid, endereco_texto: limpo, rotulo }).select('id').single();
+    if (error) throw error;
+    return data.id as string;
+  }
+
+  /** Pede ao servidor para geocodificar o endereço (uma vez; não sobrescreve pino ajustado à mão). */
+  static async geocodificar(enderecoId: string): Promise<{ ok: boolean; precisao?: string }> {
+    const { data, error } = await db.functions.invoke('geocode-endereco', { body: { endereco_id: enderecoId } });
+    if (error) throw error;
+    return data;
+  }
+
+  /** O responsável confirma/ajusta o pino: passa a ser a verdade e nunca é sobrescrito por geocodificação automática. */
+  static async ajustarPino(enderecoId: string, latitude: number, longitude: number) {
+    const { error } = await db.from('enderecos_responsavel').update({
+      latitude, longitude, precisao: 'MANUAL', origem: 'MANUAL', ajustado_manual: true, geocodificado_em: new Date().toISOString(),
+    }).eq('id', enderecoId);
+    if (error) throw error;
   }
 
   static async registrarPagamento(mensalidadeId: string, metodo: string, transacao: string, detalhes?: unknown) {

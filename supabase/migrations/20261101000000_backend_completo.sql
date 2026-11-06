@@ -96,11 +96,6 @@ ALTER TABLE public.mensagens ADD COLUMN IF NOT EXISTS responsavel_id UUID REFERE
 DELETE FROM public.mensagens WHERE responsavel_id IS NULL; -- mensagens do antigo canal em grupo não têm dono
 ALTER TABLE public.mensagens ALTER COLUMN responsavel_id SET NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_mensagens_thread ON public.mensagens(transportador_id, responsavel_id, criado_em);
--- Coordenadas opcionais do aluno (casa e entrega), usadas para indicar a chegada ao endereço mais próximo.
-ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
-ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
-ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS entrega_latitude DOUBLE PRECISION;
-ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS entrega_longitude DOUBLE PRECISION;
 
 -- Calendário do transportador: feriados, recessos e dias sem aula em que a van não roda (RF019)
 

@@ -46,7 +46,10 @@ export interface Aluno {
   transportador_id: string;
   escola_nome?: string; // escola que o aluno frequenta (destino da rota, não é usuário)
   escola_endereco?: string;
-  latitude?: number | null; // opcionais: casa e ponto de entrega, para indicar quem chega primeiro
+  endereco_busca_id?: string | null;   // endereços pertencem ao responsável (enderecos_responsavel)
+  endereco_entrega_id?: string | null;
+  // Derivados dos endereços ao carregar (opcionais): usados para indicar quem chega primeiro
+  latitude?: number | null;
   longitude?: number | null;
   entrega_latitude?: number | null;
   entrega_longitude?: number | null;

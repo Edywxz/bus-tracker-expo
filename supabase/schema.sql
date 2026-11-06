@@ -88,10 +88,8 @@ CREATE TABLE IF NOT EXISTS public.alunos (
     -- Escola que o aluno frequenta: é só o destino da rota, não um usuário do sistema
     escola_nome VARCHAR(150),
     escola_endereco TEXT,
-    latitude DOUBLE PRECISION,        -- opcionais: usados para indicar a chegada ao endereço mais próximo
-    longitude DOUBLE PRECISION,
-    entrega_latitude DOUBLE PRECISION,
-    entrega_longitude DOUBLE PRECISION,
+    endereco_busca_id UUID,           -- aponta para enderecos_responsavel (coordenadas ficam lá)
+    endereco_entrega_id UUID,
     nome VARCHAR(150) NOT NULL,
     data_nascimento DATE NOT NULL,
     documento VARCHAR(20) NOT NULL,
@@ -311,3 +309,7 @@ CREATE POLICY "Rastreamento GPS autorizado"
 CREATE POLICY "Mensalidades seguras"
     ON public.mensalidades FOR ALL
     USING (auth.uid() = responsavel_id OR auth.uid() = transportador_id);
+
+-- Endereços do RESPONSÁVEL (dado do adulto); o aluno aponta para eles. Ver migrations/20261106000000_enderecos_responsavel.sql
+-- CREATE TABLE enderecos_responsavel (id, responsavel_id, rotulo, endereco_texto, latitude, longitude,
+--   precisao ('NUMERO'|'RUA'|'CEP'|'MANUAL'), origem ('GEOAPIFY'|'CEP'|'MANUAL'), ajustado_manual, geocodificado_em, criado_em)
