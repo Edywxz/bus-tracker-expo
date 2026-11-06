@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
-import { gap, spacing } from '../theme/tokens';
+import { gap, radius, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
 import {
   Avatar, Button, Card, confirm, EmptyState, IconButton, ListRow, ListSection, notify, Screen, SectionFooter, SectionHeader,
-  share, StatusPill, statusAluno,
+  haptic, Notice, SegmentedControl, share, StatusPill, statusAluno,
 } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { AbsenceSheet, AuthorizedSheet, PaySheet } from '../sheets/Sheets';
+import { AbsenceSheet, AuthorizedSheet } from '../sheets/Sheets';
+import * as Clipboard from 'expo-clipboard';
+import QRCode from 'react-native-qrcode-svg';
+import { pixCopiaECola } from '../utils/pix';
 import { brl, isoToBR, nomeMes } from '../utils/format';
 import { SecurityService } from '../services/security';
 
@@ -118,11 +121,20 @@ export const ContractScreen: React.FC<{ alunoId?: string }> = ({ alunoId }) => {
   );
 };
 
-/* --------------------------------------------------------- Mensalidade / recibo */
+/* --------------------------------------------------------- Mensalidade / recibo (concept "Detail") */
+const diasAte = (iso: string) => {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const [y, mo, d] = iso.slice(0, 10).split('-').map(Number);
+  return Math.round((new Date(y, mo - 1, d).getTime() - hoje.getTime()) / 86400000);
+};
+
 export const PaymentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
-  const { mensalidades, pagamentos, role, confirmarRecebimento, alunos, contratos } = useApp();
-  const [pay, setPay] = useState(false);
+  const { mensalidades, pagamentos, role, confirmarRecebimento, alunos, contratos, nomes, recebimento, pagarMensalidade, isDemo } = useApp();
+  const [metodo, setMetodo] = useState<'PIX' | 'BOLETO'>('PIX');
   const [busy, setBusy] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const [informado, setInformado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const m = mensalidades.find((x) => x.id === id);
   if (!m) return <Screen title="Mensalidade"><EmptyState icon="alert" title="Não encontrada" message="Volte e tente novamente." /></Screen>;
   const pend = pagamentos.find((p) => p.mensalidade_id === m.id && p.status === 'PENDENTE');
@@ -131,39 +143,108 @@ export const PaymentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
   const aluno = alunos.find((a) => a.id === contrato?.aluno_id);
   const total = m.valor + (m.valor_multa_juros ?? 0);
   const pago = m.status === 'PAGO';
-  const atrasado = m.status === 'VENCIDO';
+  const dias = diasAte(m.data_vencimento);
+  const atrasado = m.status === 'VENCIDO' || (!pago && dias < 0);
+  const pai = role === 'RESPONSAVEL';
+  const podePagar = pai && !pago && !pend && !informado;
+  const recebedor = nomes.transportador ?? 'Motorista';
+  const pix = recebimento.chavePix
+    ? pixCopiaECola({ chave: recebimento.chavePix, nome: recebedor, valor: total, txid: `VAN${m.ano_referencia}${String(m.mes_referencia).padStart(2, '0')}` })
+    : null;
 
   const confirmar = async (aceitar: boolean) => {
     setBusy(true);
     try { await confirmarRecebimento(pend!.id, aceitar); } catch (e) { notify('Erro', (e as Error).message); } finally { setBusy(false); }
   };
+  const copiar = async () => {
+    if (!pix) return;
+    await Clipboard.setStringAsync(pix);
+    haptic.success();
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2500);
+  };
+  const informar = async () => {
+    setBusy(true); setErro(null);
+    try {
+      const r = await pagarMensalidade(m.id, metodo, { origem: 'app' });
+      if (!r.sucesso) throw new Error('Mensalidade não encontrada.');
+      setInformado(true); haptic.success();
+    } catch (e) { setErro((e as Error).message); } finally { setBusy(false); }
+  };
   const recibo = pago ? SecurityService.generateReceiptHash(m.id, m.valor, m.criado_em) : null;
   const titulo = `${nomeMes(m.mes_referencia)} ${m.ano_referencia}`;
+  const vence = dias === 0 ? 'vence hoje' : dias === 1 ? 'vence amanhã' : dias > 1 ? `daqui a ${dias} dias` : `${-dias} ${dias === -1 ? 'dia' : 'dias'} de atraso`;
+
+  const footer = podePagar ? (
+    <View style={{ gap: spacing.xs }}>
+      {metodo === 'PIX' && pix ? (
+        <Button variant="filled" icon={copiado ? 'check' : 'copy'} label={copiado ? 'Código copiado' : 'Copiar código PIX'} onPress={copiar} />
+      ) : (
+        <Button variant="filled" label="Já fiz o pagamento" onPress={informar} loading={busy} />
+      )}
+      {metodo === 'PIX' && pix ? (
+        <Button variant="plain" label="Já fiz o pagamento" onPress={informar} loading={busy} />
+      ) : null}
+    </View>
+  ) : role === 'TRANSPORTADOR' && pend ? (
+    <View style={{ flexDirection: 'row', gap: gap.related }}>
+      <Button style={{ flex: 1 }} variant="bordered" label="Não recebi" onPress={() => confirmar(false)} disabled={busy} />
+      <Button style={{ flex: 1 }} label="Confirmar" onPress={() => confirmar(true)} loading={busy} />
+    </View>
+  ) : undefined;
 
   return (
-    <Screen title={titulo}
+    <Screen title={nomeMes(m.mes_referencia)}
       headerRight={recibo ? <IconButton icon="share" label="Compartilhar recibo" variant="plain"
         onPress={() => share({ title: `Recibo · ${titulo}`, message: `Recibo VanEscolar GPS\n${aluno?.nome ?? ''} · ${titulo}\n${brl(m.valor)}\nAutenticação: ${recibo}` })} /> : undefined}
-      footer={role === 'RESPONSAVEL' && !pago && !pend ? <Button variant="filled" label={`Pagar ${brl(total)}`} onPress={() => setPay(true)} /> :
-        role === 'TRANSPORTADOR' && pend ? (
-          <View style={{ flexDirection: 'row', gap: gap.related }}>
-            <Button style={{ flex: 1 }} variant="bordered" label="Não recebi" onPress={() => confirmar(false)} disabled={busy} />
-            <Button style={{ flex: 1 }} label="Confirmar" onPress={() => confirmar(true)} loading={busy} />
-          </View>) : undefined}>
+      footer={footer}>
       <View style={s.amountBlock}>
-        {aluno ? <Text style={s.center}>Mensalidade · {aluno.nome}</Text> : null}
+        <Text style={s.center}>Mensalidade{aluno ? ` · ${aluno.nome}` : ''}</Text>
         <Text style={s.amount} accessibilityLabel={`Valor ${brl(total)}`}>{brl(total)}</Text>
-        <StatusPill
-          tone={pago ? 'success' : atrasado ? 'error' : pend ? 'info' : 'neutral'}
-          label={pago ? 'Pago' : pend ? 'Aguardando confirmação' : atrasado ? 'Em atraso' : `Vence ${isoToBR(m.data_vencimento)}`}
-        />
+        <View style={{ alignItems: 'center' }}><StatusPill
+          tone={pago ? 'success' : pend || informado ? 'info' : atrasado ? 'error' : 'neutral'}
+          label={pago ? 'Pago' : pend || informado ? 'Aguardando confirmação do motorista' : `Vence em ${isoToBR(m.data_vencimento).slice(0, 5)} · ${vence}`}
+        /></View>
       </View>
+
+      {podePagar ? (
+        <>
+          <SegmentedControl<'PIX' | 'BOLETO'> value={metodo} onChange={setMetodo} accessibilityLabel="Forma de pagamento"
+            options={[{ value: 'PIX', label: 'PIX' }, { value: 'BOLETO', label: 'Boleto / outro' }]} />
+          <Card style={{ marginTop: spacing.lg }}>
+            {metodo === 'PIX' ? (
+              pix ? (
+                <>
+                  <View style={s.qr} accessible accessibilityLabel={`QR Code PIX para pagar ${brl(total)} a ${recebedor}`}>
+                    <QRCode value={pix} size={168} color={colors.black} backgroundColor={colors.white} quietZone={8} />
+                  </View>
+                  <View style={s.pixcode}>
+                    <Text style={s.pixText} numberOfLines={1} ellipsizeMode="middle" selectable>{pix}</Text>
+                    <Button variant="tinted" size="sm" icon={copiado ? 'check' : 'copy'} label={copiado ? 'Copiado' : 'Copiar'} onPress={copiar} />
+                  </View>
+                </>
+              ) : (
+                <Notice tone="warning" message={`${recebedor} ainda não cadastrou a chave PIX. Combine o pagamento com ele.`} />
+              )
+            ) : (
+              <Text style={s.muted}>Peça o boleto ou combine outra forma de pagamento com o motorista. Depois de pagar, toque em “Já fiz o pagamento”.</Text>
+            )}
+          </Card>
+          {erro ? <View style={{ marginTop: spacing.md }}><Notice tone="error" message={erro} /></View> : null}
+        </>
+      ) : informado ? (
+        <Notice tone="success" message={isDemo ? 'Pagamento registrado. No modo de exemplo a mensalidade é marcada como paga na hora.' : `${recebedor} foi avisado e confirma o recebimento em breve.`} />
+      ) : null}
+
+      <SectionHeader title="Detalhes" />
       <ListSection>
-        <ListRow title="Mensalidade" value={brl(m.valor)} />
+        <ListRow leading={<Avatar name={recebedor} size="sm" />} title={recebedor} subtitle="Recebedor · motorista autônomo" />
+        <ListRow title="Referência" value={titulo} />
+        {m.valor_multa_juros > 0 ? <ListRow title="Mensalidade" value={brl(m.valor)} /> : null}
         {m.valor_multa_juros > 0 ? <ListRow title="Multa e juros" value={brl(m.valor_multa_juros)} /> : null}
-        <ListRow title="Vencimento" value={isoToBR(m.data_vencimento)} />
         {conf ? <ListRow title="Forma de pagamento" value={conf.metodo === 'CARTAO' ? 'Cartão' : conf.metodo === 'BOLETO' ? 'Boleto/outro' : 'PIX'} /> : null}
         {conf ? <ListRow title="Pago em" value={new Date(conf.data_pagamento).toLocaleDateString('pt-BR')} /> : null}
+        {contrato ? <ListRow title="Contrato de transporte" onPress={() => go.contract(contrato.aluno_id)} /> : null}
       </ListSection>
       {recibo ? (
         <>
@@ -171,14 +252,7 @@ export const PaymentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
           <Card><Text selectable style={s.hash}>{recibo}</Text></Card>
           <SectionFooter>Código de autenticação do recibo.</SectionFooter>
         </>
-      ) : !pago ? <SectionFooter>O recibo digital fica disponível aqui assim que o motorista confirmar o recebimento.</SectionFooter> : null}
-      {contrato && (
-        <>
-          <SectionHeader title="Contrato" />
-          <ListSection><ListRow icon="doc" iconTone="gray" title="Ver contrato" onPress={() => go.contract(contrato.aluno_id)} /></ListSection>
-        </>
-      )}
-      <PaySheet visible={pay} onClose={() => setPay(false)} mensalidade={m} />
+      ) : <SectionFooter>O recibo digital fica disponível aqui assim que o motorista confirmar o recebimento.</SectionFooter>}
     </Screen>
   );
 };
@@ -189,7 +263,10 @@ const s = StyleSheet.create({
   center: { ...type.footnote, color: colors.secondaryLabel, textAlign: 'center' },
   muted: { ...type.subheadline, color: colors.secondaryLabel },
   terms: { ...type.subheadline, color: colors.secondaryLabel },
-  amountBlock: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg, marginBottom: spacing.sm },
+  amountBlock: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xxl },
+  qr: { alignSelf: 'center', padding: spacing.sm, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: colors.white },
+  pixcode: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingLeft: spacing.md, paddingRight: spacing.sm, paddingVertical: spacing.sm, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: colors.fill4 },
+  pixText: { flex: 1, ...type.footnote, color: colors.secondaryLabel, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
   amount: { ...type.amount, color: colors.label },
   hash: { ...type.footnote, color: colors.secondaryLabel, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
 });

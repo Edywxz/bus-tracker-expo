@@ -161,8 +161,8 @@ export function PopupButton<T extends string>({ options, value, onChange, title 
 }
 
 /** Pull-down menu: botão (geralmente "…" na barra) que abre uma lista de ações. */
-export const PullDownButton: React.FC<{ icon?: IconName; label: string; title?: string; actions: SheetAction[] }> = ({ icon = 'more', label, title, actions }) => (
-  <IconButton icon={icon} label={label} onPress={() => showActionSheet({ title, actions })} variant="gray" />
+export const PullDownButton: React.FC<{ icon?: IconName; label: string; title?: string; actions: SheetAction[]; variant?: 'gray' | 'glass' | 'plain' }> = ({ icon = 'more', label, title, actions, variant = 'gray' }) => (
+  <IconButton icon={icon} label={label} onPress={() => showActionSheet({ title, actions })} variant={variant} />
 );
 
 const pb = StyleSheet.create({

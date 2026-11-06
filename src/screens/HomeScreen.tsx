@@ -1,20 +1,35 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { gap, spacing } from '../theme/tokens';
+import { gap, layout, radius, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-import { FadeInUp } from '../components/ui/FadeInUp';
 import {
-  Avatar, Button, Card, EmptyState, ListRow, ListSection, Notice, ProgressBar, Screen, SectionHeader, Stat, StatusPill, statusAluno,
+  Avatar, Button, GlassSurface, IconButton, Notice, ProgressBar, PullDownButton, StatusPill, statusAluno,
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
 
+const TURNO: Record<string, string> = { MANHA: 'manhã', TARDE: 'tarde', INTEGRAL: 'integral', NOITE: 'noite' };
+
+/** Hora prevista "~6h52" a partir de minutos à frente. */
+const horaPrevista = (min: number) => {
+  const d = new Date(Date.now() + min * 60000);
+  return `~${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
+};
+const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v < 10 ? 1 : 0 })} km`;
+
+/**
+ * Rota — primeira tela (concept "First view").
+ * Mapa em tela cheia · botões de vidro no topo · sheet de vidro flutuante com status, tempo, progresso,
+ * o aluno e as duas ações. O conteúdo da sheet muda por perfil (pais, motorista, escola).
+ */
 export const HomeScreen: React.FC = () => {
   const {
-    role, perfil, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo,
+    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota,
     simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes,
   } = useApp();
   const [absence, setAbsence] = useState(false);
@@ -25,167 +40,211 @@ export const HomeScreen: React.FC = () => {
   const [erro, setErro] = useState<string | null>(null);
 
   const emRota = viagemAtiva.status === 'EM_ANDAMENTO';
+  const concluida = temViagem && viagemAtiva.status === 'CONCLUIDA';
+  const motorista = role === 'TRANSPORTADOR';
+  const pai = role === 'RESPONSAVEL';
+  const escola = role === 'INSTITUICAO';
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;
   const naEscola = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO').length;
   const ativos = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').length;
-  const primeiro = (perfil?.nome ?? (role === 'TRANSPORTADOR' ? 'Marcos' : 'Carlos')).split(' ')[0];
-  const motorista = role === 'TRANSPORTADOR';
-  const pai = role === 'RESPONSAVEL';
-
-  const title = motorista ? 'Rota de hoje' : role === 'INSTITUICAO' ? 'Chegadas' : `Olá, ${primeiro}`;
-  const subtitle = emRota
-    ? pai ? 'A van está a caminho' : 'Rota em andamento'
-    : alunos.length ? 'Nenhuma rota em andamento agora' : undefined;
+  const aguardando = alunos.filter((a) => a.statusEmbarque === 'AGUARDANDO').length;
+  const est = emRota ? estimativaRota : null;
+  const progresso = est ? est.progresso : ativos ? (aBordo + naEscola) / ativos : 0;
+  const filho = pai ? alunos[0] : undefined;
+  const destino = viagemAtiva.tipo_viagem === 'VOLTA' ? 'até o fim da rota' : 'até a escola';
 
   const concluir = async () => {
     setFinishing(true); setErro(null);
     try { await finalizarViagem(); } catch (e) { setErro((e as Error).message); } finally { setFinishing(false); }
   };
 
-  /* ---- estados vazios por perfil ---- */
-  const vazio = (() => {
-    if (alunos.length > 0) return null;
-    if (pai)
-      return <EmptyState icon="personAdd" title="Vamos começar" message="Cadastre seu filho com o código que o motorista passou. Em segundos você já acompanha a van."
-        action={<Button size="lg" label="Adicionar aluno" onPress={() => setAddStudent(true)} />} />;
-    return (
-      <Card style={{ alignItems: 'center', gap: spacing.s6 }}>
-        <Text style={s.caption}>Seu código de convite</Text>
-        <Text style={s.code} selectable accessibilityLabel={`Código ${(codigoConvite ?? '').split('').join(' ')}`}>{codigoConvite ?? '——'}</Text>
-        <Text style={s.mutedCenter}>
-          {motorista
-            ? 'Passe este código aos pais. Quando cadastrarem o aluno, ele aparece aqui na sua rota.'
-            : 'Passe este código aos pais para vincular a escola aos alunos e acompanhar as chegadas.'}
-        </Text>
-      </Card>
-    );
+  const pill = emRota
+    ? <StatusPill tone="signal" live label={est ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
+    : concluida ? <StatusPill tone="success" label="Rota concluída" /> : <StatusPill tone="neutral" label="Rota não iniciada" />;
+
+  /* ------------------------------------------------------------------ bloco de tempo / número principal */
+  const destaque = (() => {
+    if (escola) {
+      return { valor: `${naEscola}`, sufixo: `de ${ativos}`, legenda: 'alunos chegaram à escola', lado: emRota ? (est ? horaPrevista(est.minutos) : '') : '', ladoSub: emRota ? 'chegada prevista' : '' };
+    }
+    if (motorista && !emRota) {
+      return { valor: `${ativos}`, sufixo: ativos === 1 ? 'aluno' : 'alunos', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
+    }
+    if (est) {
+      return { valor: `${est.minutos}`, sufixo: 'min', legenda: destino, lado: horaPrevista(est.minutos), ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
+    }
+    if (emRota) {
+      // Dados reais: sem previsão confiável — mostramos onde a van está agora.
+      return { valor: '', sufixo: '', legenda: gpsAtivo ? gpsPosicao.rua : 'Aguardando sinal da van', lado: gpsPosicao.velocidade ? `${gpsPosicao.velocidade} km/h` : '', ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
+    }
+    return null;
   })();
 
-  return (
-    <Screen title={title} subtitle={subtitle} onRefresh={recarregar}>
-      {motorista && !temVeiculo && !isDemo && (
-        <FadeInUp index={0} style={s.block}>
-          <Notice tone="warning" message="Cadastre seu veículo para poder iniciar rotas." />
-          <View style={{ height: gap.related }} />
-          <Button variant="bordered" label="Cadastrar veículo" icon="vanOutline" onPress={go.vehicle} />
-        </FadeInUp>
-      )}
+  /* ------------------------------------------------------------------ conteúdo da sheet */
+  const vazio = alunos.length === 0;
+  const sheet = (
+    <>
+      <View style={s.grabber} />
+      <View style={s.row}>
+        {pill}
+        <View style={{ flex: 1 }} />
+        {emRota ? <Text style={s.meta}>ao vivo</Text> : null}
+      </View>
 
-      {vazio ? <FadeInUp index={1}>{vazio}</FadeInUp> : (
+      {vazio ? (
+        pai ? (
+          <View style={{ marginTop: spacing.md, gap: spacing.md }}>
+            <Text style={s.title}>Vamos começar</Text>
+            <Text style={s.sub}>Cadastre seu filho com o código que o motorista passou. Em segundos você já acompanha a van.</Text>
+            <Button variant="borderedProminent" label="Adicionar aluno" icon="personAdd" onPress={() => setAddStudent(true)} />
+          </View>
+        ) : (
+          <View style={{ marginTop: spacing.md, gap: spacing.s6 }}>
+            <Text style={s.caption}>Seu código de convite</Text>
+            <Text style={s.code} selectable accessibilityLabel={`Código ${(codigoConvite ?? '').split('').join(' ')}`}>{codigoConvite ?? '——'}</Text>
+            <Text style={s.sub}>{motorista ? 'Passe este código aos pais. Quando cadastrarem o aluno, ele aparece na sua rota.' : 'Passe este código aos pais para acompanhar as chegadas.'}</Text>
+          </View>
+        )
+      ) : (
         <>
-          {/* Aviso principal (pais, rota ao vivo) — único card amarelo da tela */}
-          {pai && emRota && (
-            <FadeInUp index={0} style={s.block}>
-              <Card variant="signal">
-                <StatusPill tone="signal" label="A caminho" live />
-                <Text style={s.signalTitle}>{nomes.transportador ?? 'A van'} está na rota</Text>
-                <Text style={s.signalText}>Leve seu filho até o portão. Avisamos de novo quando a van estiver chegando.</Text>
-              </Card>
-            </FadeInUp>
+          {destaque ? (
+            <View style={s.etaRow}>
+              <View style={{ flex: 1 }}>
+                {destaque.valor ? (
+                  <Text style={s.eta} accessibilityLabel={`${destaque.valor} ${destaque.sufixo} ${destaque.legenda}`}>
+                    {destaque.valor}<Text style={s.etaUnit}> {destaque.sufixo}</Text>
+                  </Text>
+                ) : null}
+                <Text style={destaque.valor ? s.sub : s.title} numberOfLines={2}>{destaque.legenda}</Text>
+              </View>
+              {destaque.lado || destaque.ladoSub ? (
+                <View style={s.etaSide}>
+                  {destaque.lado ? <Text style={s.etaClock}>{destaque.lado}</Text> : null}
+                  {destaque.ladoSub ? <Text style={s.meta}>{destaque.ladoSub}</Text> : null}
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={s.title}>{nomes.transportador ? `${nomes.transportador} ainda não iniciou a rota` : 'A rota de hoje ainda não começou'}</Text>
+              <Text style={s.sub}>Avisamos você assim que a van sair.</Text>
+            </View>
           )}
 
-          {/* Mapa + telemetria */}
-          <FadeInUp index={0} style={s.block}>
-            <Card padded={false} style={{ padding: spacing.sm }}>
-              <View style={s.mapHead}>
-                <StatusPill
-                  tone={emRota ? 'signal' : temViagem && viagemAtiva.status === 'CONCLUIDA' ? 'success' : 'neutral'}
-                  label={emRota ? 'Em trânsito' : temViagem && viagemAtiva.status === 'CONCLUIDA' ? 'Rota concluída' : 'Parada'}
-                  live={emRota}
-                />
-                <Text style={s.trip}>{viagemAtiva.tipo_viagem === 'IDA' ? 'Ida à escola' : 'Volta para casa'}</Text>
-              </View>
-              <RouteMap
-                step={gpsStep}
-                ativo={emRota && gpsAtivo}
-                endereco={emRota ? gpsPosicao.rua : 'Van estacionada'}
-                velocidade={gpsPosicao.velocidade}
-                pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque }))}
-              />
-              <View style={s.stats}>
-                <Stat label="A bordo" value={`${aBordo}`} />
-                <Stat label="Na escola" value={`${naEscola}`} />
-                <Stat label="Previstos" value={`${ativos}`} />
-              </View>
-              {emRota && ativos > 0 && (
-                <View style={{ paddingHorizontal: spacing.sm, paddingBottom: spacing.sm }}>
-                  <ProgressBar value={aBordo + naEscola} total={ativos} tone="signal" accessibilityLabel="Progresso da rota" />
-                </View>
-              )}
-            </Card>
-          </FadeInUp>
+          {(emRota || motorista) && ativos > 0 ? (
+            <View style={{ marginTop: spacing.lg }}>
+              <ProgressBar value={progresso} total={1} tone="signal" accessibilityLabel="Progresso da rota" />
+            </View>
+          ) : null}
 
-          {/* Ações por perfil */}
-          <FadeInUp index={1} style={s.block}>
-            {motorista && (
-              <View style={{ gap: gap.related }}>
-                {emRota ? (
-                  <View style={s.row}>
-                    <Button style={{ flex: 1 }} variant="bordered" label="Concluir rota" icon="flag" onPress={concluir} loading={finishing} />
-                    <Button style={{ flex: 1 }} variant="tinted" role="destructive" label="Ocorrência" icon="warning" onPress={() => setEmergency(true)} />
-                  </View>
-                ) : (
-                  <Button size="lg" label="Iniciar rota" icon="play" onPress={() => setStart(true)} disabled={!temVeiculo && !isDemo} />
-                )}
-                {isDemo && emRota && (
-                  <Button variant="gray" label="Avançar GPS (simulação)" icon="forward" onPress={simularPassoGps} />
-                )}
+          {/* aluno (pais) */}
+          {filho ? (
+            <View style={s.child}>
+              <Avatar name={filho.nome} onBoard={filho.statusEmbarque === 'EMBARCADO'} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={s.childName} numberOfLines={1}>{filho.nome}</Text>
+                <Text style={s.meta} numberOfLines={1}>
+                  {filho.statusEmbarque === 'AGUARDANDO' ? filho.endereco_busca : statusAluno(filho.statusEmbarque).label}
+                  {` · ${viagemAtiva.tipo_viagem === 'VOLTA' ? 'Volta para casa' : 'Ida para a escola'}`}
+                </Text>
               </View>
-            )}
-            {pai && (
-              <View style={s.row}>
-                <Button style={{ flex: 1 }} variant="tinted" label="Avisar falta" icon="calendar" onPress={() => setAbsence(true)} />
-                {isDemo && emRota && (
-                  <Button style={{ flex: 1 }} variant="gray" label="Avançar van" icon="forward" onPress={simularPassoGps} />
-                )}
-              </View>
-            )}
-            {erro && <View style={{ marginTop: gap.related }}><Notice tone="error" message={erro} /></View>}
-            {pai && !emRota && nomes.transportador && (
-              <Text style={[s.mutedCenter, { marginTop: spacing.md }]}>{nomes.transportador} ainda não iniciou a rota de hoje.</Text>
-            )}
-          </FadeInUp>
+              <IconButton icon="chevronRight" label={`Ver ${filho.nome}`} size="sm" variant="gray" onPress={() => go.student(filho.id)} />
+            </View>
+          ) : null}
 
-          {/* Paradas */}
-          <FadeInUp index={2}>
-            <SectionHeader title={role === 'INSTITUICAO' ? 'Alunos desta escola' : 'Paradas'} />
-            <ListSection>
-              {alunos.map((a) => {
-                const st = statusAluno(a.statusEmbarque);
-                return (
-                  <ListRow
-                    key={a.id}
-                    leading={<Avatar name={a.nome} onBoard={a.statusEmbarque === 'EMBARCADO'} />}
-                    title={a.nome}
-                    subtitle={a.ultimoRegistro ?? a.endereco_busca}
-                    trailing={<StatusPill tone={st.tone} label={st.label} />}
-                    onPress={role === 'INSTITUICAO' ? undefined : () => go.student(a.id)}
-                    chevron={false}
-                  />
-                );
-              })}
-            </ListSection>
-          </FadeInUp>
+          {/* ações */}
+          {pai ? (
+            <View style={s.actions}>
+              <Button style={{ flex: 1 }} label="Mensagem" icon="chat" onPress={() => router.push('/conversa')} />
+              <Button style={{ flex: 1 }} variant="bordered" label="Avisar ausência" onPress={() => setAbsence(true)} />
+            </View>
+          ) : motorista ? (
+            emRota ? (
+              <View style={s.actions}>
+                <Button style={{ flex: 1 }} label="Concluir rota" icon="flag" onPress={concluir} loading={finishing} />
+                <Button style={{ flex: 1 }} variant="tinted" role="destructive" label="Ocorrência" icon="warning" onPress={() => setEmergency(true)} />
+              </View>
+            ) : (
+              <View style={s.actions}>
+                <Button style={{ flex: 1 }} variant="filled" label="Iniciar rota" icon="play" onPress={() => setStart(true)} disabled={!temVeiculo && !isDemo} />
+              </View>
+            )
+          ) : (
+            <View style={s.actions}>
+              <Button style={{ flex: 1 }} variant="bordered" label="Ver alunos" icon="people" onPress={() => router.navigate('/(tabs)/(alunos)')} />
+            </View>
+          )}
         </>
       )}
 
-      <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} />
+      {motorista && !temVeiculo && !isDemo ? <View style={{ marginTop: spacing.md }}><Notice tone="warning" message="Cadastre seu veículo para poder iniciar rotas." /></View> : null}
+      {erro ? <View style={{ marginTop: spacing.md }}><Notice tone="error" message={erro} /></View> : null}
+    </>
+  );
+
+  /* ------------------------------------------------------------------ menu "…" */
+  const acoes = [
+    { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
+    ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
+    ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
+    ...(pai ? [{ label: 'Adicionar aluno', onPress: () => setAddStudent(true) }] : []),
+  ];
+
+  const filhoIdx = filho ? alunos.indexOf(filho) : undefined;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.mapLand }}>
+      <Stack.Screen options={{ headerShown: false, title: motorista ? 'Rota' : escola ? 'Chegadas' : 'Rota' }} />
+      <RouteMap
+        step={gpsStep}
+        ativo={emRota && gpsAtivo}
+        pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque }))}
+        homeIndex={filhoIdx}
+        accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
+      />
+
+      {/* botões de vidro sobre o mapa */}
+      <SafeAreaView edges={['top']} style={s.top} pointerEvents="box-none">
+        <IconButton icon="people" label="Alunos" variant="glass" onPress={() => router.navigate('/(tabs)/(alunos)')} />
+        <View style={{ gap: spacing.sm }}>
+          <IconButton icon="location" label="Atualizar posição da van" variant="glass" onPress={() => { recarregar().catch(() => {}); }} />
+          <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
+        </View>
+      </SafeAreaView>
+
+      {/* sheet de vidro flutuante */}
+      <SafeAreaView edges={['bottom']} style={s.bottom} pointerEvents="box-none">
+        <GlassSurface material="thick" style={s.sheet}>
+          <View style={s.sheetBody}>{sheet}</View>
+        </GlassSurface>
+      </SafeAreaView>
+
+      <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={filho?.id} />
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
-    </Screen>
+    </View>
   );
 };
 
 const s = StyleSheet.create({
-  block: { marginBottom: gap.section - spacing.sm },
-  row: { flexDirection: 'row', gap: gap.related },
-  mapHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm + 2 },
-  trip: { ...type.footnote, fontWeight: '600', color: colors.secondaryLabel },
-  stats: { flexDirection: 'row', paddingHorizontal: spacing.sm, paddingVertical: spacing.md + 2 },
+  top: { position: 'absolute', left: 0, right: 0, top: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: layout.gutter, paddingTop: spacing.sm },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
+  sheet: { borderRadius: radius.sheet },
+  sheetBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: radius.full, backgroundColor: colors.fill1, marginBottom: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: gap.related },
+  meta: { ...type.footnote, color: colors.secondaryLabel },
+  etaRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md, marginTop: spacing.md },
+  eta: { ...type.eta, color: colors.label },
+  etaUnit: { ...type.title3, fontWeight: '700', color: colors.label, letterSpacing: 0 },
+  etaSide: { alignItems: 'flex-end', paddingBottom: spacing.xs, gap: 2 },
+  etaClock: { ...type.headline, color: colors.label, fontVariant: ['tabular-nums'] },
+  title: { ...type.headline, color: colors.label },
+  sub: { ...type.subheadline, color: colors.secondaryLabel, marginTop: 2 },
   caption: { ...type.sectionHeader, color: colors.secondaryLabel },
-  code: { fontSize: 38, fontWeight: '800', letterSpacing: 6, color: colors.label, fontVariant: ['tabular-nums'] },
-  mutedCenter: { ...type.subheadline, color: colors.secondaryLabel, textAlign: 'center' },
-  signalTitle: { ...type.headline, color: colors.onSignalContainer, marginTop: spacing.md },
-  signalText: { ...type.subheadline, color: colors.onSignalContainer, marginTop: spacing.xs },
+  code: { fontSize: 34, fontWeight: '800', letterSpacing: 6, color: colors.label, fontVariant: ['tabular-nums'] },
+  child: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, paddingTop: spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+  childName: { ...type.headline, color: colors.label },
+  actions: { flexDirection: 'row', gap: gap.related, marginTop: spacing.lg },
 });

@@ -68,6 +68,13 @@ interface AppContextType {
   gpsAtivo: boolean;
   /** índice do ponto da rota no modo demonstração */
   gpsStep?: number;
+  /** total de pontos da rota conhecida (modo demonstração) */
+  gpsTotalPassos?: number;
+  /**
+   * Estimativa até o fim da rota, calculada pela distância restante dos pontos conhecidos e a velocidade atual.
+   * Só existe quando a rota é conhecida (modo demonstração); com dados reais é null — nunca inventamos um número.
+   */
+  estimativaRota: { km: number; minutos: number; progresso: number } | null;
 
   // Ações
   simularPassoGps: () => void;
@@ -251,6 +258,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const gpsPosicao: GPSCoordinate = isDemo ? ROTA_PONTOS[gpsIndex] : gpsReal ?? SEM_SINAL;
   const gpsAtivo = isDemo || !!gpsReal;
+
+  const estimativaRota = useMemo(() => {
+    if (!isDemo) return null;
+    const rad = (g: number) => (g * Math.PI) / 180;
+    const dist = (a: GPSCoordinate, b: GPSCoordinate) => {
+      const dLat = rad(b.latitude - a.latitude), dLon = rad(b.longitude - a.longitude);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    };
+    let total = 0, restante = 0;
+    for (let i = 0; i < ROTA_PONTOS.length - 1; i++) {
+      const d = dist(ROTA_PONTOS[i], ROTA_PONTOS[i + 1]);
+      total += d;
+      if (i >= gpsIndex) restante += d;
+    }
+    const vel = Math.max(ROTA_PONTOS[gpsIndex].velocidade, 15); // km/h, piso para trânsito parado
+    return { km: restante, minutos: Math.max(1, Math.round((restante / vel) * 60)), progresso: total ? 1 - restante / total : 1 };
+  }, [isDemo, gpsIndex]);
 
   const simularPassoGps = () => {
     if (!isDemo) return;
@@ -468,6 +493,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     role, setRole, alunos, pessoasAutorizadas, veiculo, temVeiculo: !!veiculo.id,
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
     eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? gpsIndex : undefined,
+    gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     simularPassoGps, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
     registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, atualizarVeiculo,
@@ -475,7 +501,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

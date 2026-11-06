@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { motion, radius, elevation, spacing } from '../theme/tokens';
+import { motion, radius, elevation } from '../theme/tokens';
 import { type } from '../theme/type';
 import { Button, Icon, IconName, Notice, PressableScale as TouchableScale, TextField } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';

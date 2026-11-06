@@ -9,7 +9,6 @@ import {
 } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { PaySheet } from '../sheets/Sheets';
 import { brl, isoToBR, nomeMes } from '../utils/format';
 import { Mensalidade } from '../types/database';
 
@@ -18,7 +17,6 @@ type Filtro = 'ABERTAS' | 'PAGAS' | 'TODAS';
 export const PaymentsScreen: React.FC = () => {
   const { mensalidades, pagamentos, contratos, alunos, role, recarregar } = useApp();
   const [filtro, setFiltro] = useState<Filtro>('ABERTAS');
-  const [pay, setPay] = useState<Mensalidade | null>(null);
   const motorista = role === 'TRANSPORTADOR';
 
   const pendente = (m: Mensalidade) => pagamentos.some((p) => p.mensalidade_id === m.id && p.status === 'PENDENTE');
@@ -67,7 +65,7 @@ export const PaymentsScreen: React.FC = () => {
                   {pill(proxima)}
                   <Text style={s.muted}>{nomeMes(proxima.mes_referencia)} · vence {isoToBR(proxima.data_vencimento)}</Text>
                 </View>
-                {!pendente(proxima) && <View style={{ marginTop: spacing.sm }}><Button variant="filled" label="Pagar agora" onPress={() => setPay(proxima)} /></View>}
+                {!pendente(proxima) && <View style={{ marginTop: spacing.sm }}><Button variant="filled" label="Pagar agora" onPress={() => go.payment(proxima.id)} /></View>}
                 {pendente(proxima) && <Text style={[s.muted, { marginTop: spacing.xs }]}>Pagamento informado. Aguardando o motorista confirmar.</Text>}
               </Card>
             ) : (
@@ -111,7 +109,6 @@ export const PaymentsScreen: React.FC = () => {
           </FadeInUp>
         </>
       )}
-      <PaySheet visible={!!pay} mensalidade={pay} onClose={() => setPay(null)} />
     </Screen>
   );
 };

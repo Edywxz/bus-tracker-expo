@@ -1,8 +1,6 @@
-import React from 'react';
 import { Platform } from 'react-native';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useApp } from '../../src/context/AppContext';
-import { ICONS } from '../../src/components/ds';
 import { colors } from '../../src/theme/colors';
 
 /**
@@ -29,11 +27,8 @@ export default function TabsLayout() {
       badgeBackgroundColor={colors.error}
     >
       <NativeTabs.Trigger name="(inicio)">
-        <NativeTabs.Trigger.Label>{motorista ? 'Rota' : escola ? 'Chegadas' : 'Início'}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={motorista ? 'map' : { default: ICONS.home.ios, selected: ICONS.homeFill.ios }}
-          md={motorista ? 'map' : 'home'}
-        />
+        <NativeTabs.Trigger.Label>{escola ? 'Chegadas' : 'Rota'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} md="map" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(alunos)">
@@ -49,7 +44,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(financeiro)" hidden={escola}>
-        <NativeTabs.Trigger.Label>{motorista ? 'Receber' : 'Pagamentos'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{motorista ? 'Receber' : 'Pagar'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'wallet.bifold', selected: 'wallet.bifold.fill' }} md="account_balance_wallet" />
       </NativeTabs.Trigger>
 

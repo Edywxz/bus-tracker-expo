@@ -246,7 +246,7 @@ body.inspecting main{margin-right:350px}
     </div><div class="spec" style="margin-top:8px;text-align:left">standard · large title · scrolled (chrome) com ação prominent</div></section>
 
   <section id="tabbar"><h2 class="sec"><span class="cat">Bars</span>Tab bar</h2>
-    <p class="sec-desc">Cápsula de vidro flutuante (iOS 26) com até 5 abas e um botão auxiliar separado. A aba selecionada recebe um preenchimento sutil — sem cor de destaque. Badge vermelho para recados não lidos.</p>
+    <p class="sec-desc">Cápsula de vidro flutuante (iOS 26) com até 5 abas — Rota, Alunos, Recados, Pagar e Conta. (O iOS só separa em círculo a aba de busca; por isso Conta fica dentro da cápsula.) A aba selecionada recebe um preenchimento sutil — sem cor de destaque. Badge vermelho para recados não lidos.</p>
     <div class="stage map col">
       <div class="tabbar-wrap" style="max-width:400px" data-insp="tabbar">
         <div class="tabbar">
@@ -254,8 +254,8 @@ body.inspecting main{margin-right:350px}
           <div class="tab"><svg class="ico"><use href="#i-people"/></svg>Alunos</div>
           <div class="tab"><svg class="ico"><use href="#i-message"/></svg>Recados<span class="badge">3</span></div>
           <div class="tab"><svg class="ico"><use href="#i-wallet"/></svg>Pagar</div>
+          <div class="tab"><svg class="ico"><use href="#i-person"/></svg>Conta</div>
         </div>
-        <div class="tabbar-aux"><svg class="ico"><use href="#i-person"/></svg></div>
       </div>
     </div></section>
 
@@ -386,7 +386,7 @@ body.inspecting main{margin-right:350px}
   <section id="segmented"><h2 class="sec"><span class="cat">Controls</span>Segmented control</h2>
     <p class="sec-desc">2–5 opções exclusivas da mesma natureza. Cápsula com polegar elevado.</p>
     <div class="stage col" style="max-width:420px">
-      <div class="segmented" data-insp="segmented"><div class="seg sel">PIX</div><div class="seg">Cartão</div><div class="seg">Boleto</div></div>
+      <div class="segmented" data-insp="segmented"><div class="seg sel">PIX</div><div class="seg">Boleto / outro</div></div>
       <div class="segmented" data-insp="segmented"><div class="seg">Ida</div><div class="seg sel">Volta</div></div>
     </div></section>
 
@@ -588,9 +588,9 @@ const SPECS={
   props:[{n:'title',t:'string'},{n:'variant',t:'"standard"|"large"',def:'"standard"'},{n:'leading',t:'BarItem[]'},{n:'trailing',t:'BarItem[]'},{n:'prominentAction',t:'BarItem?',d:'Rendered as ink-tinted glass (e.g. Enviar)'},{n:'scrolled',t:'boolean',def:'false',d:'Applies --mat-chrome + hairline'}],
   tokens:[T('title colour','--label'),T('button glass','--mat-regular'),T('glass rim','--glass-rim'),T('prominent glass','--glass-tint-prominent'),T('scrolled bg','--mat-chrome'),T('hairline','--separator')],
   metrics:[['bar height','--bar-height (44)'],['button','44×44 circle'],['side padding','--layout-gutter (16)'],['large title','34/41 800, -0.022em'],['title','17 600']]},
- tabbar:{name:'Tab bar',file:'components/tab-bar.tsx',desc:'Floating Liquid Glass capsule with up to 5 tabs + an optional separate auxiliary circle (account/search). Selected tab gets --fill-3 pill and ink label — no accent colour. Count badge on Recados.',
+ tabbar:{name:'Tab bar',file:'components/tab-bar.tsx',desc:'Floating Liquid Glass capsule with up to 5 tabs (Rota, Alunos, Recados, Pagar, Conta). iOS only detaches the search-role tab into a circle, so Conta stays inside the capsule. Selected tab gets --fill-3 pill and ink label — no accent colour. Count badge on Recados.',
   native:'Use Expo Router NativeTabs (expo-router/unstable-native-tabs) — it renders the real iOS 26 glass tab bar. Icons via sf prop (map, person.2, message, wallet.bifold). Badge via <NativeTabs.Trigger.Badge>. Do not build a JS tab bar.',
-  props:[{n:'tabs',t:'{key,label,sfSymbol,badge?}[]'},{n:'selected',t:'string'},{n:'aux',t:'BarItem?'},{n:'onSelect',t:'(key)=>void'}],
+  props:[{n:'tabs',t:'{key,label,sfSymbol,badge?}[]'},{n:'selected',t:'string'},{n:'onSelect',t:'(key)=>void'}],
   tokens:[T('material','--mat-regular'),T('shadow','--glass-shadow'),T('selected fill','--fill-3'),T('label','--label'),T('badge','--error')],
   metrics:[['height','--tabbar-height (62)'],['radius','--r-full'],['inset from edges','--float-inset (16)'],['icon','24'],['label','10/12 500']]},
  toolbar:{name:'Toolbar',file:'components/toolbar.tsx',desc:'Floating glass group of contextual actions at the bottom (driver: centre map, call, Iniciar rota). One prominent ink item max; separators group related items.',
@@ -633,7 +633,7 @@ const SPECS={
   props:[{n:'kind',t:'"popup"|"pulldown"'},{n:'items',t:'MenuItem[]'},{n:'selected',t:'string?'},{n:'title',t:'string?'}],
   tokens:[T('menu material','--mat-thick'),T('item','--label'),T('value','--secondary-label'),T('destructive','--error'),T('group band','--fill-4')],
   metrics:[['item height','44'],['menu radius','--r-lg (20)'],['min width','250']]},
- segmented:{name:'Segmented control',file:'components/segmented-control.tsx',desc:'2–5 mutually exclusive same-kind options (PIX/Cartão/Boleto, Ida/Volta). Capsule track with raised thumb.',
+ segmented:{name:'Segmented control',file:'components/segmented-control.tsx',desc:'2–5 mutually exclusive same-kind options (PIX/Boleto, Ida/Volta). Capsule track with raised thumb.',
   native:'@expo/ui Picker variant="segmented" (SwiftUI) — native animation & haptics.',
   props:[{n:'options',t:'string[]'},{n:'selectedIndex',t:'number',def:'0'},{n:'onChange',t:'(i)=>void'}],
   tokens:[T('track','--fill-3'),T('thumb','--tertiary-system-bg'),T('label','--label')],

@@ -7,9 +7,9 @@ import { Button, Card, Chip, Icon, Notice, SegmentedControl, Sheet, TextEditor, 
 import { useApp } from '../context/AppContext';
 import { useAction } from './useAction';
 import {
-  brl, dateToISO, isoToBR, maskCpf, maskDate, maskPhone, maskPlaca, onlyDigits, parseMoney,
+  dateToISO, isoToBR, maskCpf, maskDate, maskPhone, maskPlaca, onlyDigits, parseMoney,
 } from '../utils/format';
-import { Mensalidade, PeriodoAusencia, SeveridadeEvento } from '../types/database';
+import { PeriodoAusencia, SeveridadeEvento } from '../types/database';
 
 const TURNOS = [
   { v: 'MANHA', l: 'Manhã' }, { v: 'TARDE', l: 'Tarde' }, { v: 'INTEGRAL', l: 'Integral' }, { v: 'NOITE', l: 'Noite' },
@@ -95,68 +95,6 @@ export const StartRouteSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
         </Card>
       ) : null}
       {error && <Notice tone="error" message={error} />}
-    </Sheet>
-  );
-};
-
-/* ------------------------------------------------------------ Pagamento */
-export const PaySheet: React.FC<BaseProps & { mensalidade: Mensalidade | null; onDone?: () => void }> = ({ visible, onClose, mensalidade, onDone }) => {
-  const { pagarMensalidade, recebimento, nomes, isDemo } = useApp();
-  const { run, loading, error, setError } = useAction();
-  const [metodo, setMetodo] = useState<'PIX' | 'BOLETO'>('PIX');
-  const [feito, setFeito] = useState(false);
-  useEffect(() => { if (visible) { setFeito(false); setError(null); } }, [visible]); // eslint-disable-line
-  if (!mensalidade) return null;
-  const total = mensalidade.valor + (mensalidade.valor_multa_juros ?? 0);
-
-  const informar = async () => {
-    const ok = await run(async () => {
-      const r = await pagarMensalidade(mensalidade.id, metodo, { origem: 'app' });
-      if (!r.sucesso) throw new Error('Mensalidade não encontrada.');
-    });
-    if (ok) { setFeito(true); onDone?.(); }
-  };
-
-  return (
-    <Sheet visible={visible} onClose={onClose} title={feito ? 'Tudo certo' : 'Pagar mensalidade'}
-      footer={feito
-        ? <Button size="lg" label="Fechar" onPress={onClose} />
-        : <Button size="lg" label="Já fiz o pagamento" onPress={informar} loading={loading} />}>
-      {feito ? (
-        <View style={{ alignItems: 'center', gap: 10, paddingVertical: 16 }}>
-          <View style={st.okCircle}><Icon name="check" size={34} color={colors.onSuccessContainer} weight="semibold" /></View>
-          <Text style={st.bigCenter}>{isDemo ? 'Pagamento registrado' : 'Aviso enviado'}</Text>
-          <Text style={st.mutedCenter}>
-            {isDemo
-              ? 'No modo de exemplo a mensalidade é marcada como paga na hora.'
-              : `${nomes.transportador ?? 'O motorista'} foi avisado e confirma o recebimento em breve. Você será notificado.`}
-          </Text>
-        </View>
-      ) : (
-        <>
-          <View style={st.amountBox}>
-            <Text style={st.muted}>Valor a pagar</Text>
-            <Text style={st.amount}>{brl(total)}</Text>
-            {mensalidade.valor_multa_juros > 0 && <Text style={st.muted}>inclui {brl(mensalidade.valor_multa_juros)} de multa e juros</Text>}
-          </View>
-          <SegmentedControl value={metodo} onChange={setMetodo} options={[{ value: 'PIX', label: 'PIX' }, { value: 'BOLETO', label: 'Boleto / outro' }]} />
-          {metodo === 'PIX' ? (
-            <Card>
-              <Text style={st.label}>Chave PIX de {nomes.transportador ?? 'quem recebe'}</Text>
-              {recebimento.chavePix ? (
-                <Text selectable style={st.pix}>{recebimento.chavePix}</Text>
-              ) : (
-                <Text style={st.muted}>O motorista ainda não cadastrou a chave PIX. Combine o pagamento com ele.</Text>
-              )}
-              <Text style={[st.muted, { marginTop: 8 }]}>Segure o texto para copiar, pague no app do seu banco e volte aqui.</Text>
-            </Card>
-          ) : (
-            <Card><Text style={st.muted}>Peça o boleto ou combine outra forma de pagamento com o motorista. Quando pagar, toque em “Já fiz o pagamento”.</Text></Card>
-          )}
-          {!isDemo && <Notice tone="info" message="A mensalidade só vira “paga” quando o motorista confirmar o recebimento." />}
-          {error && <Notice tone="error" message={error} />}
-        </>
-      )}
     </Sheet>
   );
 };
@@ -367,10 +305,4 @@ const st = StyleSheet.create({
   label: { ...type.footnote, color: colors.secondaryLabel, marginBottom: -8, paddingHorizontal: 4 },
   strong: { ...type.callout, fontWeight: '700', color: colors.label },
   muted: { ...type.footnote, color: colors.secondaryLabel },
-  mutedCenter: { ...type.subheadline, color: colors.secondaryLabel, textAlign: 'center' },
-  bigCenter: { ...type.title3, color: colors.label, textAlign: 'center' },
-  amountBox: { alignItems: 'center', paddingVertical: 8, gap: 2 },
-  amount: { ...type.amount, color: colors.label },
-  pix: { ...type.headline, color: colors.label, marginTop: 6, backgroundColor: colors.fill4, padding: 12, borderRadius: radius.md, overflow: 'hidden' },
-  okCircle: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.successContainer, alignItems: 'center', justifyContent: 'center' },
 });

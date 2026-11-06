@@ -132,8 +132,6 @@ body{font-family:var(--font-body);color:var(--label);background:var(--tertiary-g
         <!-- route: done (gray) → remaining (ink) -->
         <path d="M70 520 V390 H200" style="stroke:var(--route-done);stroke-width:7;fill:none;stroke-linecap:round;stroke-linejoin:round"/>
         <path d="M200 390 V250 H330 V178" style="stroke:var(--route);stroke-width:7;fill:none;stroke-linecap:round;stroke-linejoin:round"/>
-        <text x="210" y="243" style="font:600 11px var(--font-body);fill:var(--secondary-label)">Av. Brasil</text>
-        <text x="78" y="383" style="font:600 11px var(--font-body);fill:var(--secondary-label)">R. das Acácias</text>
       </svg>
       <div class="on-map" style="left:178px;top:296px"><div class="van-pin"><svg class="ico"><use href="#i-van"/></svg></div></div>
       <div class="on-map" style="left:315px;top:150px"><div class="stop-pin stop-pin--home"><svg class="ico ico--sm"><use href="#i-house"/></svg></div></div>
@@ -148,16 +146,16 @@ body{font-family:var(--font-body);color:var(--label);background:var(--tertiary-g
     <div class="s1-sheet"><div class="sheet sheet--floating">
       <div class="grabber"></div>
       <div class="inset">
-        <div class="hstack"><span class="pill pill--signal"><span class="dot"></span>A caminho · 1,2 km</span><div class="spacer"></div><span class="t-footnote">há 8 s</span></div>
+        <div class="hstack"><span class="pill pill--signal"><span class="dot"></span>A caminho · 1,2 km</span><div class="spacer"></div><span class="t-footnote">ao vivo</span></div>
         <div class="eta-row">
-          <div><div class="t-eta">7<small>min</small></div><div class="t-subheadline" style="margin-top:var(--sp-6)">até a sua parada</div></div>
-          <div class="eta-side"><div class="t-headline num">~6h52</div><div class="t-footnote">2 paradas antes</div></div>
+          <div><div class="t-eta">7<small>min</small></div><div class="t-subheadline" style="margin-top:var(--sp-6)">até a escola</div></div>
+          <div class="eta-side"><div class="t-headline num">~6h52</div><div class="t-footnote">2 paradas restantes</div></div>
         </div>
         <div class="progress progress--signal" style="margin-top:var(--sp-16)"><i style="width:57%"></i></div>
         <div class="child">
           <div class="avatar avatar--ring">HD</div>
           <div class="row-body"><div class="t-headline">Helena Duarte</div><div class="t-footnote">Rua das Acácias, 120 · Ida para a escola</div></div>
-          <span class="btn btn-gray btn-sm btn-icon" aria-label="Ligar para o motorista"><svg class="ico ico--sm"><use href="#i-phone"/></svg></span>
+          <span class="btn btn-gray btn-sm btn-icon" aria-label="Ver aluno"><svg class="ico ico--sm"><use href="#i-chevron-right"/></svg></span>
         </div>
         <div class="actions"><span class="btn btn-prominent"><svg class="ico ico--sm"><use href="#i-message"/></svg>Mensagem</span><span class="btn btn-bordered">Avisar ausência</span></div>
       </div>
@@ -169,8 +167,8 @@ body{font-family:var(--font-body);color:var(--label);background:var(--tertiary-g
         <div class="tab"><svg class="ico"><use href="#i-people"/></svg>Alunos</div>
         <div class="tab"><svg class="ico"><use href="#i-message"/></svg>Recados<span class="badge">2</span></div>
         <div class="tab"><svg class="ico"><use href="#i-wallet"/></svg>Pagar</div>
+        <div class="tab"><svg class="ico"><use href="#i-person"/></svg>Conta</div>
       </div>
-      <div class="tabbar-aux" aria-label="Conta"><svg class="ico"><use href="#i-person"/></svg></div>
     </div></div>
   </div></div>
 
@@ -192,11 +190,11 @@ body{font-family:var(--font-body);color:var(--label);background:var(--tertiary-g
       </div>
 
       <div class="inset" style="margin-top:var(--gap-section)">
-        <div class="segmented"><div class="seg sel">PIX</div><div class="seg">Cartão</div><div class="seg">Boleto</div></div>
+        <div class="segmented"><div class="seg sel">PIX</div><div class="seg">Boleto / outro</div></div>
       </div>
 
       <div class="inset" style="margin-top:var(--sp-16)"><div class="card">
-        <div class="qr"><svg class="ico"><use href="#i-qr"/></svg>QR Code PIX · placeholder</div>
+        <div class="qr"><svg class="ico"><use href="#i-qr"/></svg>QR Code PIX · gerado no app</div>
         <div class="pixcode"><code>00020126580014br.gov.bcb.pix0136a1f4…</code><span class="btn btn-tinted btn-sm"><svg class="ico ico--sm"><use href="#i-copy"/></svg>Copiar</span></div>
       </div></div>
 
@@ -211,7 +209,7 @@ body{font-family:var(--font-body);color:var(--label);background:var(--tertiary-g
 
     <div class="cta-bar mat-chrome" style="box-shadow:0 -.5px 0 var(--separator)">
       <span class="btn btn-filled"><svg class="ico ico--sm"><use href="#i-copy"/></svg>Copiar código PIX</span>
-      <div class="t-footnote">Abra o app do seu banco e cole o código.</div>
+      <span class="btn btn-plain" style="width:100%">Já fiz o pagamento</span>
     </div>
   </div></div>
 </div>
