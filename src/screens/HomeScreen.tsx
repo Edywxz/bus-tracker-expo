@@ -11,6 +11,7 @@ import {
 import { RouteMap } from '../components/RouteMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
+import { primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
 
 const TURNO: Record<string, string> = { MANHA: 'manhã', TARDE: 'tarde', INTEGRAL: 'integral', NOITE: 'noite' };
@@ -49,7 +50,10 @@ export const HomeScreen: React.FC = () => {
   const aguardando = alunos.filter((a) => a.statusEmbarque === 'AGUARDANDO').length;
   const est = emRota ? estimativaRota : null;
   const progresso = est ? est.progresso : ativos ? (aBordo + naEscola) / ativos : 0;
-  const filho = pai ? alunos[0] : undefined;
+  // Com 2+ dependentes a bordo, o mapa indica quem chega primeiro: o de endereço mais próximo da van.
+  const aBordoMeus = pai ? alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length : 0;
+  const proximo = pai && emRota && gpsAtivo && aBordoMeus > 0 ? primeiroAChegar(gpsPosicao, alunos, viagemAtiva.tipo_viagem) : null;
+  const filho = pai ? proximo?.aluno ?? alunos.find((a) => a.statusEmbarque === 'EMBARCADO') ?? alunos[0] : undefined;
   const destino = viagemAtiva.tipo_viagem === 'VOLTA' ? 'até o fim da rota' : 'até a escola';
 
   const concluir = async () => {
@@ -64,7 +68,17 @@ export const HomeScreen: React.FC = () => {
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
   const destaque = (() => {
     if (motorista && !emRota) {
-      return { valor: `${ativos}`, sufixo: ativos === 1 ? 'aluno' : 'alunos', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
+      return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
+    }
+    if (proximo && aBordoMeus >= 2) {
+      const quem = proximo.aluno.nome.split(' ')[0];
+      const onde = viagemAtiva.tipo_viagem === 'VOLTA' ? proximo.aluno.endereco_busca : proximo.aluno.endereco_entrega;
+      if (isDemo) {
+        const min = Math.max(1, Math.round((proximo.km / Math.max(gpsPosicao.velocidade, 15)) * 60));
+        return { valor: `${min}`, sufixo: 'min', legenda: `${quem} chega primeiro · ${onde}`, lado: horaPrevista(min), ladoSub: `${km(proximo.km)} de distância` };
+      }
+      // Dados reais: só distância em linha reta, sem inventar horário de chegada.
+      return { valor: proximo.km.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: proximo.km < 10 ? 1 : 0 }), sufixo: 'km', legenda: `${quem} chega primeiro · ${onde}`, lado: '', ladoSub: '' };
     }
     if (est) {
       return { valor: `${est.minutos}`, sufixo: 'min', legenda: destino, lado: horaPrevista(est.minutos), ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
@@ -91,14 +105,14 @@ export const HomeScreen: React.FC = () => {
         pai ? (
           <View style={{ marginTop: spacing.md, gap: spacing.md }}>
             <Text style={s.title}>Vamos começar</Text>
-            <Text style={s.sub}>Cadastre seu filho com o código que o motorista passou. Em segundos você já acompanha a van.</Text>
-            <Button variant="borderedProminent" label="Adicionar aluno" icon="personAdd" onPress={() => setAddStudent(true)} />
+            <Text style={s.sub}>Cadastre seu dependente com o código que o motorista passou. Em segundos você já acompanha a van.</Text>
+            <Button variant="borderedProminent" label="Adicionar dependente" icon="personAdd" onPress={() => setAddStudent(true)} />
           </View>
         ) : (
           <View style={{ marginTop: spacing.md, gap: spacing.s6 }}>
             <Text style={s.caption}>Seu código de convite</Text>
             <Text style={s.code} selectable accessibilityLabel={`Código ${(codigoConvite ?? '').split('').join(' ')}`}>{codigoConvite ?? '——'}</Text>
-            <Text style={s.sub}>{motorista ? 'Passe este código aos pais. Quando cadastrarem o aluno, ele aparece na sua rota.' : 'Passe este código aos pais para acompanhar as chegadas.'}</Text>
+            <Text style={s.sub}>{motorista ? 'Passe este código aos responsáveis. Quando cadastrarem o passageiro, ele aparece na sua rota.' : 'Passe este código aos responsáveis para acompanhar as chegadas.'}</Text>
           </View>
         )
       ) : (
@@ -179,7 +193,7 @@ export const HomeScreen: React.FC = () => {
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
     ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
-    ...(pai ? [{ label: 'Adicionar aluno', onPress: () => setAddStudent(true) }] : []),
+    ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
   ];
 
   const filhoIdx = filho ? alunos.indexOf(filho) : undefined;
@@ -190,14 +204,14 @@ export const HomeScreen: React.FC = () => {
       <RouteMap
         step={gpsStep}
         ativo={emRota && gpsAtivo}
-        pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque }))}
+        pins={alunos.map((a) => ({ nome: a.nome, status: a.statusEmbarque, parada: a.parada }))}
         homeIndex={filhoIdx}
         accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
       />
 
       {/* botões de vidro sobre o mapa */}
       <SafeAreaView edges={['top']} style={s.top} pointerEvents="box-none">
-        <IconButton icon="people" label="Alunos" variant="glass" onPress={() => router.navigate('/(tabs)/(alunos)')} />
+        <IconButton icon="people" label={motorista ? 'Passageiros' : 'Dependentes'} variant="glass" onPress={() => router.navigate('/(tabs)/(alunos)')} />
         <View style={{ gap: spacing.sm }}>
           <IconButton icon="location" label="Atualizar posição da van" variant="glass" onPress={() => { recarregar().catch(() => {}); }} />
           <PullDownButton label="Mais opções" variant="glass" actions={acoes} />

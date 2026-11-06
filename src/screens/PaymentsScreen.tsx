@@ -42,11 +42,11 @@ export const PaymentsScreen: React.FC = () => {
   };
 
   return (
-    <Screen title={motorista ? 'Receber' : 'Pagamentos'} subtitle={motorista ? 'Mensalidades dos seus alunos' : undefined} onRefresh={recarregar}>
+    <Screen title={motorista ? 'Receber' : 'Pagamentos'} subtitle={motorista ? 'Mensalidades dos seus passageiros' : undefined} onRefresh={recarregar}>
       {mensalidades.length === 0 ? (
         <EmptyState icon="wallet" title="Sem mensalidades" message={motorista
-          ? 'As mensalidades são geradas quando os pais cadastram o aluno com o seu código.'
-          : 'As mensalidades são criadas assim que você cadastra o aluno e vincula ao motorista.'} />
+          ? 'As mensalidades são geradas quando os responsáveis cadastram o dependente com o seu código.'
+          : 'As mensalidades são criadas assim que você cadastra o dependente e vincula ao motorista.'} />
       ) : (
         <>
           <FadeInUp index={0} style={{ marginBottom: spacing.sm }}>

@@ -41,7 +41,7 @@ export const StudentsScreen: React.FC = () => {
     } finally { setBusy(null); }
   };
 
-  const title = motorista ? 'Embarque' : 'Meus alunos';
+  const title = motorista ? 'Passageiros' : 'Meus dependentes';
   const subtitle = motorista ? (emRota ? 'Toque para registrar entrada e saída' : undefined) : undefined;
 
   return (
@@ -49,7 +49,7 @@ export const StudentsScreen: React.FC = () => {
       title={title}
       subtitle={subtitle}
       onRefresh={recarregar}
-      headerRight={role === 'RESPONSAVEL' ? <HeaderButton icon="plus" label="Adicionar aluno" onPress={() => setAdd(true)} /> : undefined}
+      headerRight={role === 'RESPONSAVEL' ? <HeaderButton icon="plus" label="Adicionar dependente" onPress={() => setAdd(true)} /> : undefined}
     >
       {motorista && !emRota && alunos.length > 0 && (
         <View style={s.gap}><Notice tone="info" message={isDemo ? 'Inicie uma rota na aba Rota para liberar os registros.' : 'Inicie uma rota na aba Rota para registrar embarques.'} /></View>
@@ -66,20 +66,20 @@ export const StudentsScreen: React.FC = () => {
 
       {motorista && alunos.length > 0 && (
         <View style={s.gap}>
-          <SegmentedControl<Filtro> value={filtro} onChange={setFiltro} accessibilityLabel="Filtrar alunos"
+          <SegmentedControl<Filtro> value={filtro} onChange={setFiltro} accessibilityLabel="Filtrar passageiros"
             options={[{ value: 'TODOS', label: 'Todos' }, { value: 'AGUARDANDO', label: 'Aguardando' }, { value: 'EMBARCADO', label: 'A bordo' }]} />
         </View>
       )}
 
       {alunos.length === 0 ? (
         role === 'RESPONSAVEL' ? (
-          <EmptyState icon="personAdd" title="Nenhum aluno ainda" message="Adicione seu filho com o código do motorista."
-            action={<Button size="lg" label="Adicionar aluno" onPress={() => setAdd(true)} />} />
+          <EmptyState icon="personAdd" title="Nenhum dependente ainda" message="Adicione seu dependente com o código do motorista."
+            action={<Button size="lg" label="Adicionar dependente" onPress={() => setAdd(true)} />} />
         ) : (
-          <EmptyState icon="people" title="Nenhum aluno vinculado" message="Quando os pais usarem o seu código de convite, os alunos aparecem aqui. Veja o código em Conta." />
+          <EmptyState icon="people" title="Nenhum passageiro vinculado" message="Quando os responsáveis usarem o seu código de convite, os passageiros aparecem aqui. Veja o código em Conta." />
         )
       ) : lista.length === 0 ? (
-        <EmptyState icon="checkDone" title="Tudo certo por aqui" message="Nenhum aluno neste filtro." />
+        <EmptyState icon="checkDone" title="Tudo certo por aqui" message="Nenhum passageiro neste filtro." />
       ) : (
         <View style={{ gap: spacing.md }}>
           {lista.map((a, i) => {
@@ -104,7 +104,7 @@ export const StudentsScreen: React.FC = () => {
                   {motorista && (
                     <View style={{ marginTop: spacing.md + 2 }}>
                       {a.statusEmbarque === 'AUSENTE' ? (
-                        <Text style={s.meta}>Falta comunicada pelos pais.</Text>
+                        <Text style={s.meta}>Falta comunicada pelo responsável.</Text>
                       ) : a.statusEmbarque === 'DESEMBARCADO' ? (
                         <Text style={s.meta}>Entregue na escola.</Text>
                       ) : (

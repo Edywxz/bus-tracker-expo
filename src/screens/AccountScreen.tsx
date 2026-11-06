@@ -51,7 +51,7 @@ export const AccountScreen: React.FC = () => {
         <FadeInUp index={1} style={{ marginTop: spacing.lg, gap: spacing.md }}>
           <Notice tone="info" message="Modo de exemplo: os dados não são salvos. Troque o perfil para ver cada experiência." />
           <SegmentedControl<TipoUsuario> value={role} onChange={setRole} accessibilityLabel="Perfil de exemplo"
-            options={[{ value: 'RESPONSAVEL', label: 'Pais' }, { value: 'TRANSPORTADOR', label: 'Motorista' }]} />
+            options={[{ value: 'RESPONSAVEL', label: 'Responsável' }, { value: 'TRANSPORTADOR', label: 'Motorista' }]} />
         </FadeInUp>
       )}
 
@@ -60,11 +60,11 @@ export const AccountScreen: React.FC = () => {
           <Card style={{ alignItems: 'center', gap: spacing.s6 }}>
             <Text style={s.cap}>Seu código de convite</Text>
             <Text selectable style={s.code} accessibilityLabel={`Código ${codigoConvite.split('').join(' ')}`}>{codigoConvite}</Text>
-            <Text style={s.muted}>Passe este código para os pais se vincularem.</Text>
+            <Text style={s.muted}>Passe este código para os responsáveis se vincularem.</Text>
           </Card>
           <ListSection style={{ marginTop: spacing.sm }}>
             <ListRow icon="share" iconTone="gray" title="Compartilhar código" role="action"
-              onPress={() => share({ title: 'Código VanEscolar', message: `Use o código ${codigoConvite} no app VanEscolar GPS para cadastrar seu filho.` })} chevron={false} />
+              onPress={() => share({ title: 'Código VanEscolar', message: `Use o código ${codigoConvite} no app VanEscolar GPS para cadastrar seu dependente.` })} chevron={false} />
           </ListSection>
         </FadeInUp>
       )}
@@ -84,7 +84,7 @@ export const AccountScreen: React.FC = () => {
 
         <SectionHeader title="Escola" />
         <ListSection>
-          <ListRow icon="school" iconTone="primary" title="Escola e contatos" subtitle={role === 'TRANSPORTADOR' ? 'Escolas atendidas e autorizados' : 'Escola do aluno e pessoas autorizadas'} onPress={go.school} />
+          <ListRow icon="school" iconTone="primary" title="Escola e contatos" subtitle={role === 'TRANSPORTADOR' ? 'Escolas atendidas e autorizados' : 'Escola do dependente e pessoas autorizadas'} onPress={go.school} />
           <ListRow icon="calendar" iconTone="error" title="Calendário letivo" subtitle={role === 'TRANSPORTADOR' ? 'Marque os dias sem transporte' : 'Dias sem transporte'} onPress={go.calendar} />
         </ListSection>
 

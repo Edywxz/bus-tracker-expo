@@ -22,7 +22,7 @@ const ROADS_V = [0.18, 0.5, 0.82];
 const MINOR_H = [0.24, 0.38, 0.52];
 const MINOR_V = [0.34, 0.66];
 
-export interface MapPin { nome: string; status: 'AGUARDANDO' | 'EMBARCADO' | 'DESEMBARCADO' | 'AUSENTE' }
+export interface MapPin { nome: string; /** parada da rota onde o pin fica (padrão: a ordem da lista) */ parada?: number; status: 'AGUARDANDO' | 'EMBARCADO' | 'DESEMBARCADO' | 'AUSENTE' }
 
 interface Props {
   /** índice do ponto atual da rota (rota conhecida). Sem ele, a van fica no meio do trajeto. */
@@ -80,13 +80,14 @@ export const RouteMap: React.FC<Props> = ({ step, ativo, pins, homeIndex, access
 
       {/* paradas */}
       {w > 0 && pins.slice(0, PATH.length).map((p, i) => {
-        const pt = P(PATH[i]);
+        const pi = Math.min(Math.max(p.parada ?? i, 0), PATH.length - 1);
+        const pt = P(PATH[pi]);
         const feito = p.status === 'EMBARCADO' || p.status === 'DESEMBARCADO' || p.status === 'AUSENTE';
         const casa = i === homeIndex;
         return (
           <View key={p.nome + i} pointerEvents="none" style={[s.pin, { left: pt.x - 30, top: pt.y - (casa ? 15 : 8) }]}>
             <StopMarker kind={casa ? 'home' : 'stop'} done={feito} label={`${p.nome}${feito ? ', já passou' : ''}`} />
-            {i !== idx ? <Text style={s.pinLabel} numberOfLines={1}>{p.nome.split(' ')[0]}</Text> : null}
+            {pi !== idx ? <Text style={s.pinLabel} numberOfLines={1}>{p.nome.split(' ')[0]}</Text> : null}
           </View>
         );
       })}

@@ -31,7 +31,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(alunos)">
-        <NativeTabs.Trigger.Label>{motorista ? 'Embarque' : 'Alunos'}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{motorista ? 'Passageiros' : 'Dependentes'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} md="group" />
         {motorista && offlineQueueCount > 0 ? <NativeTabs.Trigger.Badge>{String(offlineQueueCount)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>

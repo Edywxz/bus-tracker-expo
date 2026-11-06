@@ -81,7 +81,7 @@ O Diagrama de Casos de Uso (DCU) define estritamente dois atores primários:
 - [x] **RF008 — Enviar e Receber Mensagens**
   - **Caso de Uso (DCU):** `Enviar/Receber Mensagens`
   - **Ator(es):** Pais, Transportador
-  - **Descrição:** O sistema deverá disponibilizar canal de comunicação direta por mensagens entre os pais e o transportador autônomo para troca de recados e avisos operacionais.
+  - **Descrição:** O sistema deverá disponibilizar canal de comunicação direta por mensagens entre cada responsável e o transportador autônomo (conversa privada, um responsável nunca lê a conversa de outro) para troca de recados e avisos operacionais.
   - **Prioridade:** Média
   - **Status:** `[x] Concluído`
 
@@ -188,7 +188,7 @@ O Diagrama de Casos de Uso (DCU) define estritamente dois atores primários:
 | `Visualizar Contrato` | Pais, Transportador | **RF016** — Visualizar Contrato |
 | `Receber notificações/Alertas` | Pais, Transportador | **RF004** — Receber Notificações e Alertas |
 | `Efetuar Login` | Pais, Transportador | **RF021** — Efetuar Login / Autenticação |
-| `Enviar/Receber Mensagens` | Pais, Transportador | **RF008** — Enviar e Receber Mensagens |
+| `Enviar/Receber Mensagens` | Responsável, Transportador | **RF008** — Enviar e Receber Mensagens |
 | `Acompanhar transporte` | Pais | **RF003** — Acompanhar Transporte em Tempo Real |
 | `Manter Calendário escolar` | Transportador | **RF019** — Manter Calendário Escolar |
 | `Iniciar serviço` | Transportador | **RF020** — Iniciar Serviço de Transporte |

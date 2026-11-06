@@ -42,8 +42,8 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={logado}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="conversa" options={{ title: 'Conversa da rota' }} />
-        <Stack.Screen name="aluno/[id]" options={{ title: 'Aluno' }} />
+        <Stack.Screen name="conversa" options={{ title: 'Conversa' }} />
+        <Stack.Screen name="aluno/[id]" options={{ title: 'Detalhes' }} />
         <Stack.Screen name="contrato/[alunoId]" options={{ title: 'Contrato' }} />
         <Stack.Screen name="mensalidade/[id]" options={{ title: 'Mensalidade' }} />
         <Stack.Screen name="veiculo" options={{ title: 'Veículo' }} />

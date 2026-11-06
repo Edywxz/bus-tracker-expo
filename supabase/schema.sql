@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS public.alunos (
     -- Escola que o aluno frequenta: é só o destino da rota, não um usuário do sistema
     escola_nome VARCHAR(150),
     escola_endereco TEXT,
+    latitude DOUBLE PRECISION,        -- opcionais: usados para indicar a chegada ao endereço mais próximo
+    longitude DOUBLE PRECISION,
+    entrega_latitude DOUBLE PRECISION,
+    entrega_longitude DOUBLE PRECISION,
     nome VARCHAR(150) NOT NULL,
     data_nascimento DATE NOT NULL,
     documento VARCHAR(20) NOT NULL,

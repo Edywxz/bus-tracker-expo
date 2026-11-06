@@ -135,7 +135,7 @@ export class DataService {
       })),
       mensagensChat: (check<any[]>(msgR) ?? []).map((m) => ({
         id: m.id, remetenteId: m.remetente_id, remetenteNome: m.remetente_nome, destinatarioNome: '',
-        texto: m.texto, dataHora: m.criado_em, origem: m.origem,
+        texto: m.texto, dataHora: m.criado_em, origem: m.origem, responsavelId: m.responsavel_id,
       })),
       eventosCalendario: (check<any[]>(calR) ?? []).map((e) => ({
         id: e.id, data: e.data, titulo: e.titulo, tipo: e.tipo, descricao: e.descricao ?? '',
@@ -189,9 +189,9 @@ export class DataService {
     if (error) throw error;
   }
 
-  static async enviarMensagem(m: { canalTransportadorId: string; remetenteId: string; remetenteNome: string; origem: string; texto: string }) {
+  static async enviarMensagem(m: { canalTransportadorId: string; responsavelId: string; remetenteId: string; remetenteNome: string; origem: string; texto: string }) {
     const { error } = await db.from('mensagens').insert({
-      transportador_id: m.canalTransportadorId, remetente_id: m.remetenteId,
+      transportador_id: m.canalTransportadorId, responsavel_id: m.responsavelId, remetente_id: m.remetenteId,
       remetente_nome: m.remetenteNome, origem: m.origem, texto: m.texto,
     });
     if (error) throw error;

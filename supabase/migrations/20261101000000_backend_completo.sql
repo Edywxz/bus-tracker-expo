@@ -91,6 +91,16 @@ CREATE INDEX IF NOT EXISTS idx_mensagens_canal ON public.mensagens(transportador
 DELETE FROM public.mensagens WHERE origem NOT IN ('PAIS','MOTORISTA');
 ALTER TABLE public.mensagens DROP CONSTRAINT IF EXISTS mensagens_origem_check;
 ALTER TABLE public.mensagens ADD CONSTRAINT mensagens_origem_check CHECK (origem IN ('PAIS','MOTORISTA'));
+-- Conversa privada: cada thread é entre o motorista e UM responsável (um responsável nunca lê a conversa de outro).
+ALTER TABLE public.mensagens ADD COLUMN IF NOT EXISTS responsavel_id UUID REFERENCES public.perfis(id) ON DELETE CASCADE;
+DELETE FROM public.mensagens WHERE responsavel_id IS NULL; -- mensagens do antigo canal em grupo não têm dono
+ALTER TABLE public.mensagens ALTER COLUMN responsavel_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_mensagens_thread ON public.mensagens(transportador_id, responsavel_id, criado_em);
+-- Coordenadas opcionais do aluno (casa e entrega), usadas para indicar a chegada ao endereço mais próximo.
+ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS entrega_latitude DOUBLE PRECISION;
+ALTER TABLE public.alunos ADD COLUMN IF NOT EXISTS entrega_longitude DOUBLE PRECISION;
 
 -- Calendário do transportador: feriados, recessos e dias sem aula em que a van não roda (RF019)
 
@@ -468,10 +478,16 @@ CREATE POLICY "notificacoes_proprias_update" ON public.notificacoes FOR UPDATE
   USING (auth.uid() = usuario_id) WITH CHECK (auth.uid() = usuario_id);
 
 DROP POLICY IF EXISTS "mensagens_select" ON public.mensagens;
-CREATE POLICY "mensagens_select" ON public.mensagens FOR SELECT USING (public.vinculado_ao_transportador(transportador_id));
+CREATE POLICY "mensagens_select" ON public.mensagens FOR SELECT USING (auth.uid() = transportador_id OR auth.uid() = responsavel_id);
 DROP POLICY IF EXISTS "mensagens_insert" ON public.mensagens;
-CREATE POLICY "mensagens_insert" ON public.mensagens FOR INSERT
-  WITH CHECK (remetente_id = auth.uid() AND public.vinculado_ao_transportador(transportador_id));
+CREATE POLICY "mensagens_insert" ON public.mensagens FOR INSERT WITH CHECK (
+  remetente_id = auth.uid() AND (
+    (origem = 'MOTORISTA' AND transportador_id = auth.uid()
+      AND EXISTS (SELECT 1 FROM public.alunos a WHERE a.responsavel_id = mensagens.responsavel_id AND a.transportador_id = auth.uid()))
+    OR (origem = 'PAIS' AND responsavel_id = auth.uid()
+      AND EXISTS (SELECT 1 FROM public.alunos a WHERE a.responsavel_id = auth.uid() AND a.transportador_id = mensagens.transportador_id))
+  )
+);
 
 DROP POLICY IF EXISTS "calendario_select" ON public.calendario_escolar;
 CREATE POLICY "calendario_select" ON public.calendario_escolar FOR SELECT
@@ -510,3 +526,11 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   WHERE t.id = p_transportador AND public.vinculado_ao_transportador(p_transportador);
 $$;
 GRANT EXECUTE ON FUNCTION public.dados_recebimento(UUID) TO authenticated;
+
+-- O papel authenticated precisa de privilégios nas tabelas; a RLS (ligada em todas) decide as linhas.
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  public.alunos, public.calendario_escolar, public.comunicados_ausencia, public.contratos_servico, public.eventos_rota,
+  public.localizacoes_gps, public.mensagens, public.mensalidades, public.notificacoes, public.pagamentos, public.perfis,
+  public.pessoas_autorizadas, public.registros_embarque_desembarque, public.responsaveis, public.transportadores,
+  public.veiculos, public.viagens
+TO authenticated;

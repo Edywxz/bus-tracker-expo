@@ -33,9 +33,9 @@ export const AbsenceSheet: React.FC<BaseProps & { alunoId?: string }> = ({ visib
     if (await run(() => comunicarAusencia(sel, periodo, motivo.trim()))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Avisar falta" subtitle="O motorista é avisado na hora e o aluno sai da lista de hoje."
+    <Sheet visible={visible} onClose={onClose} title="Avisar falta" subtitle="O motorista é avisado na hora e o dependente sai da lista de hoje."
       footer={<Button size="lg" label="Enviar aviso" onPress={enviar} loading={loading} disabled={!sel} />}>
-      {alunos.length > 1 && (<><Label>Aluno</Label><Row2>{alunos.map((a) => <Chip key={a.id} label={a.nome.split(' ')[0]} selected={sel === a.id} onPress={() => setSel(a.id)} />)}</Row2></>)}
+      {alunos.length > 1 && (<><Label>Dependente</Label><Row2>{alunos.map((a) => <Chip key={a.id} label={a.nome.split(' ')[0]} selected={sel === a.id} onPress={() => setSel(a.id)} />)}</Row2></>)}
       <Label>Qual trajeto?</Label>
       <SegmentedControl value={periodo} onChange={setPeriodo}
         options={[{ value: 'IDA', label: 'Ida' }, { value: 'VOLTA', label: 'Volta' }, { value: 'AMBOS', label: 'Ida e volta' }]} />
@@ -61,7 +61,7 @@ export const EmergencySheet: React.FC<BaseProps> = ({ visible, onClose }) => {
     if (await run(() => registrarEventoRota(tipo, desc.trim(), sev))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Avisar ocorrência" subtitle="Os pais da rota recebem o alerta agora."
+    <Sheet visible={visible} onClose={onClose} title="Avisar ocorrência" subtitle="Os responsáveis da rota recebem o alerta agora."
       footer={<Button size="lg" role="destructive" label="Disparar alerta" onPress={enviar} loading={loading} />}>
       <Label>O que aconteceu?</Label>
       <Row2>{TIPOS_EVENTO.map((t) => <Chip key={t} label={t} selected={tipo === t} onPress={() => setTipo(t)} />)}</Row2>
@@ -82,7 +82,7 @@ export const StartRouteSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
   const [turno, setTurno] = useState<'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE'>('MANHA');
   useEffect(() => { if (visible) setError(null); }, [visible]); // eslint-disable-line
   return (
-    <Sheet visible={visible} onClose={onClose} title="Iniciar rota" subtitle="Os pais são avisados e passam a ver a van."
+    <Sheet visible={visible} onClose={onClose} title="Iniciar rota" subtitle="Os responsáveis são avisados e passam a ver a van."
       footer={<Button size="lg" label="Iniciar agora" icon="play"
         onPress={async () => { if (await run(() => iniciarViagem(tipo, turno))) onClose(); }} loading={loading} />}>
       <SegmentedControl value={tipo} onChange={setTipo} options={[{ value: 'IDA', label: 'Ida à escola' }, { value: 'VOLTA', label: 'Volta para casa' }]} />
@@ -123,12 +123,12 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
 
   const salvar = async () => {
     const e: Record<string, string> = {};
-    if (f.nome.trim().length < 2) e.nome = 'Informe o nome do aluno.';
+    if (f.nome.trim().length < 2) e.nome = 'Informe o nome do dependente.';
     const iso = dateToISO(f.nasc);
     if (!iso) e.nasc = 'Use o formato DD/MM/AAAA.';
     if (!f.turma.trim()) e.turma = 'Informe a turma.';
     if (f.busca.trim().length < 5) e.busca = 'Informe o endereço de embarque.';
-    if (f.escola.trim().length < 2) e.escola = 'Informe a escola do aluno.';
+    if (f.escola.trim().length < 2) e.escola = 'Informe a escola do dependente.';
     if (f.entrega.trim().length < 3) e.entrega = 'Informe o destino.';
     setErros(e);
     if (Object.keys(e).length) return;
@@ -140,14 +140,14 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={passo === 1 ? 'Vincular ao motorista' : 'Dados do aluno'}
+    <Sheet visible={visible} onClose={onClose} title={passo === 1 ? 'Vincular ao motorista' : 'Dados do dependente'}
       subtitle={passo === 1 ? 'Peça ao motorista o código dele (fica em Conta, no app dele).' : `Motorista: ${transp?.nome ?? ''}`}
      
       footer={passo === 1
         ? (transp
           ? <Button size="lg" label="Continuar" onPress={() => { setError(null); setPasso(2); }} />
           : <Button size="lg" label="Verificar código" onPress={verificar} loading={loading} />)
-        : <Button size="lg" label="Cadastrar aluno" onPress={salvar} loading={loading} />}>
+        : <Button size="lg" label="Cadastrar dependente" onPress={salvar} loading={loading} />}>
       {passo === 1 ? (
         <>
           <TextField label="Código do motorista" value={codigo} onChangeText={(v) => { setCodigo(v.toUpperCase()); setTransp(null); setError(null); }}
@@ -165,7 +165,7 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
           <TextField label="Turma" value={f.turma} onChangeText={set('turma')} error={erros.turma} placeholder="Ex.: 5º Ano B" />
           <Label>Turno</Label>
           <Row2>{TURNOS.map((t) => <Chip key={t.v} label={t.l} selected={f.turno === t.v} onPress={() => setF((p) => ({ ...p, turno: t.v }))} />)}</Row2>
-          <TextField label="Onde o aluno embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" />
+          <TextField label="Onde o dependente embarca" value={f.busca} onChangeText={set('busca')} error={erros.busca} icon="home" placeholder="Rua, número, complemento" />
           <TextField label="Escola" value={f.escola} onChangeText={set('escola')} error={erros.escola} icon="school" autoCapitalize="words" placeholder="Ex.: Colégio Santa Maria" />
           <TextField label="Onde desembarca" value={f.entrega} onChangeText={set('entrega')} error={erros.entrega} icon="location" placeholder="Endereço da escola e portão" />
           <TextField label="Observações de saúde (opcional)" value={f.obs} onChangeText={set('obs')} multiline helper="Alergias ou cuidados. Só você e o motorista veem." />
@@ -196,9 +196,9 @@ export const AuthorizedSheet: React.FC<BaseProps & { alunoId?: string }> = ({ vi
     if (await run(() => adicionarPessoaAutorizada({ aluno_id: sel, nome: nome.trim(), cpf, telefone: tel, grau_parentesco: par }))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Pessoa autorizada" subtitle="Só quem está nesta lista pode buscar o aluno."
+    <Sheet visible={visible} onClose={onClose} title="Pessoa autorizada" subtitle="Só quem está nesta lista pode buscar o dependente."
       footer={<Button size="lg" label="Adicionar" onPress={salvar} loading={loading} />}>
-      {alunos.length > 1 && (<><Label>Aluno</Label><Row2>{alunos.map((a) => <Chip key={a.id} label={a.nome.split(' ')[0]} selected={sel === a.id} onPress={() => setSel(a.id)} />)}</Row2></>)}
+      {alunos.length > 1 && (<><Label>Dependente</Label><Row2>{alunos.map((a) => <Chip key={a.id} label={a.nome.split(' ')[0]} selected={sel === a.id} onPress={() => setSel(a.id)} />)}</Row2></>)}
       <TextField label="Nome completo" value={nome} onChangeText={setNome} error={erros.nome} autoCapitalize="words" />
       <TextField label="CPF" value={cpf} onChangeText={(v) => setCpf(maskCpf(v))} error={erros.cpf} keyboardType="number-pad" placeholder="000.000.000-00" />
       <TextField label="Telefone" value={tel} onChangeText={(v) => setTel(maskPhone(v))} error={erros.tel} keyboardType="phone-pad" placeholder="(11) 90000-0000" autoComplete="tel" />
@@ -231,7 +231,7 @@ export const CalendarEventSheet: React.FC<BaseProps> = ({ visible, onClose }) =>
     if (await run(() => adicionarEventoCalendario({ data: iso!, titulo: titulo.trim(), tipo }))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Marcar data" subtitle="Os pais veem no calendário que a van não roda."
+    <Sheet visible={visible} onClose={onClose} title="Marcar data" subtitle="Os responsáveis veem no calendário que a van não roda."
       footer={<Button size="lg" label="Adicionar" onPress={salvar} loading={loading} />}>
       <TextField label="Data" value={data} onChangeText={(v) => setData(maskDate(v))} error={erros.data} keyboardType="number-pad" placeholder="DD/MM/AAAA" />
       <TextField label="Descrição" value={titulo} onChangeText={setTitulo} error={erros.titulo} placeholder="Ex.: Recesso escolar" />
@@ -319,7 +319,7 @@ export const ReceiptSettingsSheet: React.FC<BaseProps> = ({ visible, onClose }) 
     if (visible) { setValor(recebimento.valor ? String(recebimento.valor).replace('.', ',') : ''); setDia(String(recebimento.diaVencimento ?? 10)); setPix(recebimento.chavePix ?? ''); setError(null); }
   }, [visible]); // eslint-disable-line
   return (
-    <Sheet visible={visible} onClose={onClose} title="Recebimento" subtitle="Vale para novos alunos vinculados a você."
+    <Sheet visible={visible} onClose={onClose} title="Recebimento" subtitle="Vale para novos passageiros vinculados a você."
       footer={<Button size="lg" label="Salvar" loading={loading} onPress={async () => {
         const v = parseMoney(valor); const d = Number(dia);
         if (!v) return setError('Informe o valor da mensalidade.');
@@ -328,7 +328,7 @@ export const ReceiptSettingsSheet: React.FC<BaseProps> = ({ visible, onClose }) 
       }} />}>
       <TextField label="Valor da mensalidade (R$)" value={valor} onChangeText={setValor} keyboardType="decimal-pad" placeholder="350,00" />
       <TextField label="Dia de vencimento" value={dia} onChangeText={(v) => setDia(onlyDigits(v).slice(0, 2))} keyboardType="number-pad" helper="Entre 1 e 28" />
-      <TextField label="Chave PIX" value={pix} onChangeText={setPix} autoCapitalize="none" autoCorrect={false} placeholder="E-mail, telefone, CPF ou chave aleatória" helper="É mostrada aos pais na hora de pagar." />
+      <TextField label="Chave PIX" value={pix} onChangeText={setPix} autoCapitalize="none" autoCorrect={false} placeholder="E-mail, telefone, CPF ou chave aleatória" helper="É mostrada aos responsáveis na hora de pagar." />
       {error && <Notice tone="error" message={error} />}
     </Sheet>
   );

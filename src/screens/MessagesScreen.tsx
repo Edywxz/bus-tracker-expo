@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { gap, layout, radius, spacing } from '../theme/tokens';
@@ -21,29 +21,53 @@ const TIPO: Record<string, { icon: IconName; tone: IconTone }> = {
   AVISO: { icon: 'megaphone', tone: 'gray' },
 };
 
-const ORIGEM: Record<string, string> = { MOTORISTA: 'Motorista', PAIS: 'Família' };
+const listar = (n: string[]) => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}`);
+const ORIGEM: Record<string, string> = { MOTORISTA: 'Motorista', PAIS: 'Responsável' };
 
 /* ------------------------------------------------------------------ Recados (alertas + atalho da conversa) */
 export const MessagesScreen: React.FC = () => {
   const { notificacoes, mensagensChat, marcarNotificacoesComoLidas, role, isDemo, alunos, recarregar } = useApp();
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
   const semCanal = !isDemo && role !== 'TRANSPORTADOR' && alunos.length === 0;
+  const motorista = role === 'TRANSPORTADOR';
   const ultima = mensagensChat[mensagensChat.length - 1];
+  // Motorista: uma conversa privada por responsável (nunca um grupo).
+  const conversas = motorista ? Array.from(alunos.reduce((m, a) => {
+    m.set(a.responsavel_id, [...(m.get(a.responsavel_id) ?? []), a.nome.split(' ')[0]]); return m;
+  }, new Map<string, string[]>())).map(([id, filhos]) => {
+    const ult = [...mensagensChat].reverse().find((x) => x.responsavelId === id);
+    return { id, titulo: `Responsável de ${listar(filhos)}`, ult };
+  }) : [];
 
   return (
     <Screen title="Recados" onRefresh={recarregar}
       headerRight={naoLidas > 0 ? <HeaderButton label="Marcar lidas" onPress={() => marcarNotificacoesComoLidas().catch(() => {})} /> : undefined}>
       <SectionHeader title="Conversa" />
       <ListSection>
-        <ListRow
-          leading={<IconTile name="messages" tone="primary" />}
-          title="Conversa da rota"
-          subtitle={semCanal ? 'Cadastre um aluno para conversar com o motorista.'
-            : ultima ? `${ultima.remetenteNome}: ${ultima.texto}` : 'Motorista e famílias da mesma rota.'}
-          subtitleLines={2}
-          disabled={semCanal}
-          onPress={() => router.push('/conversa')}
-        />
+        {motorista ? (
+          conversas.length === 0 ? (
+            <ListRow leading={<IconTile name="messages" tone="primary" />} title="Nenhum responsável vinculado" subtitle="Quando um responsável usar o seu código, a conversa aparece aqui." disabled />
+          ) : conversas.map((c) => (
+            <ListRow
+              key={c.id}
+              leading={<IconTile name="messages" tone="primary" />}
+              title={c.titulo}
+              subtitle={c.ult ? c.ult.texto : 'Conversa privada.'}
+              subtitleLines={2}
+              onPress={() => router.push({ pathname: '/conversa', params: { responsavelId: c.id, titulo: c.titulo } })}
+            />
+          ))
+        ) : (
+          <ListRow
+            leading={<IconTile name="messages" tone="primary" />}
+            title="Conversa com o motorista"
+            subtitle={semCanal ? 'Cadastre um dependente para conversar com o motorista.'
+              : ultima ? `${ultima.remetenteNome}: ${ultima.texto}` : 'Conversa privada entre você e o motorista.'}
+            subtitleLines={2}
+            disabled={semCanal}
+            onPress={() => router.push('/conversa')}
+          />
+        )}
       </ListSection>
 
       <SectionHeader title={naoLidas ? `Alertas · ${naoLidas} novos` : 'Alertas'} />
@@ -76,7 +100,10 @@ export const MessagesScreen: React.FC = () => {
 
 /* ------------------------------------------------------------------ Conversa (empurrada, sem tab bar) */
 export const ChatScreen: React.FC = () => {
-  const { mensagensChat, enviarMensagem, role, perfil, isDemo, alunos } = useApp();
+  const { mensagensChat: todas, enviarMensagem, role, perfil, isDemo, alunos } = useApp();
+  const { responsavelId, titulo } = useLocalSearchParams<{ responsavelId?: string; titulo?: string }>();
+  // O motorista vê só a conversa do responsável escolhido; o responsável recebe do banco apenas a sua.
+  const mensagensChat = role === 'TRANSPORTADOR' ? todas.filter((m) => m.responsavelId === responsavelId) : todas;
   const insets = useSafeAreaInsets();
   const [texto, setTexto] = useState('');
   const [sending, setSending] = useState(false);
@@ -91,19 +118,19 @@ export const ChatScreen: React.FC = () => {
     const t = texto.trim();
     if (!t || sending) return;
     setSending(true); setErro(null);
-    try { await enviarMensagem(t); setTexto(''); } catch (e) { setErro(mensagemErro(e)); } finally { setSending(false); }
+    try { await enviarMensagem(t, responsavelId); setTexto(''); } catch (e) { setErro(mensagemErro(e)); } finally { setSending(false); }
   };
   const podeEnviar = !!texto.trim() && !sending;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.systemBg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ title: 'Conversa da rota' }} />
+      <Stack.Screen options={{ title: role === 'TRANSPORTADOR' ? titulo ?? 'Conversa' : 'Conversa com o motorista' }} />
       <ScrollView ref={scroll} style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic" keyboardDismissMode="interactive"
         contentContainerStyle={c.list}>
         {semCanal ? (
-          <EmptyState icon="messages" title="Conversa indisponível" message="Cadastre um aluno com o código do motorista para conversar com ele." />
+          <EmptyState icon="messages" title="Conversa indisponível" message="Cadastre um dependente com o código do motorista para conversar com ele." />
         ) : mensagensChat.length === 0 ? (
-          <EmptyState icon="chat" title="Comece a conversa" message="Mensagens aqui são visíveis para o motorista e as famílias da mesma rota." />
+          <EmptyState icon="chat" title="Comece a conversa" message={role === 'TRANSPORTADOR' ? 'Esta conversa é privada: só você e este responsável leem as mensagens.' : 'Esta conversa é privada: só você e o motorista leem as mensagens.'} />
         ) : (
           mensagensChat.map((m) => {
             const meu = m.origem === meuOrigem && (isDemo || m.remetenteId === perfil?.id);

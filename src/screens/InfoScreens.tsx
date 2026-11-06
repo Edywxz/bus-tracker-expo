@@ -20,7 +20,7 @@ export const VehicleScreen: React.FC = () => {
     <Screen title="Veículo"
       footer={<Button variant="filled" label={temVeiculo ? 'Editar veículo' : 'Cadastrar veículo'} onPress={() => setEdit(true)} />}>
       {!temVeiculo ? (
-        <EmptyState icon="van" title="Nenhum veículo" message="Cadastre a van para poder iniciar rotas e mostrar aos pais os dados do transporte." />
+        <EmptyState icon="van" title="Nenhum veículo" message="Cadastre a van para poder iniciar rotas e mostrar aos responsáveis os dados do transporte." />
       ) : (
         <>
           <Card style={{ alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
@@ -53,7 +53,7 @@ export const SchoolScreen: React.FC = () => {
   const pai = role === 'RESPONSAVEL';
   const escolas = Array.from(new Map(alunos.map((a) => [a.escola_nome ?? a.endereco_entrega, a])).values());
   const remover = async (id: string, nome: string) => {
-    const ok = await confirm({ title: 'Remover pessoa autorizada?', message: `${nome} não poderá mais buscar o aluno.`, confirmLabel: 'Remover', destructive: true });
+    const ok = await confirm({ title: 'Remover pessoa autorizada?', message: `${nome} não poderá mais buscar.`, confirmLabel: 'Remover', destructive: true });
     if (ok) removerPessoaAutorizada(id).catch((e) => notify('Erro', e.message));
   };
   return (
@@ -67,7 +67,7 @@ export const SchoolScreen: React.FC = () => {
           {pai && nomes.transportador ? <ListRow icon="van" iconTone="signal" title="Transportador" value={nomes.transportador} /> : null}
         </ListSection>
       ) : (
-        <Card><Text style={s.muted}>{pai ? 'A escola aparece aqui depois que você cadastrar o aluno.' : 'As escolas aparecem aqui quando os pais cadastram os alunos.'}</Text></Card>
+        <Card><Text style={s.muted}>{pai ? 'A escola aparece aqui depois que você cadastrar o dependente.' : 'As escolas aparecem aqui quando os responsáveis cadastram os passageiros.'}</Text></Card>
       )}
 
       <SectionHeader title="Pessoas autorizadas" action={pai && alunos.length > 0 ? { label: 'Adicionar', onPress: () => setAdd(true) } : undefined} />
@@ -82,7 +82,7 @@ export const SchoolScreen: React.FC = () => {
           ))}
         </ListSection>
       )}
-      <SectionFooter>Só estas pessoas podem receber o aluno no ponto de desembarque.</SectionFooter>
+      <SectionFooter>Só estas pessoas podem receber no ponto de desembarque.</SectionFooter>
       <AuthorizedSheet visible={add} onClose={() => setAdd(false)} />
     </Screen>
   );
@@ -100,7 +100,7 @@ export const CalendarScreen: React.FC = () => {
   const [add, setAdd] = useState(false);
   const motorista = role === 'TRANSPORTADOR';
   const remover = async (id: string, titulo: string) => {
-    const ok = await confirm({ title: 'Remover data?', message: `“${titulo}” sai do calendário dos pais.`, confirmLabel: 'Remover', destructive: true });
+    const ok = await confirm({ title: 'Remover data?', message: `“${titulo}” sai do calendário dos responsáveis.`, confirmLabel: 'Remover', destructive: true });
     if (ok) removerEventoCalendario(id).catch((e) => notify('Erro', e.message));
   };
   return (
@@ -108,7 +108,7 @@ export const CalendarScreen: React.FC = () => {
       {motorista && <SectionHeader title="Próximas datas" action={{ label: 'Adicionar', onPress: () => setAdd(true) }} />}
       {eventosCalendario.length === 0 ? (
         <EmptyState icon="calendar" title="Sem datas marcadas"
-          message={motorista ? 'Marque feriados, recessos e dias sem aula para avisar os pais de que a van não roda.' : 'Quando o motorista marcar feriados e dias sem aula, eles aparecem aqui.'} />
+          message={motorista ? 'Marque feriados, recessos e dias sem aula para avisar os responsáveis de que a van não roda.' : 'Quando o motorista marcar feriados e dias sem aula, eles aparecem aqui.'} />
       ) : (
         <ListSection>
           {eventosCalendario.map((e) => {
@@ -135,8 +135,8 @@ export const PrivacyScreen: React.FC = () => (
   <Screen title="Seus dados" subtitle="Como cuidamos da privacidade">
     <ListSection>
       <ListRow icon="lock" iconTone="gray" title="Conexão protegida" subtitle="Os dados trafegam criptografados entre o app e o servidor." />
-      <ListRow icon="eyeOff" iconTone="gray" title="Cada um vê o seu" subtitle="Pais veem só os próprios filhos. O motorista vê apenas os alunos da rota dele." />
-      <ListRow icon="medical" iconTone="gray" title="Saúde do aluno" subtitle="Observações médicas ficam visíveis só para a família e o motorista." />
+      <ListRow icon="eyeOff" iconTone="gray" title="Cada um vê o seu" subtitle="Cada responsável vê só os próprios dependentes. O motorista vê apenas os passageiros da rota dele." />
+      <ListRow icon="medical" iconTone="gray" title="Saúde" subtitle="Observações médicas ficam visíveis só para o responsável e o motorista." />
       <ListRow icon="location" iconTone="gray" title="Localização" subtitle="A posição da van só é compartilhada durante uma rota em andamento." />
       <ListRow icon="trash" iconTone="gray" title="Você decide" subtitle="Em Conta você pode excluir sua conta e os dados ligados a ela a qualquer momento." />
     </ListSection>

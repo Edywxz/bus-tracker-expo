@@ -24,6 +24,10 @@ export type Database = {
           endereco_entrega: string
           escola_endereco: string | null
           escola_nome: string | null
+          latitude: number | null
+          longitude: number | null
+          entrega_latitude: number | null
+          entrega_longitude: number | null
           foto_url: string | null
           id: string
           nome: string
@@ -42,6 +46,10 @@ export type Database = {
           endereco_entrega: string
           escola_endereco?: string | null
           escola_nome?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          entrega_latitude?: number | null
+          entrega_longitude?: number | null
           foto_url?: string | null
           id?: string
           nome: string
@@ -60,6 +68,10 @@ export type Database = {
           endereco_entrega?: string
           escola_endereco?: string | null
           escola_nome?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          entrega_latitude?: number | null
+          entrega_longitude?: number | null
           foto_url?: string | null
           id?: string
           nome?: string
@@ -352,6 +364,7 @@ export type Database = {
           origem: string
           remetente_id: string
           remetente_nome: string
+          responsavel_id: string
           texto: string
           transportador_id: string
         }
@@ -361,6 +374,7 @@ export type Database = {
           origem: string
           remetente_id: string
           remetente_nome: string
+          responsavel_id: string
           texto: string
           transportador_id: string
         }
@@ -370,6 +384,7 @@ export type Database = {
           origem?: string
           remetente_id?: string
           remetente_nome?: string
+          responsavel_id?: string
           texto?: string
           transportador_id?: string
         }

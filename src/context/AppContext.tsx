@@ -86,7 +86,7 @@ interface AppContextType {
   pagarMensalidade: (
     mensalidadeId: string, metodo: MetodoPagamento, detalhes?: any
   ) => Promise<{ sucesso: boolean; reciboHash?: string }>;
-  enviarMensagem: (texto: string) => Promise<void>;
+  enviarMensagem: (texto: string, responsavelId?: string) => Promise<void>;
   sincronizarFilaOffline: () => Promise<{ sincronizados: number; erros: number }>;
   iniciarViagem: (tipo: 'IDA' | 'VOLTA', turno: 'MANHA' | 'TARDE' | 'INTEGRAL' | 'NOITE') => Promise<void>;
   finalizarViagem: () => Promise<void>;
@@ -121,6 +121,8 @@ const VIAGEM_VAZIA: ViagemTransporte = {
   status: 'AGENDADA', km_percorrido: 0, criado_em: '',
 };
 
+/** Responsável da conta demo: nunca enxerga dependentes ou conversas de outros responsáveis. */
+const DEMO_RESPONSAVEL = 'resp-1';
 const novoId = (p: string) => `${p}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -162,9 +164,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const carregarDemo = (r: TipoUsuario) => {
     const d = initialMockData;
     setDemoRole(r); setIsDemo(true); setPerfil(null);
-    setAlunos(d.alunos); setPessoas(d.pessoasAutorizadas); setVeiculo(d.veiculo);
-    setViagemAtiva(d.viagemAtiva); setContratos(d.contratos); setMensalidades(d.mensalidades);
-    setNotificacoes(d.notificacoes); setMensagensChat(d.mensagensChat); setEventos(d.eventosCalendario);
+    // Como no banco (RLS), o responsável só vê os próprios dependentes e a própria conversa.
+    const meus = r === 'RESPONSAVEL' ? d.alunos.filter((a) => a.responsavel_id === DEMO_RESPONSAVEL) : d.alunos;
+    const ids = new Set(meus.map((a) => a.id));
+    setAlunos(meus);
+    setPessoas(d.pessoasAutorizadas.filter((p) => ids.has(p.aluno_id)));
+    setVeiculo(d.veiculo);
+    setViagemAtiva(d.viagemAtiva);
+    setContratos(d.contratos.filter((c) => ids.has(c.aluno_id)));
+    setMensalidades(d.mensalidades);
+    setNotificacoes(d.notificacoes);
+    setMensagensChat(r === 'RESPONSAVEL' ? d.mensagensChat.filter((m) => m.responsavelId === DEMO_RESPONSAVEL) : d.mensagensChat);
+    setEventos(d.eventosCalendario);
     setNomes({ transportador: 'Tio Marcos' });
     setCodigoConvite('DEMO42');
     setRecebimento({ chavePix: 'marcos.van@exemplo.com', valor: 350, diaVencimento: 10 });
@@ -287,7 +298,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const buscarTransportador = (codigo: string) => DataService.buscarTransportador(codigo);
 
   const cadastrarAluno = async (a: NovoAluno) => {
-    if (isDemo) throw new Error('Crie uma conta para cadastrar alunos de verdade.');
+    if (isDemo) throw new Error('Crie uma conta para cadastrar dependentes de verdade.');
     exigirReal();
     await DataService.cadastrarAluno(a);
     animateNextLayout();
@@ -374,24 +385,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await recarregar();
   };
 
-  const enviarMensagem = async (texto: string) => {
+  const enviarMensagem = async (texto: string, responsavelId?: string) => {
     const t = texto.trim();
     if (!t) return;
     const origem = role === 'TRANSPORTADOR' ? 'MOTORISTA' : 'PAIS';
+    // A conversa é sempre privada: o motorista escolhe o responsável; o responsável só fala por si.
+    const dono = role === 'TRANSPORTADOR' ? responsavelId : isDemo ? DEMO_RESPONSAVEL : userId;
+    if (!dono) throw new Error('Escolha com qual responsável conversar.');
     if (!isDemo) {
       exigirReal();
       const canal = canalTransportador();
       if (!canal) throw new Error('Vincule-se a um transportador para conversar.');
       await DataService.enviarMensagem({
-        canalTransportadorId: canal, remetenteId: userId, remetenteNome: rotulo(), origem, texto: t,
+        canalTransportadorId: canal, responsavelId: dono, remetenteId: userId, remetenteNome: rotulo(), origem, texto: t,
       });
     }
     animateNextLayout();
     setMensagensChat((p) => [...p, {
       id: novoId('msg'), remetenteId: userId || role, remetenteNome: isDemo
-        ? (role === 'TRANSPORTADOR' ? 'Tio Marcos (Motorista)' : 'Carlos Silva (Pai)')
+        ? (role === 'TRANSPORTADOR' ? 'Tio Marcos (Motorista)' : 'Carlos Silva (Responsável)')
         : rotulo(),
-      destinatarioNome: '', texto: t, dataHora: new Date().toISOString(), origem,
+      destinatarioNome: '', texto: t, dataHora: new Date().toISOString(), origem, responsavelId: dono,
     }]);
   };
 

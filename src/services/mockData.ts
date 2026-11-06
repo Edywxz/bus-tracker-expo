@@ -35,6 +35,8 @@ export interface MockDataState {
     texto: string;
     dataHora: string;
     origem: 'PAIS' | 'MOTORISTA';
+    /** Dono da conversa privada (o motorista conversa com um responsável por vez). */
+    responsavelId: string;
   }[];
   eventosCalendario: {
     id: string;
@@ -60,6 +62,7 @@ export const initialMockData: MockDataState = {
       turno: 'MANHA',
       endereco_busca: 'Rua das Flores, 142 - Apto 31',
       endereco_entrega: 'Colégio Santa Maria (Portão 2)',
+      latitude: -23.55743, longitude: -46.64219, entrega_latitude: -23.56105, entrega_longitude: -46.64732, parada: 2,
       observacoes_medicas: 'Alérgico a amendoim. Leva bombinha de asma na mochila.',
       ativo: true,
       criado_em: '2026-01-15T08:00:00Z',
@@ -119,6 +122,24 @@ export const initialMockData: MockDataState = {
       criado_em: '2026-02-10T11:00:00Z',
       statusEmbarque: 'AUSENTE',
       ultimoRegistro: 'Ausência comunicada pelo responsável (Consulta médica)',
+    },
+    {
+      id: 'aluno-5',
+      responsavel_id: 'resp-1',
+      transportador_id: 'transp-1',
+      escola_nome: 'Escola Municipal Aurora',
+      nome: 'Ana Silva',
+      data_nascimento: '2019-08-03',
+      documento: '63.118.442-1',
+      turma: '2º Ano A',
+      turno: 'MANHA',
+      endereco_busca: 'Av. Paulista, 1578',
+      endereco_entrega: 'Escola Municipal Aurora (Portão 1)',
+      latitude: -23.55052, longitude: -46.633308, entrega_latitude: -23.5675, entrega_longitude: -46.654, parada: 0,
+      ativo: true,
+      criado_em: '2026-02-12T09:00:00Z',
+      statusEmbarque: 'EMBARCADO',
+      ultimoRegistro: 'Hoje às 07:05 (Embarcou na residência)',
     },
   ],
 
@@ -260,28 +281,31 @@ export const initialMockData: MockDataState = {
       id: 'msg-1',
       remetenteId: 'transp-1',
       remetenteNome: 'Tio Marcos (Motorista)',
-      destinatarioNome: 'Carlos Silva (Pai)',
+      destinatarioNome: 'Carlos Silva (Responsável)',
       texto: 'Bom dia Carlos! Já estou na Rua das Flores, chego em 3 minutos.',
       dataHora: '2026-10-31T07:10:00Z',
       origem: 'MOTORISTA',
+      responsavelId: 'resp-1',
     },
     {
       id: 'msg-2',
       remetenteId: 'resp-1',
-      remetenteNome: 'Carlos Silva (Pai)',
+      remetenteNome: 'Carlos Silva (Responsável)',
       destinatarioNome: 'Tio Marcos (Motorista)',
       texto: 'Bom dia Tio Marcos! Perfeito, o Lucas já está descendo com a mochila.',
       dataHora: '2026-10-31T07:12:00Z',
       origem: 'PAIS',
+      responsavelId: 'resp-1',
     },
     {
       id: 'msg-3',
       remetenteId: 'transp-1',
       remetenteNome: 'Tio Marcos (Motorista)',
-      destinatarioNome: 'Famílias da rota',
+      destinatarioNome: 'Responsáveis da rota',
       texto: 'Bom dia! Hoje o desembarque no Colégio Santa Maria será normal pelos portões 1 e 2.',
       dataHora: '2026-10-31T06:30:00Z',
       origem: 'MOTORISTA',
+      responsavelId: 'resp-1',
     },
   ],
 

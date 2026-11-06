@@ -16,13 +16,13 @@ const W = Dimensions.get('window').width;
 type Step = 'boasvindas' | 'entrar' | 'perfil' | 'cadastro' | 'confirmar' | 'recuperar';
 
 const SLIDES: { icon: IconName; title: string; text: string; tint: string }[] = [
-  { icon: 'van', title: 'Veja a van chegando', text: 'Acompanhe o trajeto em tempo real e saiba exatamente quando o aluno embarca e desembarca.', tint: colors.signalContainer },
+  { icon: 'van', title: 'Veja a van chegando', text: 'Acompanhe o trajeto em tempo real e saiba exatamente quando o passageiro embarca e desembarca.', tint: colors.signalContainer },
   { icon: 'shield', title: 'Mais segurança no dia a dia', text: 'Pessoas autorizadas, avisos de ocorrência na rota e registro de cada embarque, mesmo sem sinal.', tint: colors.infoContainer },
   { icon: 'wallet', title: 'Mensalidades sem complicação', text: 'Pague por PIX ou boleto, receba o recibo e converse com o motorista no mesmo lugar.', tint: colors.successContainer },
 ];
 
 const PAPEIS: { tipo: TipoUsuario; icon: IconName; titulo: string; texto: string }[] = [
-  { tipo: 'RESPONSAVEL', icon: 'people', titulo: 'Sou pai, mãe ou responsável', texto: 'Acompanhar o trajeto, pagar e avisar faltas' },
+  { tipo: 'RESPONSAVEL', icon: 'people', titulo: 'Sou responsável', texto: 'Acompanhar o trajeto, pagar e avisar faltas' },
   { tipo: 'TRANSPORTADOR', icon: 'van', titulo: 'Sou motorista', texto: 'Conduzir rotas, registrar embarques e receber' },
 ];
 
@@ -222,7 +222,7 @@ export const AuthFlow: React.FC = () => {
                     helper="Mínimo de 6 caracteres" returnKeyType="done" inputRef={senhaRef} onSubmitEditing={onCadastrar} />
                   {erro && <Notice tone="error" message={erro} />}
                 </View>
-                <Text style={s.legal}>Ao continuar você concorda com o tratamento dos seus dados e dos dados do aluno conforme a LGPD.</Text>
+                <Text style={s.legal}>Ao continuar você concorda com o tratamento dos seus dados e dos dados do passageiro conforme a LGPD.</Text>
               </>
             )}
 

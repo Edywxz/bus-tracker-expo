@@ -46,6 +46,11 @@ export interface Aluno {
   transportador_id: string;
   escola_nome?: string; // escola que o aluno frequenta (destino da rota, não é usuário)
   escola_endereco?: string;
+  latitude?: number | null; // opcionais: casa e ponto de entrega, para indicar quem chega primeiro
+  longitude?: number | null;
+  entrega_latitude?: number | null;
+  entrega_longitude?: number | null;
+  parada?: number; // só no demo: posição do aluno no mapa esquemático
   nome: string;
   data_nascimento: string;
   documento: string;

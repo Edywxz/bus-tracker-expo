@@ -25,7 +25,7 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
   const [addPessoa, setAddPessoa] = useState(false);
   const a = alunos.find((x) => x.id === id);
   if (!a) {
-    return <Screen title="Aluno"><EmptyState icon="alert" title="Aluno não encontrado" message="Ele pode ter sido removido." /></Screen>;
+    return <Screen title="Detalhes"><EmptyState icon="alert" title="Não encontrado" message="Ele pode ter sido removido." /></Screen>;
   }
   const st = statusAluno(a.statusEmbarque);
   const pessoas = pessoasAutorizadas.filter((p) => p.aluno_id === a.id);
@@ -58,14 +58,14 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
         <>
           <SectionHeader title="Saúde" />
           <ListSection><ListRow icon="medical" iconTone="error" title="Observações" subtitle={a.observacoes_medicas} subtitleLines={6} /></ListSection>
-          <SectionFooter>Visível só para a família e o motorista.</SectionFooter>
+          <SectionFooter>Visível só para o responsável e o motorista.</SectionFooter>
         </>
       ) : null}
 
       <>
           <SectionHeader title="Pessoas autorizadas" action={pai ? { label: 'Adicionar', onPress: () => setAddPessoa(true) } : undefined} />
           {pessoas.length === 0 ? (
-            <Card><Text style={s.muted}>Ninguém além dos responsáveis foi autorizado a buscar o aluno.</Text></Card>
+            <Card><Text style={s.muted}>Ninguém além dos responsáveis foi autorizado a buscar.</Text></Card>
           ) : (
             <ListSection>
               {pessoas.map((p) => (
@@ -75,7 +75,7 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
               ))}
             </ListSection>
           )}
-          <SectionFooter>Só estas pessoas podem receber o aluno no ponto. O motorista confere o documento.</SectionFooter>
+          <SectionFooter>Só estas pessoas podem receber no ponto. O motorista confere o documento.</SectionFooter>
       </>
 
       {contrato && (
@@ -98,11 +98,11 @@ export const ContractScreen: React.FC<{ alunoId?: string }> = ({ alunoId }) => {
   const { contratos, alunos, nomes } = useApp();
   const c = contratos.find((x) => x.aluno_id === alunoId);
   const aluno = alunos.find((x) => x.id === alunoId);
-  if (!c) return <Screen title="Contrato"><EmptyState icon="doc" title="Sem contrato" message="O contrato é criado quando o aluno é vinculado ao motorista." /></Screen>;
+  if (!c) return <Screen title="Contrato"><EmptyState icon="doc" title="Sem contrato" message="O contrato é criado quando o passageiro é vinculado ao motorista." /></Screen>;
   return (
     <Screen title="Contrato" subtitle={c.numero_contrato}>
       <ListSection>
-        <ListRow icon="person" iconTone="gray" title="Aluno" value={aluno?.nome ?? '-'} />
+        <ListRow icon="person" iconTone="gray" title="Passageiro" value={aluno?.nome ?? '-'} />
         <ListRow icon="van" iconTone="signal" title="Transportador" value={nomes.transportador ?? '-'} />
         <ListRow icon="cash" iconTone="gray" title="Mensalidade" value={brl(c.valor_mensalidade)} />
         <ListRow icon="calendar" iconTone="gray" title="Vencimento" value={`Dia ${c.dia_vencimento}`} />
