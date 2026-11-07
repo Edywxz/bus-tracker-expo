@@ -310,6 +310,6 @@ CREATE POLICY "Mensalidades seguras"
     ON public.mensalidades FOR ALL
     USING (auth.uid() = responsavel_id OR auth.uid() = transportador_id);
 
--- Endereços do RESPONSÁVEL (dado do adulto); o aluno aponta para eles. Ver migrations/20261106000000_enderecos_responsavel.sql
+-- Endereços do RESPONSÁVEL (dado do adulto); o aluno aponta para eles. Ver migrations/20261106202922_enderecos_responsavel.sql
 -- CREATE TABLE enderecos_responsavel (id, responsavel_id, rotulo, endereco_texto, latitude, longitude,
 --   precisao ('NUMERO'|'RUA'|'CEP'|'MANUAL'), origem ('GEOAPIFY'|'CEP'|'MANUAL'), ajustado_manual, geocodificado_em, criado_em)

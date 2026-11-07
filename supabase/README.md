@@ -5,7 +5,7 @@
    (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Veja `.env.example`.
 2. No **SQL Editor**, rode nesta ordem:
    1. `supabase/schema.sql` (tabelas base)
-   2. `supabase/migrations/20261101000000_backend_completo.sql` (cadastro automático de perfil, notificações,
+   2. `supabase/migrations/20261106184810_backend_completo_sem_instituicao.sql` (cadastro automático de perfil, notificações,
       chat, calendário, RPCs, gatilhos e políticas RLS)
 3. **Authentication → Providers → Email**: para testar rápido, desative “Confirm email”.
    Com a confirmação ligada o app mostra a tela “Confirme seu e-mail”.

@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- VanEscolar GPS — Migração do back-end completo
--- Rode DEPOIS de supabase/schema.sql (SQL Editor do Supabase ou `supabase db push`).
+-- Histórico alinhado ao banco remoto (mesmas versões). Arquivo idempotente (estado final); schema inicial em 20261025*.
 -- Idempotente: pode ser executada mais de uma vez.
 -- Atores: apenas Responsável e Transportador. A escola é só o destino da rota
 -- (campos escola_nome / escola_endereco do aluno), não um usuário.
