@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src https://ghcqvnxjivauvkpnpqlf.supabase.co; style-src 'self'; img-src 'self' data:; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Nova senha</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <header class="topo"><a href="../">VanEscolar GPS</a></header>
+  <main class="conteudo">
+    <section data-estado="carregando">
+      <h1>Nova senha</h1>
+      <p>Verificando o link...</p>
+    </section>
+    <section data-estado="erro" hidden>
+      <h1>Não foi possível continuar</h1>
+      <p class="aviso aviso-erro" id="mensagem-erro" role="alert"></p>
+    </section>
+    <section data-estado="formulario" hidden>
+      <h1>Nova senha</h1>
+      <form id="form-senha" novalidate>
+        <label class="campo" for="senha">Nova senha</label>
+        <input class="entrada" id="senha" type="password" autocomplete="new-password" required>
+        <label class="campo" for="confirmacao">Confirme a nova senha</label>
+        <input class="entrada" id="confirmacao" type="password" autocomplete="new-password" required>
+        <p class="erro-form" id="erro-form" role="alert"></p>
+        <button class="botao" id="enviar" type="submit">Salvar nova senha</button>
+      </form>
+    </section>
+    <section data-estado="sucesso" hidden>
+      <h1 class="sucesso">Senha alterada</h1>
+      <p>Senha alterada. Abra o app e entre com a nova senha.</p>
+      <p><a href="vanescolar://" class="botao">Abrir o app</a></p>
+    </section>
+  </main>
+  <footer class="rodape">Projeto acadêmico · <a href="../privacidade/">Política de privacidade</a></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js" integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous"></script>
+  <script type="module" src="../assets/redefinir.js"></script>
+</body>
+</html>

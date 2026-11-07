@@ -47,3 +47,27 @@ test('páginas sem script, style ou style= inline', () => {
     assert.ok(!/\sstyle=/i.test(html), `${pagina}: atributo style`);
   }
 });
+
+const ler = (rel: string) => readFileSync(join(raiz, rel), 'utf8');
+
+test('existem exatamente as quatro páginas', () => {
+  const rel = paginas.map((p) => p.slice(raiz.length + 1)).sort();
+  assert.deepEqual(rel, ['confirmado/index.html', 'index.html', 'privacidade/index.html', 'redefinir-senha/index.html']);
+});
+
+test('página de nova senha tem CSP, referrer e supabase-js fixo com SRI', () => {
+  const html = ler('redefinir-senha/index.html');
+  const csp =
+    "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src https://ghcqvnxjivauvkpnpqlf.supabase.co; style-src 'self'; img-src 'self' data:; frame-src 'none'; base-uri 'none'; form-action 'none'";
+  assert.ok(html.includes(`<meta http-equiv="Content-Security-Policy" content="${csp}">`));
+  assert.ok(html.includes('<meta name="referrer" content="no-referrer">'));
+  const tag = html.match(/<script[^>]*supabase-js@2\.119\.0\/dist\/umd\/supabase\.js[^>]*>/)?.[0] ?? '';
+  assert.ok(tag.includes('src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"'));
+  assert.ok(tag.includes('integrity="sha384-'));
+  assert.ok(tag.includes('crossorigin="anonymous"'));
+});
+
+test('páginas de retorno têm o botão para abrir o app', () => {
+  for (const p of ['confirmado/index.html', 'redefinir-senha/index.html'])
+    assert.ok(ler(p).includes('<a href="vanescolar://"'), p);
+});

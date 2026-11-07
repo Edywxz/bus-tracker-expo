@@ -40,3 +40,9 @@ ul { padding-left: 1.25rem; }
   .duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .duas-colunas .cartao { margin: 0; }
 }
+[hidden] { display: none !important; }
+.botao { display: inline-block; background: var(--signal); color: var(--on-signal); border: 0; border-radius: 8px; padding: 0.75rem 1.25rem; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.botao:disabled { opacity: 0.6; cursor: not-allowed; }
+.campo { display: block; margin: 1rem 0 0.25rem; font-weight: 600; }
+.entrada { display: block; width: 100%; padding: 0.75rem; font: inherit; border: 1px solid var(--muted); border-radius: 8px; background: var(--white); color: var(--ink); }
+.erro-form { color: var(--error); min-height: 1.6em; }
