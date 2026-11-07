@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with: { deno-version: v2.x }
-      - run: deno check supabase/functions/*/index.ts
+      - run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
 
   database:
     name: database
