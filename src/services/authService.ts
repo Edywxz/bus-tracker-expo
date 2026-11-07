@@ -1,8 +1,8 @@
 import { Session } from '@supabase/supabase-js';
-import * as Linking from 'expo-linking';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { TipoUsuario } from '../types/database';
 import { lerLinkAuth } from '../utils/authLink';
+import { urlDoSite } from '../utils/siteUrl';
 
 /** Traduz erros do Supabase Auth para mensagens claras em português. */
 export function traduzirErroAuth(err: unknown): string {
@@ -48,7 +48,7 @@ export class AuthService {
       email: p.email.trim().toLowerCase(),
       password: p.senha,
       options: {
-        emailRedirectTo: Linking.createURL('/'), // o link do e-mail abre o app (precisa estar nas Redirect URLs do Supabase)
+        emailRedirectTo: urlDoSite('confirmado/', process.env.EXPO_PUBLIC_SITE_URL), // página do site (precisa estar nas Redirect URLs do Supabase)
         data: { nome: p.nome.trim(), tipo_usuario: p.tipo, telefone: p.telefone ?? '' },
       },
     });
@@ -60,7 +60,7 @@ export class AuthService {
 
   static async reenviarConfirmacao(email: string) {
     const { error } = await supabase.auth.resend({
-      type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: Linking.createURL('/') },
+      type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: urlDoSite('confirmado/', process.env.EXPO_PUBLIC_SITE_URL) },
     });
     if (error) throw error;
   }
@@ -70,7 +70,7 @@ export class AuthService {
     const l = lerLinkAuth(url);
     if (!l) return null;
     if (l.erro) return l.erro;
-    if (l.tipo === 'recovery') return null; // shortcut: redefinição de senha ainda não tem tela, ver pendência 6
+    if (l.tipo === 'recovery') return null; // redefinição de senha agora é tratada pela página web (site/redefinir-senha)
     const { error } = await supabase.auth.setSession({ access_token: l.sessao!.accessToken, refresh_token: l.sessao!.refreshToken });
     return error ? traduzirErroAuth(error) : null;
   }
@@ -84,7 +84,9 @@ export class AuthService {
   }
 
   static async recuperarSenha(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: urlDoSite('redefinir-senha/', process.env.EXPO_PUBLIC_SITE_URL),
+    });
     if (error) throw error;
   }
 
