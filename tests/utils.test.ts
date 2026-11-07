@@ -4,6 +4,7 @@ import { pixCopiaECola } from '../src/utils/pix.ts';
 import { distanciaKm, pontoDeDescida, primeiroAChegar } from '../src/utils/proximidade.ts';
 import { diaLetivo, lembrete } from '../src/utils/lembrete.ts';
 import { lerLinkAuth } from '../src/utils/authLink.ts';
+import { urlDoSite } from '../src/utils/siteUrl.ts';
 
 // CRC16-CCITT independente da implementação (vetor padrão: "123456789" -> 29B1)
 const crc = (s: string) => {
@@ -95,4 +96,13 @@ test('link de confirmação: link expirado vira mensagem de erro, sem sessão', 
   const l = lerLinkAuth('vanescolar://#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid')!;
   assert.ok(l.erro!.includes('expirou'));
   assert.equal(l.sessao, undefined);
+});
+
+test('urlDoSite: junta base e caminho com exatamente uma barra', () => {
+  const p = 'https://edywxz.github.io/bus-tracker-expo/';
+  assert.equal(urlDoSite('confirmado/'), `${p}confirmado/`);
+  assert.equal(urlDoSite('confirmado/', 'https://x.dev/app'), 'https://x.dev/app/confirmado/');
+  assert.equal(urlDoSite('confirmado/', 'https://x.dev/app/'), 'https://x.dev/app/confirmado/');
+  assert.equal(urlDoSite('/redefinir-senha/'), `${p}redefinir-senha/`);
+  assert.equal(urlDoSite('confirmado/', ''), `${p}confirmado/`);
 });

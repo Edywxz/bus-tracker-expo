@@ -15,9 +15,9 @@
    ```
 
 ### Link do e-mail de confirmação (Authentication → URL Configuration)
-O link de confirmação redireciona para o endereço enviado pelo app (`emailRedirectTo`), que precisa estar permitido:
-- **Site URL:** `vanescolar://` (era localhost, por isso o erro "localhost null").
-- **Redirect URLs:** `vanescolar://**` (builds) e `exp://**` (Expo Go, só para desenvolvimento).
+Os links dos e-mails (confirmação e redefinição de senha) apontam para o site, que fica em `site/` e é publicado no GitHub Pages por `.github/workflows/site.yml`. Esses endereços precisam estar permitidos:
+- **Site URL:** `https://edywxz.github.io/bus-tracker-expo/` (o endereço do site).
+- **Redirect URLs:** `https://edywxz.github.io/bus-tracker-expo/**`, `vanescolar://**` e `exp://**` (este último só para desenvolvimento).
 - Regra do app: **um e-mail = uma conta = um perfil** (responsável ou motorista). O banco já impede e-mails repetidos.
 
 ### Push notifications (opcional, mas necessário para avisar com o app fechado)
