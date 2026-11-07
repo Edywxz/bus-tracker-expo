@@ -14,6 +14,12 @@
    select cron.schedule('mensalidades-vencidas', '0 6 * * *', $$select public.atualizar_mensalidades_vencidas()$$);
    ```
 
+### Link do e-mail de confirmação (Authentication → URL Configuration)
+O link de confirmação redireciona para o endereço enviado pelo app (`emailRedirectTo`), que precisa estar permitido:
+- **Site URL:** `vanescolar://` (era localhost, por isso o erro "localhost null").
+- **Redirect URLs:** `vanescolar://**` (builds) e `exp://**` (Expo Go, só para desenvolvimento).
+- Regra do app: **um e-mail = uma conta = um perfil** (responsável ou motorista). O banco já impede e-mails repetidos.
+
 ### Push notifications (opcional, mas necessário para avisar com o app fechado)
 1. Rode a migration `20261107120000_push_tokens.sql`.
 2. Defina o segredo e publique a função (sem JWT, ela se autentica por cabeçalho):

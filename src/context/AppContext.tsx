@@ -13,6 +13,8 @@ import { supabase } from '../services/supabase';
 import { AuthService } from '../services/authService';
 import { PushService } from '../services/pushService';
 import { DataService, PerfilApp, AlunoApp } from '../services/dataService';
+import { Alert } from 'react-native';
+import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import { animateNextLayout } from '../theme/tokens';
 
@@ -45,6 +47,7 @@ interface AppContextType {
   entrar: (email: string, senha: string) => Promise<void>;
   cadastrar: (p: { nome: string; email: string; senha: string; tipo: TipoUsuario }) => Promise<{ precisaConfirmar: boolean }>;
   recuperarSenha: (email: string) => Promise<void>;
+  reenviarConfirmacao: (email: string) => Promise<void>;
   sair: () => Promise<void>;
   excluirConta: () => Promise<void>;
   recarregar: () => Promise<void>;
@@ -241,6 +244,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Link do e-mail de confirmação aberto no aparelho: entra na conta (ou avisa que o link não vale mais)
+  useEffect(() => {
+    if (!AuthService.disponivel()) return;
+    const tratar = (url: string | null) => {
+      if (url) AuthService.tratarLink(url).then((m) => { if (m) Alert.alert('Link inválido', m); });
+    };
+    Linking.getInitialURL().then(tratar);
+    const sub = Linking.addEventListener('url', (e) => tratar(e.url));
+    return () => sub.remove();
+  }, []);
+
   // Tempo real: recarrega (com debounce) quando algo muda no banco
   useEffect(() => {
     if (isDemo || !userId) return;
@@ -296,6 +310,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const entrar = async (email: string, senha: string) => { await AuthService.entrar(email, senha); };
   const cadastrar: AppContextType['cadastrar'] = (p) => AuthService.cadastrar(p);
   const recuperarSenha = (email: string) => AuthService.recuperarSenha(email);
+  const reenviarConfirmacao = (email: string) => AuthService.reenviarConfirmacao(email);
   const sair = async () => {
     if (isDemo) { setIsDemo(false); limpar(); setAuthStatus('deslogado'); return; }
     await PushService.desregistrar();
@@ -611,7 +626,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const value = useMemo<AppContextType>(() => ({
     authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados,
-    entrarDemo, entrar, cadastrar, recuperarSenha, sair, excluirConta, recarregar,
+    entrarDemo, entrar, cadastrar, recuperarSenha, reenviarConfirmacao, sair, excluirConta, recarregar,
     role, setRole, alunos, pessoasAutorizadas, veiculo, temVeiculo: !!veiculo.id,
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
     eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? gpsIndex : undefined,
