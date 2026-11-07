@@ -17,7 +17,7 @@ if (typeof document !== 'undefined') {
     a.href = href;
   }
   for (const p of document.querySelectorAll('[data-contato-aviso]')) {
-    p.textContent = aviso ?? '';
-    p.hidden = aviso === null;
+    if (aviso === null) p.hidden = true;
+    else p.textContent = aviso;
   }
 }
