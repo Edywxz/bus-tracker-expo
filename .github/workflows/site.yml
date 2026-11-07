@@ -1,5 +1,6 @@
 name: Site
 
+# Também é disparado pelo job automerge do ci.yml (workflow_dispatch), porque merges feitos pelo GITHUB_TOKEN não acionam o push.
 on:
   push:
     branches: [main]

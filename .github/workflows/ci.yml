@@ -64,8 +64,16 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write # para disparar o deploy do site (merge feito pelo GITHUB_TOKEN não aciona o push do site.yml)
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
     steps:
       - name: Squash merge e apaga a branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --squash --delete-branch
+        run: gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
+      - name: Publica o site se o PR mexeu nele
+        run: |
+          if gh pr view "$PR" --repo "$REPO" --json files --jq '.files[].path' | grep -qE '^(site/|\.github/workflows/site\.yml$)'; then
+            gh workflow run site.yml --repo "$REPO" --ref main
+          fi
