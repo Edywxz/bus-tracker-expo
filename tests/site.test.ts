@@ -71,3 +71,20 @@ test('páginas de retorno têm o botão para abrir o app', () => {
   for (const p of ['confirmado/index.html', 'redefinir-senha/index.html'])
     assert.ok(ler(p).includes('<a href="vanescolar://"'), p);
 });
+
+test('página de nova senha: noscript e campos de senha', () => {
+  const html = ler('redefinir-senha/index.html');
+  assert.ok(html.includes('<noscript><p class="aviso aviso-erro">Ative o JavaScript para definir a nova senha.</p></noscript>'));
+  for (const id of ['senha', 'confirmacao']) {
+    const tag = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))?.[0] ?? '';
+    assert.ok(tag.includes('type="password"') && tag.includes('autocomplete="new-password"'), id);
+  }
+});
+
+test('privacidade: sem promessa falsa de exclusão e com dados novos', () => {
+  const html = ler('privacidade/index.html');
+  assert.ok(!html.includes('apagamos o perfil'));
+  assert.ok(!html.includes('remove o perfil'));
+  assert.ok(/<li>[^<]*autorizadas[^<]*CPF[^<]*<\/li>/.test(html));
+  assert.ok(html.includes('histórico de posições'));
+});
