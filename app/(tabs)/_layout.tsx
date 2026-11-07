@@ -26,13 +26,8 @@ export default function TabsLayout() {
       badgeBackgroundColor={colors.error}
     >
       <NativeTabs.Trigger name="(inicio)">
-        <NativeTabs.Trigger.Label>Rota</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{motorista ? 'Rota' : 'Acompanhar'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} md="map" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="(alunos)">
-        <NativeTabs.Trigger.Label>{motorista ? 'Passageiros' : 'Dependentes'}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} md="group" />
         {motorista && offlineQueueCount > 0 ? <NativeTabs.Trigger.Badge>{String(offlineQueueCount)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
 

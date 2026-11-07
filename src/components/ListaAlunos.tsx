@@ -3,25 +3,24 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { gap, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-import { FadeInUp } from '../components/ui/FadeInUp';
+import { FadeInUp } from './ui/FadeInUp';
 import {
-  Avatar, Button, Card, EmptyState, HeaderButton, Icon, Notice, Screen, SegmentedControl, StatusPill, statusAluno,
-} from '../components/ui/kit';
+  Avatar, Button, Card, EmptyState, Icon, Notice, SegmentedControl, StatusPill, statusAluno,
+} from './ui/kit';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { AddStudentSheet } from '../sheets/Sheets';
 import { mensagemErro } from '../utils/format';
 
 type Filtro = 'TODOS' | 'AGUARDANDO' | 'EMBARCADO';
 const TURNO: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', INTEGRAL: 'Integral', NOITE: 'Noite' };
 
-export const StudentsScreen: React.FC = () => {
-  const { role, alunos, viagemAtiva, isDemo, registrarEmbarque, offlineQueueCount, sincronizarFilaOffline, recarregar } = useApp();
+/** Dependentes (responsável) ou passageiros (motorista) — vive dentro do painel da tela de viagem. */
+export const ListaAlunos: React.FC<{ onAdicionar: () => void }> = ({ onAdicionar }) => {
+  const { role, alunos, viagemAtiva, isDemo, registrarEmbarque, offlineQueueCount, sincronizarFilaOffline } = useApp();
   const [filtro, setFiltro] = useState<Filtro>('TODOS');
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sync, setSync] = useState<string | null>(null);
-  const [add, setAdd] = useState(false);
   const emRota = viagemAtiva.status === 'EM_ANDAMENTO';
   const motorista = role === 'TRANSPORTADOR';
 
@@ -41,16 +40,12 @@ export const StudentsScreen: React.FC = () => {
     } finally { setBusy(null); }
   };
 
-  const title = motorista ? 'Passageiros' : 'Meus dependentes';
-  const subtitle = motorista ? (emRota ? 'Toque para registrar entrada e saída' : undefined) : undefined;
-
   return (
-    <Screen
-      title={title}
-      subtitle={subtitle}
-      onRefresh={recarregar}
-      headerRight={role === 'RESPONSAVEL' ? <HeaderButton icon="plus" label="Adicionar dependente" onPress={() => setAdd(true)} /> : undefined}
-    >
+    <View>
+      <Text style={s.titulo}>{motorista ? 'Passageiros' : 'Meus dependentes'}</Text>
+      {role === 'RESPONSAVEL' && alunos.length > 0 && (
+        <View style={s.gap}><Button variant="bordered" size="sm" icon="personAdd" label="Adicionar dependente" onPress={onAdicionar} /></View>
+      )}
       {motorista && !emRota && alunos.length > 0 && (
         <View style={s.gap}><Notice tone="info" message={isDemo ? 'Inicie uma rota na aba Rota para liberar os registros.' : 'Inicie uma rota na aba Rota para registrar embarques.'} /></View>
       )}
@@ -74,7 +69,7 @@ export const StudentsScreen: React.FC = () => {
       {alunos.length === 0 ? (
         role === 'RESPONSAVEL' ? (
           <EmptyState icon="personAdd" title="Nenhum dependente ainda" message="Adicione seu dependente com o código do motorista."
-            action={<Button size="lg" label="Adicionar dependente" onPress={() => setAdd(true)} />} />
+            action={<Button size="lg" label="Adicionar dependente" onPress={() => onAdicionar()} />} />
         ) : (
           <EmptyState icon="people" title="Nenhum passageiro vinculado" message="Quando os responsáveis usarem o seu código de convite, os passageiros aparecem aqui. Veja o código em Conta." />
         )
@@ -125,12 +120,12 @@ export const StudentsScreen: React.FC = () => {
           })}
         </View>
       )}
-      <AddStudentSheet visible={add} onClose={() => setAdd(false)} />
-    </Screen>
+    </View>
   );
 };
 
 const s = StyleSheet.create({
+  titulo: { ...type.title3, color: colors.label, marginBottom: spacing.md },
   gap: { marginBottom: spacing.md + 2 },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   name: { ...type.headline, color: colors.label },

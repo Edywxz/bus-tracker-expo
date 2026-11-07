@@ -1,3 +1,3 @@
-import { HomeScreen } from '../../../src/screens/HomeScreen';
+import { ViagemScreen } from '../../../src/screens/ViagemScreen';
 
-export default HomeScreen;
+export default ViagemScreen;

@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { gap, layout, radius, spacing } from '../theme/tokens';
+import { gap, layout, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
 import {
-  Avatar, Button, GlassSurface, IconButton, Notice, ProgressBar, PullDownButton, StatusPill, statusAluno,
+  Button, IconButton, Notice, ProgressBar, PullDownButton, StatusPill,
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
+import { PainelArrastavel } from '../components/PainelArrastavel';
+import { ListaAlunos } from '../components/ListaAlunos';
+import { distanciaKm } from '../utils/proximidade';
+import { lembrete } from '../utils/lembrete';
 import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
 
@@ -25,15 +29,16 @@ const horaPrevista = (min: number) => {
 const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v < 10 ? 1 : 0 })} km`;
 
 /**
- * Rota — primeira tela (concept "First view").
- * Mapa em tela cheia · botões de vidro no topo · sheet de vidro flutuante com status, tempo, progresso,
- * o aluno e as duas ações. O conteúdo da sheet muda por perfil (pais ou motorista).
+ * Viagem — primeira tela. Mapa em tela cheia + painel arrastável: recolhido mostra status, aviso, tempo e ações;
+ * aberto mostra os dependentes/passageiros; escondido libera o mapa. O conteúdo muda por perfil (pais ou motorista).
  */
-export const HomeScreen: React.FC = () => {
+export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo,
-    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes,
+    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario,
   } = useApp();
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => { const i = setInterval(() => setAgora(new Date()), 30000); return () => clearInterval(i); }, []);
   const [absence, setAbsence] = useState(false);
   const [emergency, setEmergency] = useState(false);
   const [start, setStart] = useState(false);
@@ -56,6 +61,16 @@ export const HomeScreen: React.FC = () => {
   const proximo = pai && emRota && gpsAtivo && aBordoMeus > 0 ? primeiroAChegar(gpsPosicao, alunos, viagemAtiva.tipo_viagem) : null;
   const filho = pai ? proximo?.aluno ?? alunos.find((a) => a.statusEmbarque === 'EMBARCADO') ?? alunos[0] : undefined;
   const destino = viagemAtiva.tipo_viagem === 'VOLTA' ? 'até o fim da rota' : 'até a escola';
+
+  // Distância da van até a parada que ela atende agora (ida: quem espera; volta: quem está a bordo).
+  const kmVan = (() => {
+    if (!pai || !emRota || !gpsAtivo) return null;
+    const alvo = viagemAtiva.tipo_viagem === 'VOLTA' ? 'EMBARCADO' : 'AGUARDANDO';
+    const ds = alunos.filter((a) => a.statusEmbarque === alvo && a.latitude != null && a.longitude != null)
+      .map((a) => distanciaKm(gpsPosicao, { latitude: a.latitude!, longitude: a.longitude! }));
+    return ds.length ? Math.min(...ds) : null;
+  })();
+  const aviso = pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida, kmVan }) : null;
 
   const concluir = async () => {
     setFinishing(true); setErro(null);
@@ -95,12 +110,13 @@ export const HomeScreen: React.FC = () => {
   const vazio = alunos.length === 0;
   const sheet = (
     <>
-      <View style={s.grabber} />
       <View style={s.row}>
         {pill}
         <View style={{ flex: 1 }} />
         {emRota ? <Text style={s.meta}>ao vivo</Text> : null}
       </View>
+
+      {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
 
       {vazio ? (
         pai ? (
@@ -145,21 +161,6 @@ export const HomeScreen: React.FC = () => {
           {(emRota || motorista) && ativos > 0 ? (
             <View style={{ marginTop: spacing.lg }}>
               <ProgressBar value={progresso} total={1} tone="signal" accessibilityLabel="Progresso da rota" />
-            </View>
-          ) : null}
-
-          {/* aluno (pais) */}
-          {filho ? (
-            <View style={s.child}>
-              <Avatar name={filho.nome} onBoard={filho.statusEmbarque === 'EMBARCADO'} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={s.childName} numberOfLines={1}>{filho.nome}</Text>
-                <Text style={s.meta} numberOfLines={1}>
-                  {filho.statusEmbarque === 'AGUARDANDO' ? filho.endereco_busca : statusAluno(filho.statusEmbarque).label}
-                  {` · ${viagemAtiva.tipo_viagem === 'VOLTA' ? 'Volta para casa' : 'Ida para a escola'}`}
-                </Text>
-              </View>
-              <IconButton icon="chevronRight" label={`Ver ${filho.nome}`} size="sm" variant="gray" onPress={() => go.student(filho.id)} />
             </View>
           ) : null}
 
@@ -211,7 +212,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.mapLand }}>
-      <Stack.Screen options={{ headerShown: false, title: 'Rota' }} />
+      <Stack.Screen options={{ headerShown: false, title: 'Viagem' }} />
       {mapaReal ? (
         <LiveMap
           van={vanGeo}
@@ -232,19 +233,13 @@ export const HomeScreen: React.FC = () => {
 
       {/* botões de vidro sobre o mapa */}
       <SafeAreaView edges={['top']} style={s.top} pointerEvents="box-none">
-        <IconButton icon="people" label={motorista ? 'Passageiros' : 'Dependentes'} variant="glass" onPress={() => router.navigate('/(tabs)/(alunos)')} />
-        <View style={{ gap: spacing.sm }}>
-          <IconButton icon="location" label="Atualizar posição da van" variant="glass" onPress={() => { recarregar().catch(() => {}); }} />
-          <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
-        </View>
+        <IconButton icon="location" label="Atualizar posição da van" variant="glass" onPress={() => { recarregar().catch(() => {}); }} />
+        <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      {/* sheet de vidro flutuante */}
-      <SafeAreaView edges={['bottom']} style={s.bottom} pointerEvents="box-none">
-        <GlassSurface material="thick" style={s.sheet}>
-          <View style={s.sheetBody}>{sheet}</View>
-        </GlassSurface>
-      </SafeAreaView>
+      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
+        {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
+      </PainelArrastavel>
 
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={filho?.id} />
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
@@ -256,10 +251,6 @@ export const HomeScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   top: { position: 'absolute', left: 0, right: 0, top: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: layout.gutter, paddingTop: spacing.sm },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
-  sheet: { borderRadius: radius.sheet },
-  sheetBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
-  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: radius.full, backgroundColor: colors.fill1, marginBottom: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: gap.related },
   meta: { ...type.footnote, color: colors.secondaryLabel },
   etaRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md, marginTop: spacing.md },
@@ -271,7 +262,5 @@ const s = StyleSheet.create({
   sub: { ...type.subheadline, color: colors.secondaryLabel, marginTop: 2 },
   caption: { ...type.sectionHeader, color: colors.secondaryLabel },
   code: { fontSize: 34, fontWeight: '800', letterSpacing: 6, color: colors.label, fontVariant: ['tabular-nums'] },
-  child: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, paddingTop: spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
-  childName: { ...type.headline, color: colors.label },
   actions: { flexDirection: 'row', gap: gap.related, marginTop: spacing.lg },
 });
