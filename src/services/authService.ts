@@ -1,6 +1,8 @@
 import { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { TipoUsuario } from '../types/database';
+import { lerLinkAuth } from '../utils/authLink';
 
 /** Traduz erros do Supabase Auth para mensagens claras em português. */
 export function traduzirErroAuth(err: unknown): string {
@@ -8,7 +10,7 @@ export function traduzirErroAuth(err: unknown): string {
   if (msg.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
   if (msg.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.';
   if (msg.includes('already registered') || msg.includes('already been registered'))
-    return 'Este e-mail já tem cadastro. Tente entrar.';
+    return 'Este e-mail já tem cadastro. Cada e-mail serve para um só perfil (responsável ou motorista). Entre ou recupere a senha.';
   if (msg.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.';
   if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde um instante e tente de novo.';
   if (msg.includes('network') || msg.includes('fetch')) return 'Sem conexão. Verifique sua internet.';
@@ -45,10 +47,32 @@ export class AuthService {
     const { data, error } = await supabase.auth.signUp({
       email: p.email.trim().toLowerCase(),
       password: p.senha,
-      options: { data: { nome: p.nome.trim(), tipo_usuario: p.tipo, telefone: p.telefone ?? '' } },
+      options: {
+        emailRedirectTo: Linking.createURL('/'), // o link do e-mail abre o app (precisa estar nas Redirect URLs do Supabase)
+        data: { nome: p.nome.trim(), tipo_usuario: p.tipo, telefone: p.telefone ?? '' },
+      },
     });
     if (error) throw error;
+    // E-mail já cadastrado: o Supabase não dá erro, devolve um usuário sem identidades e não envia e-mail.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) throw new Error('User already registered');
     return { precisaConfirmar: !data.session };
+  }
+
+  static async reenviarConfirmacao(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: Linking.createURL('/') },
+    });
+    if (error) throw error;
+  }
+
+  /** Link recebido por e-mail (confirmação): abre a sessão. Devolve a mensagem de erro, se houver. */
+  static async tratarLink(url: string): Promise<string | null> {
+    const l = lerLinkAuth(url);
+    if (!l) return null;
+    if (l.erro) return l.erro;
+    if (l.tipo === 'recovery') return null; // shortcut: redefinição de senha ainda não tem tela, ver pendência 6
+    const { error } = await supabase.auth.setSession({ access_token: l.sessao!.accessToken, refresh_token: l.sessao!.refreshToken });
+    return error ? traduzirErroAuth(error) : null;
   }
 
   static async entrar(email: string, senha: string) {

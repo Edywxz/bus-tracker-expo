@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { pixCopiaECola } from '../src/utils/pix.ts';
 import { distanciaKm, pontoDeDescida, primeiroAChegar } from '../src/utils/proximidade.ts';
 import { diaLetivo, lembrete } from '../src/utils/lembrete.ts';
+import { lerLinkAuth } from '../src/utils/authLink.ts';
 
 // CRC16-CCITT independente da implementação (vetor padrão: "123456789" -> 29B1)
 const crc = (s: string) => {
@@ -77,4 +78,21 @@ test('lembrete: em rota perto da parada manda esperar no portão', () => {
 test('lembrete: volta com aluno a bordo avisa o responsável', () => {
   const l = lembrete({ ...base, agora: seg(12, 30), alunos: [{ ...ana, statusEmbarque: 'EMBARCADO' }], emRota: true, tipo: 'VOLTA', kmVan: 2 })!;
   assert.ok(l.texto.includes('voltando com Ana'));
+});
+
+test('link de confirmação: lê os tokens do fragmento', () => {
+  const l = lerLinkAuth('vanescolar://#access_token=AAA&refresh_token=RRR&expires_in=3600&type=signup')!;
+  assert.deepEqual(l.sessao, { accessToken: 'AAA', refreshToken: 'RRR' });
+  assert.equal(l.tipo, 'signup');
+});
+
+test('link de confirmação: sem fragmento ou sem tokens é ignorado', () => {
+  assert.equal(lerLinkAuth('vanescolar://aluno/1'), null);
+  assert.equal(lerLinkAuth('vanescolar://#type=signup'), null);
+});
+
+test('link de confirmação: link expirado vira mensagem de erro, sem sessão', () => {
+  const l = lerLinkAuth('vanescolar://#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid')!;
+  assert.ok(l.erro!.includes('expirou'));
+  assert.equal(l.sessao, undefined);
 });

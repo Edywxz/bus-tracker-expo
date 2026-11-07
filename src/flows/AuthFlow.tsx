@@ -51,7 +51,7 @@ const HeroArt: React.FC<{ icon: IconName; tint: string }> = ({ icon, tint }) => 
 };
 
 export const AuthFlow: React.FC = () => {
-  const { entrar, cadastrar, recuperarSenha, entrarDemo } = useApp();
+  const { entrar, cadastrar, recuperarSenha, reenviarConfirmacao, entrarDemo } = useApp();
   const [step, setStep] = useState<Step>('boasvindas');
   const [dir, setDir] = useState(1);
   const [page, setPage] = useState(0);
@@ -100,6 +100,9 @@ export const AuthFlow: React.FC = () => {
   const onRecuperar = () =>
     validar(['email']) &&
     submeter(async () => { await recuperarSenha(email); setInfo('Enviamos um link para redefinir sua senha. Confira seu e-mail.'); });
+
+  const onReenviar = () =>
+    submeter(async () => { await reenviarConfirmacao(email); setInfo('Reenviamos o e-mail. Confira também a caixa de spam.'); });
 
   const slide = {
     opacity: t,
@@ -267,6 +270,8 @@ export const AuthFlow: React.FC = () => {
                 <Text style={[s.sub, { textAlign: 'center' }]}>
                   Enviamos um link para {email.trim()}. Toque nele e depois volte aqui para entrar.
                 </Text>
+                {info && <Notice tone="success" message={info} />}
+                {erro && <Notice tone="error" message={erro} />}
               </View>
             )}
           </Animated.View>
@@ -287,7 +292,12 @@ export const AuthFlow: React.FC = () => {
             </>
           )}
           {step === 'recuperar' && <Button size="lg" label="Enviar link" onPress={onRecuperar} loading={loading} disabled={!disponivel} />}
-          {step === 'confirmar' && <Button size="lg" label="Ir para o login" onPress={() => go('entrar')} />}
+          {step === 'confirmar' && (
+            <>
+              <Button size="lg" label="Ir para o login" onPress={() => go('entrar')} />
+              <TouchableScale onPress={onReenviar} style={s.demo}><Text style={s.demoText}>Não recebi o e-mail. Reenviar</Text></TouchableScale>
+            </>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
