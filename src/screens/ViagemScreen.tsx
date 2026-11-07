@@ -10,7 +10,7 @@ import {
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
-import { useApp } from '../context/AppContext';
+import { CENARIOS, useApp, type Cenario } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { PainelArrastavel } from '../components/PainelArrastavel';
 import { ListaAlunos } from '../components/ListaAlunos';
@@ -35,9 +35,10 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo,
-    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario,
+    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, simularCenario, horaSimulada,
   } = useApp();
-  const [agora, setAgora] = useState(() => new Date());
+  const [relogio, setAgora] = useState(() => new Date());
+  const agora = horaSimulada ?? relogio;
   useEffect(() => { const i = setInterval(() => setAgora(new Date()), 30000); return () => clearInterval(i); }, []);
   const [absence, setAbsence] = useState(false);
   const [emergency, setEmergency] = useState(false);
@@ -194,6 +195,7 @@ export const ViagemScreen: React.FC = () => {
   const acoes = [
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
     ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
+    ...(isDemo ? [...(Object.keys(CENARIOS) as Cenario[]).map((c) => ({ label: `Simular: ${CENARIOS[c]}`, onPress: () => simularCenario(c) })), { label: 'Simular: hora real', onPress: () => simularCenario(null) }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
   ];

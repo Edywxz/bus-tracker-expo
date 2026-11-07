@@ -18,7 +18,9 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-notifications",
+      ["expo-location", { "locationWhenInUsePermission": "O VanEscolar usa sua localização durante a rota para os responsáveis acompanharem a van." }]
     ],
     "scheme": "vanescolar",
     "experiments": {
