@@ -223,3 +223,15 @@ bus-tracker-expo/
 ## ⚖️ Licença
 
 Projeto desenvolvido para fins educacionais e profissionais de transporte escolar. Todos os direitos reservados.
+
+## Rodar no emulador Android
+
+```bash
+npm run android:doctor   # mostra onde estão Android Studio, SDK, JDK e quais emuladores existem
+npm run android          # sobe o emulador (se preciso) e abre o app no Expo Go
+npm run android:build    # build próprio (expo run:android); defina GOOGLE_MAPS_ANDROID_API_KEY para o mapa
+```
+
+O script `scripts/android.js` localiza tudo sozinho (macOS, Windows e Linux), sem precisar editar `~/.zshrc`.
+Se não houver emulador: Android Studio → More Actions → Virtual Device Manager → Create Device (Pixel, API 34+).
+Para escolher um AVD específico: `ANDROID_AVD=NomeDoAVD npm run android`.
