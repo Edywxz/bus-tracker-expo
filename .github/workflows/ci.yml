@@ -9,6 +9,9 @@ on:
   push:
     branches-ignore: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -51,3 +54,18 @@ jobs:
             echo "== $f"
             psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f "$f"
           done
+
+  # Só roda se app, edge-functions e database passaram. Se qualquer um falhar, o PR fica aberto.
+  automerge:
+    name: automerge
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    needs: [app, edge-functions, database]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Squash merge e apaga a branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --squash --delete-branch
