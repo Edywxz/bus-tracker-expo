@@ -11,7 +11,9 @@ import { LocationTrackerService } from '../services/locationTracker';
 import { SecurityService } from '../services/security';
 import { supabase } from '../services/supabase';
 import { AuthService } from '../services/authService';
+import { PushService } from '../services/pushService';
 import { DataService, PerfilApp, AlunoApp } from '../services/dataService';
+import * as Location from 'expo-location';
 import { animateNextLayout } from '../theme/tokens';
 
 export interface GPSCoordinate {
@@ -82,6 +84,10 @@ interface AppContextType {
 
   // Ações
   simularPassoGps: () => void;
+  /** Demo: força um estado do app (hora, viagem, alunos, van) para testar as telas. null volta à hora real. */
+  simularCenario: (c: Cenario | null) => void;
+  /** Hora de mentira definida pelo cenário (demo); null = usar a hora real. */
+  horaSimulada: Date | null;
   buscarTransportador: (codigo: string) => Promise<{ id: string; nome: string } | null>;
   cadastrarAluno: (a: NovoAluno) => Promise<void>;
   registrarEmbarque: (alunoId: string, tipo: 'EMBARQUE' | 'DESEMBARQUE') => Promise<void>;
@@ -104,6 +110,12 @@ interface AppContextType {
   atualizarPerfil: (d: { nome?: string; telefone?: string }) => Promise<void>;
   salvarConfigRecebimento: (d: { valor: number; dia: number; chavePix: string }) => Promise<void>;
 }
+
+export type Cenario = 'FORA_HORARIO' | 'PREPARAR' | 'ESPERANDO_MOTORISTA' | 'VAN_A_CAMINHO' | 'ALUNO_CHEGANDO' | 'A_BORDO' | 'VOLTA' | 'FINALIZADA';
+export const CENARIOS: Record<Cenario, string> = {
+  FORA_HORARIO: 'Fora do horário', PREPARAR: 'Hora de preparar', ESPERANDO_MOTORISTA: 'Esperando o motorista',
+  VAN_A_CAMINHO: 'Van a caminho', ALUNO_CHEGANDO: 'Van chegando', A_BORDO: 'Aluno a bordo', VOLTA: 'Voltando para casa', FINALIZADA: 'Corrida finalizada',
+};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -152,6 +164,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isOnline] = useState(true);
   const [gpsIndex, setGpsIndex] = useState(2);
+  const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
 
   const role: TipoUsuario = perfil?.tipo ?? demoRole;
@@ -214,6 +227,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       try {
         await recarregar();
         if (ativo) setAuthStatus('logado');
+        PushService.registrar();
       } catch (e) {
         console.warn('Falha ao carregar dados:', e);
         if (ativo) setAuthStatus('logado');
@@ -245,6 +259,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   }, [isDemo, role, viagemAtiva.id, viagemAtiva.status]);
 
+  // GPS do motorista: durante a rota, publica a posição (broadcast + banco) e mostra no próprio mapa
+  // shortcut: só em primeiro plano (app aberto na rota); para tela bloqueada, usar expo-task-manager + permissão background
+  useEffect(() => {
+    if (isDemo || role !== 'TRANSPORTADOR' || !userId || !viagemAtiva.id || viagemAtiva.status !== 'EM_ANDAMENTO') return;
+    let sub: Location.LocationSubscription | null = null;
+    let ativo = true;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || !ativo) { console.warn('Permissão de localização negada'); return; }
+      const s = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+        (loc) => {
+          const { latitude, longitude, speed, heading, accuracy } = loc.coords;
+          const kmh = Math.max(0, Math.round((speed ?? 0) * 3.6));
+          setGpsReal({ latitude, longitude, velocidade: kmh, rua: 'Posição em tempo real' });
+          LocationTrackerService.enviarLocalizacao({
+            viagemId: viagemAtiva.id, transportadorId: userId, latitude, longitude,
+            velocidade: kmh, direcao: heading ?? undefined, precisaoMetros: accuracy ?? undefined,
+          }).catch((e) => console.warn('Falha ao enviar GPS:', e));
+        },
+      );
+      if (ativo) sub = s; else s.remove();
+    })();
+    return () => { ativo = false; sub?.remove(); };
+  }, [isDemo, role, userId, viagemAtiva.id, viagemAtiva.status]);
+
   const atualizarContadorOffline = useCallback(async () => {
     try { setOfflineQueueCount((await BoardingService.obterFilaOffline()).length); }
     catch { setOfflineQueueCount(0); }
@@ -258,10 +298,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const recuperarSenha = (email: string) => AuthService.recuperarSenha(email);
   const sair = async () => {
     if (isDemo) { setIsDemo(false); limpar(); setAuthStatus('deslogado'); return; }
+    await PushService.desregistrar();
     await AuthService.sair();
   };
   const excluirConta = async () => {
     if (isDemo) { await sair(); return; }
+    await PushService.desregistrar();
     await AuthService.excluirConta(userId);
   };
 
@@ -293,6 +335,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const vel = Math.max(ROTA_PONTOS[gpsIndex].velocidade, 15); // km/h, piso para trânsito parado
     return { km: restante, minutos: Math.max(1, Math.round((restante / vel) * 60)), progresso: total ? 1 - restante / total : 1 };
   }, [isDemo, gpsIndex]);
+
+  const simularCenario = (c: Cenario | null) => {
+    if (!isDemo) return;
+    if (!c) { setHoraSimulada(null); return; }
+    const hora: Record<Cenario, [number, number]> = {
+      FORA_HORARIO: [22, 0], PREPARAR: [6, 30], ESPERANDO_MOTORISTA: [6, 55], VAN_A_CAMINHO: [6, 50], ALUNO_CHEGANDO: [6, 55], A_BORDO: [7, 10], VOLTA: [12, 30], FINALIZADA: [7, 40],
+    };
+    const d = new Date(); d.setHours(hora[c][0], hora[c][1], 0, 0);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); // aviso só vale em dia de aula
+    setHoraSimulada(d);
+    const andamento = ['VAN_A_CAMINHO', 'ALUNO_CHEGANDO', 'A_BORDO', 'VOLTA'].includes(c);
+    const status: ViagemTransporte['status'] = c === 'FINALIZADA' ? 'CONCLUIDA' : andamento ? 'EM_ANDAMENTO' : 'AGENDADA';
+    setViagemAtiva((v) => ({ ...v, id: v.id || 'viagem-simulada', tipo_viagem: c === 'VOLTA' ? 'VOLTA' : 'IDA', status }));
+    const st = c === 'A_BORDO' || c === 'VOLTA' ? 'EMBARCADO' : c === 'FINALIZADA' ? 'DESEMBARCADO' : 'AGUARDANDO';
+    setAlunos((prev) => prev.map((a) => (a.statusEmbarque === 'AUSENTE' ? a : { ...a, statusEmbarque: st })));
+    if (c === 'ALUNO_CHEGANDO') {
+      const a = alunos.find((x) => x.latitude != null && x.longitude != null);
+      setGpsIndex(a ? ROTA_PONTOS.reduce((m, p, i) => (
+        Math.hypot(p.latitude - a.latitude!, p.longitude - a.longitude!) < Math.hypot(ROTA_PONTOS[m].latitude - a.latitude!, ROTA_PONTOS[m].longitude - a.longitude!) ? i : m), 0) : ROTA_PONTOS.length - 1);
+    } else if (c === 'VAN_A_CAMINHO') setGpsIndex(0);
+  };
 
   const simularPassoGps = () => {
     if (!isDemo) return;
@@ -555,14 +618,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : [],
     ajustarPino, geocodificarEndereco,
-    simularPassoGps, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
+    simularPassoGps, simularCenario, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
     registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
     marcarNotificacoesComoLidas, atualizarPerfil, salvarConfigRecebimento,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

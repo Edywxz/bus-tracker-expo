@@ -14,6 +14,21 @@
    select cron.schedule('mensalidades-vencidas', '0 6 * * *', $$select public.atualizar_mensalidades_vencidas()$$);
    ```
 
+### Push notifications (opcional, mas necessário para avisar com o app fechado)
+1. Rode a migration `20261107120000_push_tokens.sql`.
+2. Defina o segredo e publique a função (sem JWT, ela se autentica por cabeçalho):
+   ```
+   supabase secrets set PUSH_WEBHOOK_SECRET=<valor-aleatorio-longo>
+   supabase functions deploy enviar-push --no-verify-jwt
+   ```
+3. No SQL Editor, guarde no Vault a URL da função e o mesmo segredo (o gatilho lê daqui):
+   ```sql
+   select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/enviar-push', 'push_function_url');
+   select vault.create_secret('<mesmo-valor-aleatorio-longo>', 'push_webhook_secret');
+   ```
+4. No app: `eas init` (cria o `projectId` exigido pelo token de push) e gere um novo build de desenvolvimento.
+   Push não chega em simulador/emulador nem no Expo Go do Android.
+
 ## Como funciona
 | Fluxo | Onde |
 |---|---|
@@ -37,6 +52,5 @@ Todas as tabelas têm RLS. Pontos de atenção:
 - **GPS real do motorista:** o app recebe e exibe a posição, mas quem envia precisa de `expo-location`
   (`npx expo install expo-location`) chamando `LocationTrackerService.enviarLocalizacao`.
 - **Cobrança automática (PSP):** hoje o pagamento é confirmado manualmente pelo motorista.
-- **Push notifications** com o app fechado (`expo-notifications`).
 - **Tipos TypeScript:** `src/types/supabase.ts` foi gerado do banco em 06/11/2026. Se mudar o schema, gere de novo com
   `npx supabase gen types typescript --project-id <id> > src/types/supabase.ts`.
