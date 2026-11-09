@@ -11,12 +11,15 @@ O diagrama foi gerado nativamente e está disponível nos seguintes formatos no 
 1. **Arquivo Nativo Draw.io (Editável):** [`diagrama-classes.drawio`](./diagrama-classes.drawio)
 2. **Exportação em Imagem com XML Embutido:** [`diagrama-classes.drawio.png`](./diagrama-classes.drawio.png)
 3. **Exportação Vetorial com XML Embutido:** [`diagrama-classes.drawio.svg`](./diagrama-classes.drawio.svg)
+3b. **PDF:** [`diagrama-classes.pdf`](./diagrama-classes.pdf)
 4. **Código Fonte Mermaid:** [`diagrama-classes.mmd`](./diagrama-classes.mmd)
 5. **Acesso Web Direto:** Você pode abrir e editar o diagrama imediatamente no navegador pelo link do [Draw.io Web (app.diagrams.net)](./drawio-web-link.txt).
 
 > **Dica de Visualização no VS Code / IDE:** Se você possui a extensão **Draw.io Integration** (`hediet.vscode-drawio`), basta clicar duas vezes sobre o arquivo `diagrama-classes.drawio` ou `diagrama-classes.drawio.png` para abrir e editar visualmente direto no editor.
 
 ---
+
+> ⚠️ **Sincronizado com o banco Supabase real (09/11/2026).** O diagrama (`.mmd`/`.drawio`) é a fonte de verdade; o texto abaixo é o detalhamento original e está desatualizado nestes pontos: removidos `MotoristaSubstituto`, `Recibo`, `PagamentoPix/Cartao/Boleto` (há uma única tabela `pagamentos`), `EventoCalendario`, `TipoNotificacao`, `TipoEvento`, `SeveridadeEvento`, `StatusPagamento` (são `varchar` no banco); adicionados `EnderecoResponsavel`, `PushToken`, `OrigemMensagem`, `TipoDiaCalendario`; enums corrigidos (`TipoUsuario`=RESPONSAVEL/TRANSPORTADOR, `Turno`+NOITE, `StatusContrato`+CANCELADO, `StatusMensalidade` ATRASADO→VENCIDO, `MetodoPagamento` CARTAO); `Transportador` ganhou `codigoConvite`, `valorMensalidadePadrao`, `diaVencimentoPadrao`, `chavePix`; um transportador pode ter vários veículos.
 
 ## 🧩 Visão Geral da Arquitetura de Classes
 
