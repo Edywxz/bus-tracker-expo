@@ -8,8 +8,8 @@ A interface visual foi concebida seguindo rigorosamente as diretrizes da **Apple
 
 ## 📑 Documentação do Projeto
 
-- 📋 **Requisitos Funcionais e DCU (RF001 a RF021 / RNF001 a RNF008):** 👉 [REQUISITOS.md](./REQUISITOS.md)
-- 📐 **Diagrama de Classes UML (Draw.io e Mermaid):** 👉 [DIAGRAMA_CLASSES.md](./DIAGRAMA_CLASSES.md)
+- 📋 **Requisitos Funcionais e DCU (RF001 a RF021 / RNF001 a RNF008):** 👉 [REQUISITOS.md](./docs/REQUISITOS.md)
+- 📐 **Diagrama de Classes UML (Draw.io e Mermaid):** 👉 [DIAGRAMA_CLASSES.md](./docs/diagrama-classes/DIAGRAMA_CLASSES.md)
 - 🗄️ **Modelagem de Banco de Dados e RLS (PostGIS):** 👉 [`supabase/schema.sql`](./supabase/schema.sql)
 
 ---
@@ -203,8 +203,7 @@ bus-tracker-expo/
 ├── app.json                     # Metadados e configuração do Expo
 ├── package.json                 # Dependências e scripts
 ├── tsconfig.json                # Configuração do TypeScript
-├── REQUISITOS.md                # Matriz completa de Requisitos Funcionais e Não Funcionais
-├── DIAGRAMA_CLASSES.md          # Especificação UML e rastreabilidade
+├── docs/                        # Requisitos, diagrama de classes (UML), guias e specs
 ├── supabase/
 │   └── schema.sql               # Script DDL com PostgreSQL, PostGIS e políticas RLS
 └── src/
