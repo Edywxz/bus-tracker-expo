@@ -1,6 +1,6 @@
 /**
  * Definições de Tipos TypeScript para o Banco de Dados Supabase (PostgreSQL)
- * Baseado no Diagrama de Classes UML (DIAGRAMA_CLASSES.md) e Requisitos (REQUISITOS.md)
+ * Baseado no Diagrama de Classes UML (docs/diagrama-classes/DIAGRAMA_CLASSES.md) e Requisitos (docs/REQUISITOS.md)
  */
 
 export type TipoUsuario = 'RESPONSAVEL' | 'TRANSPORTADOR';
