@@ -1,21 +1,17 @@
 classDiagram
     direction TB
 
-    %% ==========================================
-    %% MÓDULO: USUÁRIOS E PERFIS DE ACESSO
-    %% ==========================================
-
     class Usuario {
         <<abstract>>
-        -String id
+        -UUID id
         -String nome
         -String email
         -String cpf
         -String telefone
-        -String senhaHash
         -TipoUsuario tipoUsuario
         -Boolean ativo
-        -DateTime dataCriacao
+        -DateTime criadoEm
+        -DateTime atualizadoEm
         +autenticar(senha) Boolean
         +atualizarPerfil(dados) void
         +alterarSenha(senhaAtual, novaSenha) Boolean
@@ -25,13 +21,8 @@ classDiagram
     class Responsavel {
         -String enderecoResidencial
         +cadastrarAluno(dadosAluno) Aluno
-        +atualizarAluno(alunoId, dados) void
-        +vincularPessoaAutorizada(alunoId, dados) PessoaAutorizada
         +comunicarAusencia(alunoId, periodo, motivo) ComunicadoAusencia
         +pagarMensalidade(mensalidadeId, metodo) Pagamento
-        +consultarHistoricoFinanceiro() List~Mensalidade~
-        +visualizarRecibo(pagamentoId) Recibo
-        +visualizarContrato(contratoId) ContratoServico
         +acompanharTransporte() ViagemTransporte
     }
 
@@ -41,41 +32,39 @@ classDiagram
         -String numeroCredencial
         -String alvaraAutonomo
         -String fotoUrl
+        -String codigoConvite
+        -Decimal valorMensalidadePadrao
+        -Integer diaVencimentoPadrao
+        -String chavePix
         +cadastrarVeiculo(dadosVeiculo) Veiculo
-        +cadastrarMotoristaSubstituto(dados) MotoristaSubstituto
         +iniciarViagem(tipo, turno) ViagemTransporte
         +finalizarViagem(viagemId) void
-        +registrarEmbarque(alunoId, viagemId, localizacao) RegistroEmbarqueDesembarque
-        +registrarDesembarque(alunoId, viagemId, localizacao) RegistroEmbarqueDesembarque
+        +registrarEmbarque(alunoId, viagemId) RegistroEmbarqueDesembarque
         +registrarEventoRota(viagemId, tipo, desc) EventoRota
         +emitirContrato(responsavelId, alunoId, valor) ContratoServico
-        +manterCalendarioEscolar(ano, eventos) CalendarioEscolar
     }
 
-    class MotoristaSubstituto {
-        -String id
-        -String nome
-        -String cpf
-        -String cnh
-        -String categoriaCnh
-        -String telefone
-        -Date autorizadoAte
-        -Boolean ativo
-        +validarCredenciais() Boolean
+    class EnderecoResponsavel {
+        -UUID id
+        -String rotulo
+        -String enderecoTexto
+        -Double latitude
+        -Double longitude
+        -String precisao
+        -String origem
+        -Boolean ajustadoManual
+        -DateTime geocodificadoEm
+        -DateTime criadoEm
     }
 
     class TipoUsuario {
         <<enumeration>>
-        PAIS
+        RESPONSAVEL
         TRANSPORTADOR
     }
 
-    %% ==========================================
-    %% MÓDULO: ALUNOS, RESPONSÁVEIS E AUTORIZADOS
-    %% ==========================================
-
     class Aluno {
-        -String id
+        -UUID id
         -String nome
         -Date dataNascimento
         -String documento
@@ -86,32 +75,29 @@ classDiagram
         -String escolaNome
         -String escolaEndereco
         -String observacoesMedicas
+        -String fotoUrl
         -Boolean ativo
-        +adicionarAusencia(comunicado) void
-        +adicionarPessoaAutorizada(pessoa) void
+        -DateTime criadoEm
     }
 
     class PessoaAutorizada {
-        -String id
+        -UUID id
         -String nome
         -String cpf
         -String telefone
         -String grauParentesco
         -String fotoUrl
         -Boolean ativo
-        +validarDocumento() Boolean
+        -DateTime criadoEm
     }
 
     class ComunicadoAusencia {
-        -String id
+        -UUID id
         -Date dataInicio
         -Date dataFim
         -PeriodoAusencia periodo
         -String motivo
-        -DateTime notificadoTransportadorEm
-        -Boolean cancelado
-        +cancelar() void
-        +isVigente(data) Boolean
+        -DateTime notificadoEm
     }
 
     class PeriodoAusencia {
@@ -126,14 +112,11 @@ classDiagram
         MANHA
         TARDE
         INTEGRAL
+        NOITE
     }
 
-    %% ==========================================
-    %% MÓDULO: TRANSPORTE, ROTA E TELEMETRIA
-    %% ==========================================
-
     class Veiculo {
-        -String id
+        -UUID id
         -String placa
         -String modelo
         -Integer ano
@@ -142,66 +125,54 @@ classDiagram
         -String numeroAlvara
         -Date validadeVistoria
         -Boolean ativo
-        +validarVistoria() Boolean
-        +verificarCapacidadeDisponivel() Integer
+        -DateTime criadoEm
     }
 
     class ViagemTransporte {
-        -String id
+        -UUID id
         -TipoViagem tipoViagem
         -Turno turno
         -DateTime dataHoraInicio
         -DateTime dataHoraFim
         -StatusViagem status
-        -Float kmPercorrido
-        +iniciar() void
-        +finalizar() void
-        +atualizarPosicaoGPS(posicao) void
-        +adicionarRegistro(registro) void
-        +adicionarEvento(evento) void
+        -Decimal kmPercorrido
+        -DateTime criadoEm
     }
 
     class LocalizacaoGPS {
-        -Float latitude
-        -Float longitude
-        -Float velocidade
-        -Float direcao
-        -Float precisaoMetros
+        -UUID id
+        -Point posicao
+        -Decimal velocidade
+        -Decimal direcao
+        -Decimal precisaoMetros
         -DateTime timestamp
-        +calcularDistancia(outraPosicao) Float
     }
 
     class RegistroEmbarqueDesembarque {
-        -String id
+        -UUID id
         -TipoRegistro tipo
         -DateTime dataHora
+        -Decimal latitude
+        -Decimal longitude
         -Boolean registradoOffline
         -DateTime sincronizadoEm
-        +sincronizar() void
-        +confirmarPresenca() void
     }
 
     class EventoRota {
-        -String id
-        -TipoEvento tipo
+        -UUID id
+        -String tipo
         -String descricao
+        -String severidade
+        -Decimal latitude
+        -Decimal longitude
         -DateTime dataHora
-        -SeveridadeEvento severidade
-        +notificarResponsaveis() void
     }
 
     class CalendarioEscolar {
-        -String id
-        -Integer anoLetivo
-        +adicionarEvento(evento) void
-        +isDiaLetivo(data) Boolean
-    }
-
-    class EventoCalendario {
-        -String id
-        -Date dataInicio
-        -Date dataFim
-        -String tipo
+        -UUID id
+        -Date data
+        -String titulo
+        -TipoDiaCalendario tipo
         -String descricao
     }
 
@@ -225,108 +196,52 @@ classDiagram
         DESEMBARQUE
     }
 
-    class TipoEvento {
+    class TipoDiaCalendario {
         <<enumeration>>
-        TRANSITO_CONGESTIONADO
-        QUEBRA_MECANICA
-        ACIDENTE
-        DESVIO_ROTA
-        EMERGENCIA_MEDICA
+        LETIVO
+        FERIADO
+        RECESSO
+        EVENTO
     }
-
-    class SeveridadeEvento {
-        <<enumeration>>
-        BAIXA
-        MEDIA
-        ALTA
-    }
-
-    %% ==========================================
-    %% MÓDULO: CONTRATOS E FINANCEIRO
-    %% ==========================================
 
     class ContratoServico {
-        -String id
+        -UUID id
         -String numeroContrato
         -Date dataInicio
         -Date dataTermino
-        -Float valorMensalidade
+        -Decimal valorMensalidade
         -Integer diaVencimento
         -StatusContrato status
         -String termosCondicoes
-        +gerarMensalidades() List~Mensalidade~
-        +rescindir(motivo) void
-        +suspender() void
+        -DateTime criadoEm
     }
 
     class Mensalidade {
-        -String id
+        -UUID id
         -Integer mesReferencia
         -Integer anoReferencia
-        -Float valor
+        -Decimal valor
         -Date dataVencimento
-        -Float valorMultaJuros
+        -Decimal valorMultaJuros
         -StatusMensalidade status
-        +calcularTotalDevido() Float
-        +marcarComoPaga(pagamento) void
+        -DateTime criadoEm
     }
 
     class Pagamento {
-        <<abstract>>
-        -String id
-        -Float valorPago
-        -DateTime dataHoraPagamento
-        -StatusPagamento status
+        -UUID id
         -MetodoPagamento metodo
-        +processar() Boolean
-        +confirmar() void
-        +gerarRecibo() Recibo
-    }
-
-    class PagamentoPix {
-        -String chavePix
-        -String qrCodeCopiaECola
-        -String qrCodeImagemUrl
-        -String txId
-        -DateTime dataHoraExpiracao
-        +consultarStatusPix() StatusPagamento
-        +gerarQrCode() String
-    }
-
-    class PagamentoCartao {
-        -String ultimosDigitos
-        -String bandeiraCartao
-        -Integer numeroParcelas
-        -String idTransacaoGateway
-        -String codigoAutorizacao
-        +autorizarCartao() Boolean
-        +capturarTransacao() void
-    }
-
-    class PagamentoBoleto {
-        -String codigoBarras
-        -String linhaDigitavel
-        -Date dataVencimentoBoleto
-        -String urlPdfBoleto
-        +gerarBoleto() void
-        +consultarCompensacao() Boolean
-    }
-
-    class Recibo {
-        -String id
-        -String numeroRecibo
-        -DateTime dataEmissao
-        -Float valorTotal
-        -String codigoAutenticidadeHash
-        -String discriminacaoServico
-        +gerarHashAutenticidade() String
-        +emitirPdf() String
+        -Decimal valorPago
+        -DateTime dataPagamento
+        -String transacaoId
+        -JSON detalhesMetodo
+        -String status
     }
 
     class StatusContrato {
         <<enumeration>>
         ATIVO
         SUSPENSO
+        CANCELADO
         ENCERRADO
     }
 
@@ -334,122 +249,94 @@ classDiagram
         <<enumeration>>
         PENDENTE
         PAGO
-        ATRASADO
+        VENCIDO
         CANCELADO
-    }
-
-    class StatusPagamento {
-        <<enumeration>>
-        PROCESSANDO
-        CONFIRMADO
-        ESTORNADO
-        FALHOU
     }
 
     class MetodoPagamento {
         <<enumeration>>
         PIX
-        CARTAO_CREDITO
+        CARTAO
         BOLETO
     }
 
-    %% ==========================================
-    %% MÓDULO: COMUNICAÇÃO E MENSAGERIA
-    %% ==========================================
-
     class Mensagem {
-        -String id
-        -String conteudo
-        -DateTime dataHoraEnvio
-        -DateTime dataHoraLeitura
-        -Boolean lida
-        -String anexoUrl
-        +marcarComoLida() void
+        -UUID id
+        -UUID remetenteId
+        -String remetenteNome
+        -OrigemMensagem origem
+        -String texto
+        -DateTime criadoEm
+    }
+
+    class OrigemMensagem {
+        <<enumeration>>
+        PAIS
+        MOTORISTA
     }
 
     class Notificacao {
-        -String id
+        -UUID id
+        -String tipo
         -String titulo
-        -String conteudo
-        -TipoNotificacao tipo
-        -DateTime dataHoraEnvio
+        -String mensagem
         -Boolean lida
-        +enviarPushNotification() void
-        +marcarComoLida() void
+        -DateTime criadoEm
     }
 
-    class TipoNotificacao {
-        <<enumeration>>
-        PROXIMIDADE_VAN
-        EMBARQUE_ALUNO
-        DESEMBARQUE_ALUNO
-        ALERTA_EMERGENCIA
-        AVISO_PAGAMENTO
-        GERAL
+    class PushToken {
+        -String token
+        -String plataforma
+        -DateTime atualizadoEm
     }
 
-    %% ==========================================
-    %% RELACIONAMENTOS E MULTIPLICIDADES
-    %% ==========================================
-
-    %% Heranças de Usuário
     Usuario <|-- Responsavel : herda
     Usuario <|-- Transportador : herda
-
-    %% Dependência de TipoUsuario
     Usuario ..> TipoUsuario : classifica
 
-    %% Relacionamentos do Responsável e Alunos
-    Responsavel "1" *-- "1..*" Aluno : eh_responsavel_por
+    Responsavel "1" *-- "0..*" Aluno : eh_responsavel_por
+    Responsavel "1" *-- "0..*" EnderecoResponsavel : possui_enderecos
+    Aluno "0..*" --> "0..1" EnderecoResponsavel : endereco_busca
+    Aluno "0..*" --> "0..1" EnderecoResponsavel : endereco_entrega
     Aluno "1" *-- "0..*" PessoaAutorizada : autoriza_retirada
     Aluno "1" *-- "0..*" ComunicadoAusencia : informa_ausencia
+    Responsavel "1" o-- "0..*" ComunicadoAusencia : comunica
+    Transportador "1" o-- "0..*" ComunicadoAusencia : eh_notificado
     Aluno ..> Turno : cursa
     ComunicadoAusencia ..> PeriodoAusencia : especifica
 
-    %% Relacionamentos do Transportador
-    Transportador "1" *-- "1" Veiculo : opera
-    Transportador "1" o-- "0..1" MotoristaSubstituto : possui_substituto
-    Transportador "1" o-- "0..*" Aluno : transporta_em_rota
+    Transportador "1" o-- "1..*" Aluno : transporta
+    Transportador "1" *-- "0..*" Veiculo : opera
+    Transportador "1" *-- "0..*" CalendarioEscolar : mantem
+    CalendarioEscolar ..> TipoDiaCalendario : tipo
 
-    %% Calendário (dias sem transporte) mantido pelo Transportador
-    Transportador "1" *-- "0..1" CalendarioEscolar : mantem
-    CalendarioEscolar "1" *-- "0..*" EventoCalendario : contem
-
-    %% Relacionamentos de Viagem e Operação
     Transportador "1" *-- "0..*" ViagemTransporte : realiza
+    Veiculo "1" <-- "0..*" ViagemTransporte : usa
     ViagemTransporte "1" *-- "0..*" LocalizacaoGPS : transmite_posicao
+    Transportador "1" *-- "0..*" LocalizacaoGPS : emite
     ViagemTransporte "1" *-- "0..*" RegistroEmbarqueDesembarque : registra
     ViagemTransporte "1" *-- "0..*" EventoRota : reporta
+    Transportador "1" *-- "0..*" EventoRota : registra_evento
     RegistroEmbarqueDesembarque "0..*" --> "1" Aluno : refere_se_a
-    RegistroEmbarqueDesembarque "0..*" --> "0..1" PessoaAutorizada : entregue_ou_recebido_por
-    RegistroEmbarqueDesembarque "1" *-- "1" LocalizacaoGPS : georreferenciado_em
-    EventoRota "1" *-- "0..1" LocalizacaoGPS : ocorreu_em
     ViagemTransporte ..> StatusViagem : possui
     ViagemTransporte ..> TipoViagem : define
+    ViagemTransporte ..> Turno : turno
     RegistroEmbarqueDesembarque ..> TipoRegistro : tipo
-    EventoRota ..> TipoEvento : categoria
-    EventoRota ..> SeveridadeEvento : nivel
 
-    %% Relacionamentos Contratuais e Financeiros
     Transportador "1" o-- "0..*" ContratoServico : contratado
     Responsavel "1" o-- "0..*" ContratoServico : contratante
     ContratoServico "0..*" --> "1" Aluno : beneficia
     ContratoServico ..> StatusContrato : estado
-    ContratoServico "1" *-- "1..*" Mensalidade : gera_cobrancas
+    ContratoServico "1" *-- "0..*" Mensalidade : gera_cobrancas
+    Responsavel "1" o-- "0..*" Mensalidade : paga
+    Transportador "1" o-- "0..*" Mensalidade : recebe
     Mensalidade ..> StatusMensalidade : estado
-    Mensalidade "1" o-- "0..1" Pagamento : liquidada_por
-
-    %% Especializações de Pagamento
-    Pagamento <|-- PagamentoPix : herda
-    Pagamento <|-- PagamentoCartao : herda
-    Pagamento <|-- PagamentoBoleto : herda
-    Pagamento ..> StatusPagamento : estado
+    Mensalidade "1" *-- "0..*" Pagamento : liquidada_por
     Pagamento ..> MetodoPagamento : metodo
 
-    %% Emissão de Recibo
-    Pagamento "1" *-- "1" Recibo : emite_comprovante
-
-    %% Mensageria e Notificações
-    Usuario "1" o-- "0..*" Mensagem : envia_ou_recebe
+    Responsavel "1" o-- "0..*" Mensagem : conversa
+    Transportador "1" o-- "0..*" Mensagem : conversa
+    Usuario "1" o-- "0..*" Mensagem : remetente
+    Mensagem ..> OrigemMensagem : origem
     Usuario "1" o-- "0..*" Notificacao : recebe_alerta
-    Notificacao ..> TipoNotificacao : tipo
+    Usuario "1" o-- "0..*" PushToken : registra_dispositivo
