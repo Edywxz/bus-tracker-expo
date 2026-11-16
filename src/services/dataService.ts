@@ -283,8 +283,11 @@ export class DataService {
     if (error) throw error;
   }
 
-  static async salvarCalendario(transportadorId: string, e: { data: string; titulo: string; tipo: string; descricao?: string }) {
-    const { error } = await db.from('calendario_escolar').insert({ transportador_id: transportadorId, ...e });
+  /** Com `id` edita a data existente (a RLS só deixa o dono); sem `id` cria. */
+  static async salvarCalendario(transportadorId: string, { id, ...e }: { id?: string; data: string; titulo: string; tipo: string; descricao?: string }) {
+    const { error } = id
+      ? await db.from('calendario_escolar').update(e).eq('id', id).eq('transportador_id', transportadorId)
+      : await db.from('calendario_escolar').insert({ transportador_id: transportadorId, ...e });
     if (error) throw error;
   }
 

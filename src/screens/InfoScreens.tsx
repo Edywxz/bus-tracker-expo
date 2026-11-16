@@ -98,6 +98,7 @@ const TIPO: Record<string, { tone: PillTone; label: string }> = {
 export const CalendarScreen: React.FC = () => {
   const { eventosCalendario, role, removerEventoCalendario } = useApp();
   const [add, setAdd] = useState(false);
+  const [editando, setEditando] = useState<(typeof eventosCalendario)[number] | null>(null);
   const motorista = role === 'TRANSPORTADOR';
   const remover = async (id: string, titulo: string) => {
     const ok = await confirm({ title: 'Remover data?', message: `“${titulo}” sai do calendário dos responsáveis.`, confirmLabel: 'Remover', destructive: true });
@@ -118,6 +119,7 @@ export const CalendarScreen: React.FC = () => {
               <ListRow key={e.id}
                 leading={<View style={s.date}><Text style={s.dateDay}>{d.dia}</Text><Text style={s.dateMonth}>{d.mes}</Text></View>}
                 title={e.titulo} subtitle={e.descricao}
+                onPress={motorista ? () => setEditando(e) : undefined}
                 trailing={motorista
                   ? <IconButton icon="trash" label={`Remover ${e.titulo}`} variant="plain" tint={colors.error} onPress={() => remover(e.id, e.titulo)} />
                   : <StatusPill tone={t.tone} label={t.label} />} />
@@ -125,7 +127,7 @@ export const CalendarScreen: React.FC = () => {
           })}
         </ListSection>
       )}
-      <CalendarEventSheet visible={add} onClose={() => setAdd(false)} />
+      <CalendarEventSheet visible={add || !!editando} evento={editando ?? undefined} onClose={() => { setAdd(false); setEditando(null); }} />
     </Screen>
   );
 };
