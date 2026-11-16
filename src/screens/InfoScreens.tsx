@@ -140,7 +140,7 @@ export const PrivacyScreen: React.FC = () => (
       <ListRow icon="eyeOff" iconTone="gray" title="Cada um vê o seu" subtitle="Cada responsável vê só os próprios dependentes. O motorista vê apenas os passageiros da rota dele." />
       <ListRow icon="medical" iconTone="gray" title="Saúde" subtitle="Observações médicas ficam visíveis só para o responsável e o motorista." />
       <ListRow icon="location" iconTone="gray" title="Localização" subtitle="A posição da van só é compartilhada durante uma rota em andamento." />
-      <ListRow icon="trash" iconTone="gray" title="Você decide" subtitle="Em Conta você pode excluir sua conta e os dados ligados a ela a qualquer momento." />
+      <ListRow icon="trash" iconTone="gray" title="Você decide" subtitle="Em Conta você pode excluir sua conta e os dados ligados a ela. Motoristas com alunos vinculados precisam falar com o suporte." />
     </ListSection>
   </Screen>
 );
