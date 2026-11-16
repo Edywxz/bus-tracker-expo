@@ -21,8 +21,8 @@ export type Database = {
           data_nascimento: string
           documento: string
           endereco_busca: string
-          endereco_entrega: string
           endereco_busca_id: string | null
+          endereco_entrega: string
           endereco_entrega_id: string | null
           escola_endereco: string | null
           escola_nome: string | null
@@ -41,8 +41,8 @@ export type Database = {
           data_nascimento: string
           documento: string
           endereco_busca: string
-          endereco_entrega: string
           endereco_busca_id?: string | null
+          endereco_entrega: string
           endereco_entrega_id?: string | null
           escola_endereco?: string | null
           escola_nome?: string | null
@@ -61,8 +61,8 @@ export type Database = {
           data_nascimento?: string
           documento?: string
           endereco_busca?: string
-          endereco_entrega?: string
           endereco_busca_id?: string | null
+          endereco_entrega?: string
           endereco_entrega_id?: string | null
           escola_endereco?: string | null
           escola_nome?: string | null
@@ -76,6 +76,20 @@ export type Database = {
           turno?: Database["public"]["Enums"]["turno_enum"]
         }
         Relationships: [
+          {
+            foreignKeyName: "alunos_endereco_busca_id_fkey"
+            columns: ["endereco_busca_id"]
+            isOneToOne: false
+            referencedRelation: "enderecos_responsavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_endereco_entrega_id_fkey"
+            columns: ["endereco_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "enderecos_responsavel"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alunos_responsavel_id_fkey"
             columns: ["responsavel_id"]
@@ -292,7 +306,15 @@ export type Database = {
           responsavel_id?: string
           rotulo?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "enderecos_responsavel_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       eventos_rota: {
         Row: {
@@ -428,6 +450,13 @@ export type Database = {
           {
             foreignKeyName: "mensagens_remetente_id_fkey"
             columns: ["remetente_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_responsavel_id_fkey"
+            columns: ["responsavel_id"]
             isOneToOne: false
             referencedRelation: "perfis"
             referencedColumns: ["id"]
@@ -660,6 +689,35 @@ export type Database = {
             columns: ["aluno_id"]
             isOneToOne: false
             referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          atualizado_em: string
+          plataforma: string
+          token: string
+          usuario_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          plataforma: string
+          token: string
+          usuario_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          plataforma?: string
+          token?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
             referencedColumns: ["id"]
           },
         ]
@@ -1100,7 +1158,9 @@ export type Database = {
           p_data_nascimento: string
           p_documento: string
           p_endereco_busca: string
+          p_endereco_busca_id?: string
           p_endereco_entrega: string
+          p_endereco_entrega_id?: string
           p_escola_endereco?: string
           p_escola_nome?: string
           p_nome: string
@@ -1313,6 +1373,10 @@ export type Database = {
           p_transacao: string
         }
         Returns: string
+      }
+      registrar_push_token: {
+        Args: { p_plataforma: string; p_token: string }
+        Returns: undefined
       }
       relacionado_com: { Args: { p_outro: string }; Returns: boolean }
       st_3dclosestpoint: {
