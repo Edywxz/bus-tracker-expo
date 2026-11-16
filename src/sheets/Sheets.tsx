@@ -211,6 +211,25 @@ export const AuthorizedSheet: React.FC<BaseProps & { alunoId?: string }> = ({ vi
   );
 };
 
+/* ------------------------------------------------------------ Vincular a um transportador */
+export const LinkTransporterSheet: React.FC<BaseProps & { alunoId: string }> = ({ visible, onClose, alunoId }) => {
+  const { vincularAluno } = useApp();
+  const { run, loading, error, setError } = useAction();
+  const [codigo, setCodigo] = useState('');
+  useEffect(() => { if (visible) { setCodigo(''); setError(null); } }, [visible]); // eslint-disable-line
+  const salvar = async () => {
+    if (codigo.trim().length < 4) { setError('Informe o código que o motorista passou.'); return; }
+    if (await run(() => vincularAluno(alunoId, codigo))) onClose();
+  };
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Vincular a um transportador" subtitle="Um novo contrato e as mensalidades do ano são criados."
+      footer={<Button size="lg" label="Vincular" onPress={salvar} loading={loading} />}>
+      <TextField label="Código do motorista" value={codigo} onChangeText={(v) => setCodigo(v.toUpperCase())} autoCapitalize="characters" autoCorrect={false} placeholder="Ex.: A1B2C3" />
+      {error && <Notice tone="error" message={error} />}
+    </Sheet>
+  );
+};
+
 /* ------------------------------------------------------------ Calendário (motorista) */
 const TIPOS_DIA = [
   { value: 'FERIADO', label: 'Feriado' }, { value: 'RECESSO', label: 'Recesso' }, { value: 'EVENTO', label: 'Evento' },
