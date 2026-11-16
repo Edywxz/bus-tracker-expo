@@ -107,7 +107,7 @@ interface AppContextType {
   registrarEventoRota: (tipo: string, descricao: string, severidade: SeveridadeEvento) => Promise<void>;
   adicionarPessoaAutorizada: (pessoa: Omit<PessoaAutorizada, 'id' | 'ativo'>) => Promise<void>;
   removerPessoaAutorizada: (id: string) => Promise<void>;
-  adicionarEventoCalendario: (e: { data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
+  adicionarEventoCalendario: (e: { id?: string; data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
   removerEventoCalendario: (id: string) => Promise<void>;
   atualizarVeiculo: (dados: Partial<Veiculo>) => Promise<void>;
   marcarNotificacoesComoLidas: () => Promise<void>;
@@ -589,7 +589,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (role !== 'TRANSPORTADOR') throw new Error('Só o motorista edita o calendário.');
     if (!isDemo) { exigirReal(); await DataService.salvarCalendario(userId, e); await recarregar(); return; }
     animateNextLayout();
-    setEventos((p) => [...p, { id: novoId('cal'), descricao: '', ...e }].sort((a, b) => a.data.localeCompare(b.data)));
+    setEventos((p) => (e.id ? p.map((x) => (x.id === e.id ? { ...x, ...e, id: x.id } : x)) : [...p, { id: novoId('cal'), descricao: '', ...e }])
+      .sort((a, b) => a.data.localeCompare(b.data)));
   };
   const removerEventoCalendario = async (id: string) => {
     if (!isDemo) { exigirReal(); await DataService.removerCalendario(id); }
