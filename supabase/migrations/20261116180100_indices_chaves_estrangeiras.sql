@@ -1,0 +1,24 @@
+-- Índices nas FKs que as policies e as telas consultam o tempo todo (aluno por responsável/transportador, financeiro, viagem).
+CREATE INDEX IF NOT EXISTS idx_alunos_responsavel ON public.alunos (responsavel_id);
+CREATE INDEX IF NOT EXISTS idx_alunos_transportador ON public.alunos (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_comunicados_aluno ON public.comunicados_ausencia (aluno_id);
+CREATE INDEX IF NOT EXISTS idx_comunicados_responsavel ON public.comunicados_ausencia (responsavel_id);
+CREATE INDEX IF NOT EXISTS idx_comunicados_transportador ON public.comunicados_ausencia (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_contratos_aluno ON public.contratos_servico (aluno_id);
+CREATE INDEX IF NOT EXISTS idx_contratos_responsavel ON public.contratos_servico (responsavel_id);
+CREATE INDEX IF NOT EXISTS idx_contratos_transportador ON public.contratos_servico (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_eventos_rota_transportador ON public.eventos_rota (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_eventos_rota_viagem ON public.eventos_rota (viagem_id);
+CREATE INDEX IF NOT EXISTS idx_gps_transportador ON public.localizacoes_gps (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_mensagens_remetente ON public.mensagens (remetente_id);
+CREATE INDEX IF NOT EXISTS idx_mensagens_responsavel ON public.mensagens (responsavel_id);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_contrato ON public.mensalidades (contrato_id);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_responsavel ON public.mensalidades (responsavel_id);
+CREATE INDEX IF NOT EXISTS idx_mensalidades_transportador ON public.mensalidades (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_mensalidade ON public.pagamentos (mensalidade_id);
+CREATE INDEX IF NOT EXISTS idx_pessoas_aluno ON public.pessoas_autorizadas (aluno_id);
+CREATE INDEX IF NOT EXISTS idx_registros_aluno ON public.registros_embarque_desembarque (aluno_id);
+CREATE INDEX IF NOT EXISTS idx_registros_viagem ON public.registros_embarque_desembarque (viagem_id);
+CREATE INDEX IF NOT EXISTS idx_veiculos_transportador ON public.veiculos (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_viagens_transportador ON public.viagens (transportador_id);
+CREATE INDEX IF NOT EXISTS idx_viagens_veiculo ON public.viagens (veiculo_id);
