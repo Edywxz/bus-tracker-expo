@@ -94,10 +94,10 @@ export class AuthService {
     await supabase.auth.signOut();
   }
 
-  /** Exclusão de conta exigida pela App Store: apaga dados do usuário via perfil (cascade). */
-  static async excluirConta(userId: string) {
-    const { error } = await (supabase as any).from('perfis').delete().eq('id', userId);
+  /** Exclusão de conta (App Store/LGPD): a RPC apaga os dados e o usuário do Auth; depois só limpa a sessão local. */
+  static async excluirConta() {
+    const { error } = await supabase.rpc('excluir_minha_conta');
     if (error) throw error;
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
   }
 }

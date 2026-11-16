@@ -15,6 +15,7 @@ import { PushService } from '../services/pushService';
 import { DataService, PerfilApp, AlunoApp } from '../services/dataService';
 import { Alert } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { mensagemErro } from '../utils/format';
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import { animateNextLayout } from '../theme/tokens';
@@ -107,7 +108,7 @@ interface AppContextType {
   registrarEventoRota: (tipo: string, descricao: string, severidade: SeveridadeEvento) => Promise<void>;
   adicionarPessoaAutorizada: (pessoa: Omit<PessoaAutorizada, 'id' | 'ativo'>) => Promise<void>;
   removerPessoaAutorizada: (id: string) => Promise<void>;
-  adicionarEventoCalendario: (e: { data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
+  adicionarEventoCalendario: (e: { id?: string; data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
   removerEventoCalendario: (id: string) => Promise<void>;
   atualizarVeiculo: (dados: Partial<Veiculo>) => Promise<void>;
   marcarNotificacoesComoLidas: () => Promise<void>;
@@ -173,6 +174,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const role: TipoUsuario = perfil?.tipo ?? demoRole;
   const userId = perfil?.id ?? '';
+  const logadoRef = useRef(false);
+  const saindoRef = useRef(false); // distingue sair() do usuário de sessão que expirou
   const recarregarTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---------- Carga de dados --------------------------------------------------
@@ -223,9 +226,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const aplicar = async (temSessao: boolean) => {
       if (!ativo) return;
       if (!temSessao) {
+        if (logadoRef.current && !saindoRef.current && !isDemo) Alert.alert('Sessão expirada', 'Por segurança, entre novamente para continuar.');
+        logadoRef.current = false; saindoRef.current = false;
         if (!isDemo) { limpar(); setAuthStatus('deslogado'); }
         return;
       }
+      logadoRef.current = true;
       setIsDemo(false);
       setCarregandoDados(true);
       try {
@@ -235,6 +241,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } catch (e) {
         console.warn('Falha ao carregar dados:', e);
         if (ativo) setAuthStatus('logado');
+        if (ativo) Alert.alert('Não foi possível carregar seus dados', mensagemErro(e), [
+          { text: 'Tentar de novo', onPress: () => { recarregar().catch(() => {}); } }, { text: 'Fechar', style: 'cancel' },
+        ]);
       } finally {
         if (ativo) setCarregandoDados(false);
       }
@@ -323,13 +332,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const reenviarConfirmacao = (email: string) => AuthService.reenviarConfirmacao(email);
   const sair = async () => {
     if (isDemo) { setIsDemo(false); limpar(); setAuthStatus('deslogado'); return; }
+    saindoRef.current = true;
     await PushService.desregistrar();
     await AuthService.sair();
   };
   const excluirConta = async () => {
     if (isDemo) { await sair(); return; }
+    saindoRef.current = true;
     await PushService.desregistrar();
-    await AuthService.excluirConta(userId);
+    await AuthService.excluirConta();
   };
 
   const setRole = (r: TipoUsuario) => { if (isDemo) carregarDemo(r); };
@@ -589,7 +600,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (role !== 'TRANSPORTADOR') throw new Error('Só o motorista edita o calendário.');
     if (!isDemo) { exigirReal(); await DataService.salvarCalendario(userId, e); await recarregar(); return; }
     animateNextLayout();
-    setEventos((p) => [...p, { id: novoId('cal'), descricao: '', ...e }].sort((a, b) => a.data.localeCompare(b.data)));
+    setEventos((p) => (e.id ? p.map((x) => (x.id === e.id ? { ...x, ...e, id: x.id } : x)) : [...p, { id: novoId('cal'), descricao: '', ...e }])
+      .sort((a, b) => a.data.localeCompare(b.data)));
   };
   const removerEventoCalendario = async (id: string) => {
     if (!isDemo) { exigirReal(); await DataService.removerCalendario(id); }

@@ -5,6 +5,7 @@ import { distanciaKm, pontoDeDescida, primeiroAChegar } from '../src/utils/proxi
 import { diaLetivo, lembrete } from '../src/utils/lembrete.ts';
 import { lerLinkAuth } from '../src/utils/authLink.ts';
 import { urlDoSite } from '../src/utils/siteUrl.ts';
+import { mensagemErro } from '../src/utils/format.ts';
 
 // CRC16-CCITT independente da implementação (vetor padrão: "123456789" -> 29B1)
 const crc = (s: string) => {
@@ -105,4 +106,11 @@ test('urlDoSite: junta base e caminho com exatamente uma barra', () => {
   assert.equal(urlDoSite('confirmado/', 'https://x.dev/app/'), 'https://x.dev/app/confirmado/');
   assert.equal(urlDoSite('/redefinir-senha/'), `${p}redefinir-senha/`);
   assert.equal(urlDoSite('confirmado/', ''), `${p}confirmado/`);
+});
+
+test('mensagemErro: sessão expirada, rede e permissão', () => {
+  assert.match(mensagemErro({ message: 'JWT expired' }), /sessão expirou/);
+  assert.match(mensagemErro({ message: 'Invalid Refresh Token: Refresh Token Not Found' }), /sessão expirou/);
+  assert.match(mensagemErro({ message: 'TypeError: Network request failed' }), /Sem conexão/);
+  assert.match(mensagemErro({ message: 'new row violates row-level security policy' }), /permissão/);
 });

@@ -78,6 +78,7 @@ export const semEmoji = (s: string) => s.replace(/^[^\p{L}\p{N}]+/u, '').trim();
 export function mensagemErro(e: unknown, padrao = 'Não foi possível concluir. Tente novamente.') {
   const m = (e as { message?: string })?.message;
   if (!m) return padrao;
+  if (/jwt|refresh token|PGRST30[0-9]|not authenticated|não autenticado/i.test(m)) return 'Sua sessão expirou. Entre novamente.';
   if (/network|fetch|timeout/i.test(m)) return 'Sem conexão. Verifique sua internet e tente de novo.';
   if (/row-level security|permission denied|42501/i.test(m)) return 'Você não tem permissão para essa ação.';
   if (/duplicate key|23505/i.test(m)) return 'Esse registro já existe.';

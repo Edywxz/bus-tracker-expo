@@ -215,13 +215,18 @@ export const AuthorizedSheet: React.FC<BaseProps & { alunoId?: string }> = ({ vi
 const TIPOS_DIA = [
   { value: 'FERIADO', label: 'Feriado' }, { value: 'RECESSO', label: 'Recesso' }, { value: 'EVENTO', label: 'Evento' },
 ] as const;
-export const CalendarEventSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
+export const CalendarEventSheet: React.FC<BaseProps & { evento?: { id: string; data: string; titulo: string; tipo: string } }> = ({ visible, onClose, evento }) => {
   const { adicionarEventoCalendario } = useApp();
   const { run, loading, error, setError } = useAction();
   const [data, setData] = useState(''); const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<'FERIADO' | 'RECESSO' | 'EVENTO'>('FERIADO');
   const [erros, setErros] = useState<Record<string, string>>({});
-  useEffect(() => { if (visible) { setData(''); setTitulo(''); setTipo('FERIADO'); setErros({}); setError(null); } }, [visible]); // eslint-disable-line
+  useEffect(() => {
+    if (visible) {
+      setData(evento ? isoToBR(evento.data) : ''); setTitulo(evento?.titulo ?? '');
+      setTipo(TIPOS_DIA.find((t) => t.value === evento?.tipo)?.value ?? 'FERIADO'); setErros({}); setError(null);
+    }
+  }, [visible]); // eslint-disable-line
 
   const salvar = async () => {
     const e: Record<string, string> = {};
@@ -230,11 +235,11 @@ export const CalendarEventSheet: React.FC<BaseProps> = ({ visible, onClose }) =>
     if (titulo.trim().length < 2) e.titulo = 'Dê um nome para a data.';
     setErros(e);
     if (Object.keys(e).length) return;
-    if (await run(() => adicionarEventoCalendario({ data: iso!, titulo: titulo.trim(), tipo }))) onClose();
+    if (await run(() => adicionarEventoCalendario({ id: evento?.id, data: iso!, titulo: titulo.trim(), tipo }))) onClose();
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Marcar data" subtitle="Os responsáveis veem no calendário que a van não roda."
-      footer={<Button size="lg" label="Adicionar" onPress={salvar} loading={loading} />}>
+    <Sheet visible={visible} onClose={onClose} title={evento ? 'Editar data' : 'Marcar data'} subtitle="Os responsáveis veem no calendário que a van não roda."
+      footer={<Button size="lg" label={evento ? 'Salvar' : 'Adicionar'} onPress={salvar} loading={loading} />}>
       <TextField label="Data" value={data} onChangeText={(v) => setData(maskDate(v))} error={erros.data} keyboardType="number-pad" placeholder="DD/MM/AAAA" />
       <TextField label="Descrição" value={titulo} onChangeText={setTitulo} error={erros.titulo} placeholder="Ex.: Recesso escolar" />
       <Label>Tipo</Label>
