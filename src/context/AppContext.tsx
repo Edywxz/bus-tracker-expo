@@ -14,6 +14,7 @@ import { AuthService } from '../services/authService';
 import { PushService } from '../services/pushService';
 import { DataService, PerfilApp, AlunoApp } from '../services/dataService';
 import { Alert } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import { animateNextLayout } from '../theme/tokens';
@@ -165,7 +166,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [mensagensChat, setMensagensChat] = useState<MockDataState['mensagensChat']>([]);
   const [eventosCalendario, setEventos] = useState<MockDataState['eventosCalendario']>([]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
-  const [isOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(true);
   const [gpsIndex, setGpsIndex] = useState(2);
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
@@ -305,6 +306,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
   useEffect(() => { atualizarContadorOffline(); }, [atualizarContadorOffline]);
 
+  // RNF005: acompanha a conexão e esvazia a fila de embarques assim que ela volta
+  useEffect(() => {
+    return NetInfo.addEventListener((st) => {
+      const on = st.isConnected !== false && st.isInternetReachable !== false;
+      setIsOnline(on);
+      if (on && !isDemo) BoardingService.sincronizarFilaOffline().then(atualizarContadorOffline).catch(() => {});
+    });
+  }, [isDemo, atualizarContadorOffline]);
+
   // ---------- Sessão: ações ---------------------------------------------------
   const entrarDemo = (r: TipoUsuario) => { animateNextLayout(); carregarDemo(r); };
   const entrar = async (email: string, senha: string) => { await AuthService.entrar(email, senha); };
@@ -396,6 +406,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await BoardingService.registrar({
       viagemId: viagemAtiva.id, alunoId, tipo, latitude: pos?.latitude, longitude: pos?.longitude,
     });
+    atualizarContadorOffline();
     animateNextLayout();
     setAlunos((prev) => prev.map((a) => a.id !== alunoId ? a : {
       ...a,
