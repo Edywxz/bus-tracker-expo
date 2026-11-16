@@ -178,3 +178,6 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- O cadastro (GoTrue) roda como supabase_auth_admin e dispara handle_new_user; garante o EXECUTE mesmo que a checagem de trigger mude.
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO supabase_auth_admin;

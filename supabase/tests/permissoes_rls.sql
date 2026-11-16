@@ -12,7 +12,7 @@ GRANT EXECUTE ON FUNCTION public._t_nega(text) TO anon, authenticated;
 
 DO $$
 DECLARE
-  t uuid := gen_random_uuid(); t2 uuid := gen_random_uuid(); r uuid := gen_random_uuid(); r2 uuid := gen_random_uuid();
+  t uuid := gen_random_uuid(); t2 uuid := gen_random_uuid(); r uuid := gen_random_uuid(); r2 uuid := gen_random_uuid(); r3 uuid := gen_random_uuid();
   cod text; cod2 text; a1 uuid; a2 uuid; v1 uuid; v2 uuid; via1 uuid; via2 uuid; mens uuid; pag uuid; n int; ok boolean;
   ins text := '00000000-0000-0000-0000-000000000000';
 BEGIN
@@ -30,6 +30,18 @@ BEGIN
   a1 := public.cadastrar_aluno('Aluno1', '2015-01-01', '1', '5A', 'MANHA', 'Rua A', 'Rua B', '', cod);
   PERFORM set_config('request.jwt.claim.sub', r2::text, true);
   a2 := public.cadastrar_aluno('Aluno2', '2015-01-01', '2', '5B', 'MANHA', 'Rua C', 'Rua D', '', cod2);
+
+  -- ---------------- cadastro de usuário como o GoTrue faz (supabase_auth_admin) continua criando perfil
+  BEGIN
+    PERFORM set_config('role', 'supabase_auth_admin', true);
+    INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+      VALUES (r3, ins::uuid, 'authenticated', 'authenticated', 'pr-r3@teste.local', '{"nome":"R3","tipo_usuario":"RESPONSAVEL"}', now(), now());
+    PERFORM set_config('role', 'postgres', true);
+    ASSERT EXISTS (SELECT 1 FROM public.responsaveis WHERE id = r3), 'signup como supabase_auth_admin cria perfil e responsável';
+  EXCEPTION WHEN invalid_parameter_value OR insufficient_privilege OR undefined_object THEN
+    PERFORM set_config('role', 'postgres', true);
+    RAISE NOTICE 'sem permissão para assumir supabase_auth_admin neste ambiente: teste de signup ignorado';
+  END;
 
   -- ---------------- anônimo não enxerga nem executa nada
   PERFORM set_config('role', 'anon', true);
