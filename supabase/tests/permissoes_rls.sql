@@ -13,7 +13,7 @@ GRANT EXECUTE ON FUNCTION public._t_nega(text) TO anon, authenticated;
 DO $$
 DECLARE
   t uuid := gen_random_uuid(); t2 uuid := gen_random_uuid(); r uuid := gen_random_uuid(); r2 uuid := gen_random_uuid();
-  cod text; cod2 text; a1 uuid; a2 uuid; v1 uuid; v2 uuid; via1 uuid; via2 uuid; mens uuid; pag uuid; n int;
+  cod text; cod2 text; a1 uuid; a2 uuid; v1 uuid; v2 uuid; via1 uuid; via2 uuid; mens uuid; pag uuid; n int; ok boolean;
   ins text := '00000000-0000-0000-0000-000000000000';
 BEGIN
   INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at) VALUES
@@ -108,7 +108,8 @@ BEGIN
   ASSERT public._t_nega(format('INSERT INTO public.viagens (transportador_id, veiculo_id, tipo_viagem, turno) VALUES (%L, %L, ''IDA'', ''MANHA'')', r, v1)), 'responsável não cria viagem';
   ASSERT public._t_nega(format('UPDATE public.notificacoes SET titulo = ''x'' WHERE usuario_id = %L', r)), 'notificação: só a coluna lida';
   ASSERT public._t_nega(format('UPDATE public.perfis SET tipo_usuario = ''TRANSPORTADOR'' WHERE id = %L', r)), 'não troca o papel';
-  ASSERT public._t_nega('SELECT public.vincular_aluno(''' || a2 || ''', ''' || cod || ''')'), 'não vincula aluno alheio';
+  BEGIN PERFORM public.vincular_aluno(a2, cod); ok := false; EXCEPTION WHEN no_data_found THEN ok := true; END;
+  ASSERT ok, 'não vincula aluno alheio';
   UPDATE public.alunos SET nome = 'Invasor' WHERE id = a2; GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 0, 'não edita aluno alheio (0 linhas)';
 
