@@ -1174,6 +1174,7 @@ export type Database = {
         Args: { p_aceitar?: boolean; p_pagamento: string }
         Returns: undefined
       }
+      excluir_minha_conta: { Args: never; Returns: undefined }
       dados_recebimento: {
         Args: { p_transportador: string }
         Returns: {

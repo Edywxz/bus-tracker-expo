@@ -330,7 +330,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isDemo) { await sair(); return; }
     saindoRef.current = true;
     await PushService.desregistrar();
-    await AuthService.excluirConta(userId);
+    await AuthService.excluirConta();
   };
 
   const setRole = (r: TipoUsuario) => { if (isDemo) carregarDemo(r); };

@@ -29,7 +29,9 @@ export const AccountScreen: React.FC = () => {
   const confirmarExcluir = async () => {
     const ok = await confirm({
       title: 'Excluir conta?', confirmLabel: 'Excluir conta', destructive: true,
-      message: 'Seus dados e os cadastros ligados a você serão apagados de forma permanente. Essa ação não pode ser desfeita.',
+      message: role === 'RESPONSAVEL'
+        ? 'Seu perfil, dependentes, contratos, mensalidades, pagamentos e mensagens serão apagados de forma permanente. Essa ação não pode ser desfeita.'
+        : 'Seu perfil, veículo, calendário e mensagens serão apagados de forma permanente. Só é possível se você não tiver alunos vinculados. Essa ação não pode ser desfeita.',
     });
     if (ok) excluirConta().catch((e) => notify('Não foi possível excluir', mensagemErro(e)));
   };
