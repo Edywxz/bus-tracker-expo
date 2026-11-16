@@ -46,8 +46,9 @@ export class BoardingService {
 
       if (error) throw error;
       return { sucesso: true, offline: false, dados: data };
-    } catch (err) {
-      // Salva localmente em caso de falha de conexão (RNF005)
+    } catch (err: any) {
+      // Só falha de rede entra na fila (RNF005); erro do banco (RLS, FK) seria reenviado para sempre
+      if (err?.code) throw err;
       await this.enfileirarOffline({ ...params, dataHora });
       return { sucesso: true, offline: true, dados: null };
     }
@@ -78,6 +79,7 @@ export class BoardingService {
     if (fila.length === 0) return { sincronizados: 0, erros: 0 };
 
     let sincronizados = 0;
+    let rejeitados = 0;
     const pendentesAinda: RegistroOfflineItem[] = [];
 
     for (const item of fila) {
@@ -93,7 +95,9 @@ export class BoardingService {
           sincronizado_em: new Date().toISOString(),
         });
 
-        if (error) {
+        if (error?.code) {
+          rejeitados++; // o banco recusou: reenviar não adianta, descarta
+        } else if (error) {
           pendentesAinda.push(item);
         } else {
           sincronizados++;
@@ -104,7 +108,7 @@ export class BoardingService {
     }
 
     await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(pendentesAinda));
-    return { sincronizados, erros: pendentesAinda.length };
+    return { sincronizados, erros: pendentesAinda.length + rejeitados };
   }
 
   /**
