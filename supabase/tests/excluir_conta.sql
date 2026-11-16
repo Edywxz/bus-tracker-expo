@@ -23,7 +23,9 @@ BEGIN
   BEGIN PERFORM public.excluir_minha_conta(); ok := false;
   EXCEPTION WHEN foreign_key_violation THEN ok := true; END;
   ASSERT ok, 'transportador com alunos deve ser recusado';
+  PERFORM set_config('role', 'postgres', true); -- authenticated não lê auth.users
   ASSERT EXISTS (SELECT 1 FROM auth.users WHERE id = t), 'transportador recusado continua existindo';
+  PERFORM set_config('role', 'authenticated', true);
 
   -- responsável exclui: tudo dele some, o transportador fica
   PERFORM set_config('request.jwt.claim.sub', r::text, true);
