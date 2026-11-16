@@ -1,12 +1,12 @@
 import { supabase } from './supabase';
 import {
   PessoaAutorizada, Veiculo, ViagemTransporte, ContratoServico, Mensalidade, Pagamento, TipoUsuario,
+  Turno, MetodoPagamento, PeriodoAusencia,
 } from '../types/database';
+import type { Json, Database } from '../types/supabase';
 import type { MockDataState } from './mockData';
 
-// Cliente sem tipagem estrita: as tabelas novas (notificacoes, mensagens, calendario_escolar)
-// e as RPCs não constam em types/supabase.ts. Regenere com `supabase gen types` quando quiser.
-const db: any = supabase;
+const db = supabase;
 
 export type AlunoApp = MockDataState['alunos'][number];
 
@@ -38,9 +38,9 @@ export interface DadosCarregados {
 const hhmm = (iso: string) =>
   new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-function check<T>(res: { data: T; error: any }): T {
+function check<T>(res: { data: T | null; error: any }): T {
   if (res.error) throw res.error;
-  return res.data;
+  return res.data as T;
 }
 
 export class DataService {
@@ -163,7 +163,7 @@ export class DataService {
   }
 
   static async cadastrarAluno(p: {
-    nome: string; dataNascimento: string; documento?: string; turma: string; turno: string;
+    nome: string; dataNascimento: string; documento?: string; turma: string; turno: Turno;
     enderecoBusca: string; enderecoEntrega: string; observacoes?: string;
     codigoTransportador: string; escolaNome?: string; escolaEndereco?: string;
   }): Promise<string> {
@@ -174,7 +174,7 @@ export class DataService {
       p_turma: p.turma, p_turno: p.turno, p_endereco_busca: p.enderecoBusca,
       p_endereco_entrega: p.enderecoEntrega, p_observacoes: p.observacoes ?? '',
       p_codigo_transportador: p.codigoTransportador,
-      p_escola_nome: p.escolaNome ?? null, p_escola_endereco: p.escolaEndereco ?? null,
+      p_escola_nome: p.escolaNome, p_escola_endereco: p.escolaEndereco,
       p_endereco_busca_id: buscaId, p_endereco_entrega_id: entregaId,
     });
     if (error) throw error;
@@ -213,7 +213,7 @@ export class DataService {
     if (error) throw error;
   }
 
-  static async registrarPagamento(mensalidadeId: string, metodo: string, transacao: string, detalhes?: unknown) {
+  static async registrarPagamento(mensalidadeId: string, metodo: MetodoPagamento, transacao: string, detalhes?: Json) {
     const { error } = await db.rpc('registrar_pagamento', {
       p_mensalidade: mensalidadeId, p_metodo: metodo, p_transacao: transacao, p_detalhes: detalhes ?? null,
     });
@@ -225,7 +225,7 @@ export class DataService {
     if (error) throw error;
   }
 
-  static async comunicarAusencia(a: { alunoId: string; responsavelId: string; transportadorId: string; periodo: string; motivo: string }) {
+  static async comunicarAusencia(a: { alunoId: string; responsavelId: string; transportadorId: string; periodo: PeriodoAusencia; motivo: string }) {
     const hoje = new Date().toISOString().slice(0, 10);
     const { error } = await db.from('comunicados_ausencia').insert({
       aluno_id: a.alunoId, responsavel_id: a.responsavelId, transportador_id: a.transportadorId,
@@ -267,7 +267,8 @@ export class DataService {
 
   static async salvarVeiculo(transportadorId: string, v: Partial<Veiculo>) {
     const { error } = await db.from('veiculos').upsert(
-      { ...v, transportador_id: transportadorId }, { onConflict: 'placa' }
+      // o banco valida os NOT NULL; o formulário já envia todos os campos ao cadastrar
+      { ...v, transportador_id: transportadorId } as Database['public']['Tables']['veiculos']['Insert'], { onConflict: 'placa' }
     );
     if (error) throw error;
   }
