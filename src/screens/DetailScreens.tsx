@@ -9,19 +9,20 @@ import {
 } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { AbsenceSheet, AuthorizedSheet } from '../sheets/Sheets';
+import { AbsenceSheet, AuthorizedSheet, LinkTransporterSheet } from '../sheets/Sheets';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { pixCopiaECola } from '../utils/pix';
-import { brl, isoToBR, nomeMes } from '../utils/format';
+import { brl, isoToBR, mensagemErro, nomeMes } from '../utils/format';
 import { SecurityService } from '../services/security';
 
 const TURNO: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', INTEGRAL: 'Integral', NOITE: 'Noite' };
 
 /* --------------------------------------------------------- Aluno */
 export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
-  const { alunos, role, pessoasAutorizadas, removerPessoaAutorizada, contratos } = useApp();
+  const { alunos, role, pessoasAutorizadas, removerPessoaAutorizada, contratos, desvincularAluno, isDemo } = useApp();
   const [absence, setAbsence] = useState(false);
+  const [vincular, setVincular] = useState(false);
   const [addPessoa, setAddPessoa] = useState(false);
   const a = alunos.find((x) => x.id === id);
   if (!a) {
@@ -37,9 +38,21 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
     if (ok) removerPessoaAutorizada(pid).catch((e) => notify('Erro', e.message));
   };
 
+  const desvincular = async () => {
+    const primeiro = a.nome.split(' ')[0];
+    const ok = await confirm({
+      title: pai ? 'Desvincular do transportador?' : 'Remover da rota?',
+      message: pai
+        ? `${primeiro} deixa de aparecer na rota. O contrato é cancelado e as mensalidades futuras também. Você pode vincular a outro transportador depois.`
+        : `${primeiro} sai da sua rota e o responsável é avisado. O contrato é cancelado e as mensalidades futuras também.`,
+      confirmLabel: pai ? 'Desvincular' : 'Remover', destructive: true,
+    });
+    if (ok) desvincularAluno(a.id).catch((e) => notify('Erro', mensagemErro(e)));
+  };
+
   return (
     <Screen title={a.nome.split(' ')[0]}
-      footer={pai ? <Button size="lg" variant="tinted" label="Avisar falta" icon="calendar" onPress={() => setAbsence(true)} /> : undefined}>
+      footer={pai && a.transportador_id ? <Button size="lg" variant="tinted" label="Avisar falta" icon="calendar" onPress={() => setAbsence(true)} /> : undefined}>
       <Card style={s.hero}>
         <Avatar name={a.nome} size="lg" onBoard={a.statusEmbarque === 'EMBARCADO'} />
         <Text style={s.heroName}>{a.nome}</Text>
@@ -89,8 +102,20 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
         </>
       )}
 
+      {(a.transportador_id || (pai && !isDemo)) && (
+        <>
+          <SectionHeader title="Vínculo" />
+          <ListSection>
+            {a.transportador_id
+              ? <ListRow role="destructive" icon="van" title={pai ? 'Desvincular do transportador' : 'Remover da rota'} onPress={desvincular} chevron={false} />
+              : <ListRow role="action" icon="van" title="Vincular a um transportador" subtitle="Sem transportador no momento" onPress={() => setVincular(true)} chevron={false} />}
+          </ListSection>
+        </>
+      )}
+
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={a.id} />
       <AuthorizedSheet visible={addPessoa} onClose={() => setAddPessoa(false)} alunoId={a.id} />
+      <LinkTransporterSheet visible={vincular} onClose={() => setVincular(false)} alunoId={a.id} />
     </Screen>
   );
 };

@@ -111,7 +111,7 @@ export class DataService {
 
     // Nomes de quem está vinculado (liberados pela política `perfis_select`)
     const nomes: DadosCarregados['nomes'] = {};
-    const idTransp = alunos[0]?.transportador_id;
+    const idTransp = alunos.find((a) => a.transportador_id)?.transportador_id;
     const ids = [idTransp].filter((x): x is string => !!x && x !== userId);
     if (ids.length) {
       const r = await db.from('perfis').select('id,nome').in('id', ids);
@@ -293,6 +293,22 @@ export class DataService {
 
   static async removerCalendario(id: string) {
     const { error } = await db.from('calendario_escolar').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  static async renovarCodigoConvite(): Promise<string> {
+    const { data, error } = await db.rpc('renovar_codigo_convite');
+    if (error) throw error;
+    return data;
+  }
+
+  static async desvincularAluno(alunoId: string) {
+    const { error } = await db.rpc('desvincular_aluno', { p_aluno: alunoId });
+    if (error) throw error;
+  }
+
+  static async vincularAluno(alunoId: string, codigo: string) {
+    const { error } = await db.rpc('vincular_aluno', { p_aluno: alunoId, p_codigo: codigo });
     if (error) throw error;
   }
 

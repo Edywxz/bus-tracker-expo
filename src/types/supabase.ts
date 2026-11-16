@@ -31,7 +31,7 @@ export type Database = {
           nome: string
           observacoes_medicas: string | null
           responsavel_id: string
-          transportador_id: string
+          transportador_id: string | null
           turma: string | null
           turno: Database["public"]["Enums"]["turno_enum"]
         }
@@ -51,7 +51,7 @@ export type Database = {
           nome: string
           observacoes_medicas?: string | null
           responsavel_id: string
-          transportador_id: string
+          transportador_id?: string | null
           turma?: string | null
           turno: Database["public"]["Enums"]["turno_enum"]
         }
@@ -71,7 +71,7 @@ export type Database = {
           nome?: string
           observacoes_medicas?: string | null
           responsavel_id?: string
-          transportador_id?: string
+          transportador_id?: string | null
           turma?: string | null
           turno?: Database["public"]["Enums"]["turno_enum"]
         }
@@ -1175,6 +1175,9 @@ export type Database = {
         Returns: undefined
       }
       excluir_minha_conta: { Args: never; Returns: undefined }
+      renovar_codigo_convite: { Args: never; Returns: string }
+      desvincular_aluno: { Args: { p_aluno: string }; Returns: undefined }
+      vincular_aluno: { Args: { p_aluno: string; p_codigo: string }; Returns: undefined }
       dados_recebimento: {
         Args: { p_transportador: string }
         Returns: {

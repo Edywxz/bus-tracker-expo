@@ -16,7 +16,7 @@ import { brl, mensagemErro } from '../utils/format';
 const ROTULO: Record<TipoUsuario, string> = { RESPONSAVEL: 'Responsável', TRANSPORTADOR: 'Motorista' };
 
 export const AccountScreen: React.FC = () => {
-  const { role, perfil, isDemo, setRole, sair, excluirConta, codigoConvite, nomes, veiculo, temVeiculo, recebimento, recarregar } = useApp();
+  const { role, perfil, isDemo, setRole, sair, excluirConta, renovarCodigoConvite, codigoConvite, nomes, veiculo, temVeiculo, recebimento, recarregar } = useApp();
   const [edit, setEdit] = useState(false);
   const [receipt, setReceipt] = useState(false);
   const nome = perfil?.nome ?? (role === 'TRANSPORTADOR' ? 'Tio Marcos' : 'Carlos Silva');
@@ -24,6 +24,11 @@ export const AccountScreen: React.FC = () => {
   const confirmarSair = async () => {
     const ok = await confirm({ title: 'Sair da conta?', message: isDemo ? 'Você volta para a tela inicial.' : 'Você precisará entrar de novo para ver a van.', confirmLabel: 'Sair', destructive: true });
     if (ok) sair().catch(() => {});
+  };
+
+  const renovar = async () => {
+    const ok = await confirm({ title: 'Gerar novo código?', message: 'O código atual deixa de valer para novos cadastros. Quem já está na sua rota continua vinculado.', confirmLabel: 'Gerar novo' });
+    if (ok) renovarCodigoConvite().catch((e) => notify('Não foi possível gerar', mensagemErro(e)));
   };
 
   const confirmarExcluir = async () => {
@@ -67,6 +72,7 @@ export const AccountScreen: React.FC = () => {
           <ListSection style={{ marginTop: spacing.sm }}>
             <ListRow icon="share" iconTone="gray" title="Compartilhar código" role="action"
               onPress={() => share({ title: 'Código VanEscolar', message: `Use o código ${codigoConvite} no app VanEscolar GPS para cadastrar seu dependente.` })} chevron={false} />
+            <ListRow icon="edit" iconTone="gray" title="Gerar novo código" role="action" onPress={renovar} chevron={false} />
           </ListSection>
         </FadeInUp>
       )}

@@ -43,7 +43,7 @@ export interface TransportadorProfile {
 export interface Aluno {
   id: string;
   responsavel_id: string;
-  transportador_id: string;
+  transportador_id: string | null; // null = sem transportador (desvinculado)
   escola_nome?: string; // escola que o aluno frequenta (destino da rota, não é usuário)
   escola_endereco?: string;
   endereco_busca_id?: string | null;   // endereços pertencem ao responsável (enderecos_responsavel)
