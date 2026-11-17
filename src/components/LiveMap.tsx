@@ -105,11 +105,13 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
           </Pin>
         ) : null}
       </MapView>
+      {trilha && trilha.length > 1 ? <Text style={s.atribuicao}>Rota: Powered by Geoapify · © OpenStreetMap</Text> : null}
     </View>
   );
 };
 
 const s = StyleSheet.create({
+  atribuicao: { ...type.caption2, position: 'absolute', left: 8, top: 108, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden' },
   pin: { alignItems: 'center', gap: 2, minWidth: 80, paddingVertical: 4 },
   rotulo: { ...type.caption2, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden', maxWidth: 140, textAlign: 'center' },
   rotuloDestaque: { backgroundColor: colors.primary, color: colors.onPrimary },
