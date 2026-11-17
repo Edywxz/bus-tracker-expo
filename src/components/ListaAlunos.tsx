@@ -16,7 +16,7 @@ const TURNO: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', INTEGRA
 
 /** Dependentes (responsável) ou passageiros (motorista) — vive dentro do painel da tela de viagem. */
 export const ListaAlunos: React.FC<{ onAdicionar: () => void }> = ({ onAdicionar }) => {
-  const { role, alunos, viagemAtiva, isDemo, registrarEmbarque, offlineQueueCount, sincronizarFilaOffline } = useApp();
+  const { role, alunos, viagemAtiva, isDemo, registrarEmbarque, offlineQueueCount, sincronizarFilaOffline, previsoes } = useApp();
   const [filtro, setFiltro] = useState<Filtro>('TODOS');
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -95,6 +95,16 @@ export const ListaAlunos: React.FC<{ onAdicionar: () => void }> = ({ onAdicionar
                     <Icon name="location" size={15} color={colors.secondaryLabel} />
                     <Text style={s.addrText} numberOfLines={2}>{a.endereco_busca}</Text>
                   </View>
+                  {(() => {
+                    // previsão de chegada (dados reais): na ida a van busca e depois entrega; na volta, o contrário
+                    const p = previsoes[a.id];
+                    const min = a.statusEmbarque === 'AGUARDANDO' ? p?.busca : embarcado ? p?.entrega : undefined;
+                    if (!emRota || isDemo || min == null) return null;
+                    const texto = a.statusEmbarque === 'AGUARDANDO'
+                      ? (motorista ? 'Embarque' : 'Van chega')
+                      : (viagemAtiva.tipo_viagem === 'VOLTA' ? 'Chega em casa' : 'Chega à escola');
+                    return <Text style={s.last}>{`${texto} em ~${Math.max(1, min)} min`}</Text>;
+                  })()}
                   {a.ultimoRegistro ? <Text style={s.last}>{a.ultimoRegistro}</Text> : null}
                   {motorista && (
                     <View style={{ marginTop: spacing.md + 2 }}>

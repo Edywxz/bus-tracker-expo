@@ -15,6 +15,7 @@ const UUID = /^[0-9a-f-]{36}$/i;
 const MAX_ALUNOS = 25;
 const MAX_PONTOS = 30; // a matriz do Geoapify cobra por par de pontos
 const PASSO_M = 25; // a linha devolvida ao app é amostrada a cada ~25 m
+const PARADA_S = 60; // tempo parado em cada parada (embarque/desembarque) somado à previsão das seguintes
 
 interface Ponto { latitude: number; longitude: number }
 interface No extends Ponto { rotulo: string; tipo: 'RETIRADA' | 'ENTREGA'; alunos: string[] }
@@ -41,6 +42,9 @@ Deno.serve(async (req) => {
   const { data: auth } = await userClient.auth.getUser();
   if (!auth.user) return resp({ erro: 'Não autenticado' }, 401);
   const uid = auth.user.id;
+  // Previsões por aluno ficam numa tabela que só esta função escreve; cada responsável lê só as dos próprios dependentes (RLS).
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const limparPrevisoes = () => admin.from('previsoes_chegada').delete().eq('transportador_id', uid);
 
   const { data: transp } = await userClient.from('transportadores').select('id').eq('id', uid).maybeSingle();
   if (!transp) return resp({ erro: 'Apenas transportadores' }, 403);
@@ -55,7 +59,7 @@ Deno.serve(async (req) => {
 
   // Alunos do próprio motorista e as coordenadas dos endereços (a RLS libera ao motorista os endereços dos seus alunos).
   const todos = [...new Set([...aguardando, ...aBordo])];
-  if (todos.length === 0) return resp({ ordem: [], pontos: [], km: 0, minutos: 0, semCoordenada: [] });
+  if (todos.length === 0) { await limparPrevisoes(); return resp({ ordem: [], pontos: [], km: 0, minutos: 0, semCoordenada: [], partidaConhecida: !!van }); }
   const { data: alunos, error: e1 } = await userClient.from('alunos')
     .select('id, nome, escola_nome, endereco_busca_id, endereco_entrega_id').in('id', todos).eq('transportador_id', uid);
   if (e1) return resp({ erro: 'Falha ao ler alunos' }, 500);
@@ -91,7 +95,7 @@ Deno.serve(async (req) => {
       noDe(destino, rotDestino, 'ENTREGA', a.id);
     }
   }
-  if (nos.length === 0) return resp({ ordem: [], pontos: [], km: 0, minutos: 0, semCoordenada });
+  if (nos.length === 0) { await limparPrevisoes(); return resp({ ordem: [], pontos: [], km: 0, minutos: 0, semCoordenada, partidaConhecida: !!van }); }
   if (nos.length + (van ? 1 : 0) > MAX_PONTOS) return resp({ erro: 'Paradas demais para uma rota' }, 422);
 
   // Matriz de tempos de viagem entre início (van, se informada) e paradas.
@@ -122,6 +126,10 @@ Deno.serve(async (req) => {
   let ordem: number[];
   try { ordem = ordenar(custo, antes); } catch { return resp({ erro: 'Rota impossível' }, 422); }
   const paradas = ordem.map((i) => nos[i - 1]);
+  // Minutos até chegar a cada parada: tempos de viagem da matriz + tempo parado nas anteriores.
+  // Sem a posição da van a primeira perna não tem custo, então não há previsão confiável (partidaConhecida = false).
+  let acum = 0;
+  const minutosAte = ordem.map((idx, k) => { acum += custo[k ? ordem[k - 1] : 0][idx] + (k ? PARADA_S : 0); return Math.round(acum / 60); });
 
   // Geometria pelas ruas, na ordem escolhida.
   const wp = [...(van ? [van] : []), ...paradas];
@@ -147,8 +155,20 @@ Deno.serve(async (req) => {
     }
   }
 
+  const calculadoEm = new Date().toISOString();
+  if (van) {
+    const linhas = paradas.flatMap((p, k) => p.alunos.map((alunoId) => ({
+      aluno_id: alunoId, evento: p.tipo === 'RETIRADA' ? 'BUSCA' : 'ENTREGA', transportador_id: uid, minutos: minutosAte[k], calculado_em: calculadoEm,
+    })));
+    const { error: e3 } = await admin.from('previsoes_chegada').upsert(linhas, { onConflict: 'aluno_id,evento' });
+    // o que não foi recalculado agora (aluno que embarcou, faltou ou saiu da rota) deixa de valer
+    if (!e3) await admin.from('previsoes_chegada').delete().eq('transportador_id', uid).lt('calculado_em', calculadoEm);
+  } else {
+    await limparPrevisoes();
+  }
+
   return resp({
-    ordem: paradas.map((p) => ({ rotulo: p.rotulo, tipo: p.tipo, latitude: p.latitude, longitude: p.longitude, alunos: p.alunos })),
-    pontos: linha, km, minutos, semCoordenada, aproximado,
+    ordem: paradas.map((p, k) => ({ rotulo: p.rotulo, tipo: p.tipo, latitude: p.latitude, longitude: p.longitude, alunos: p.alunos, minutos: minutosAte[k] })),
+    pontos: linha, km, minutos, semCoordenada, aproximado, partidaConhecida: !!van,
   });
 });

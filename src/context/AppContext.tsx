@@ -13,7 +13,7 @@ import { SecurityService } from '../services/security';
 import { supabase } from '../services/supabase';
 import { AuthService } from '../services/authService';
 import { PushService } from '../services/pushService';
-import { DataService, PerfilApp, AlunoApp, RotaOtimizada } from '../services/dataService';
+import { DataService, PerfilApp, AlunoApp, RotaOtimizada, PrevisaoChegada } from '../services/dataService';
 import { Alert } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { mensagemErro } from '../utils/format';
@@ -87,6 +87,10 @@ interface AppContextType {
   rotaGeo: { latitude: number; longitude: number }[];
   /** força um novo cálculo da rota mais eficiente (motorista, dados reais) */
   recalcularRota: () => void;
+  /** minutos restantes até a van chegar a cada aluno (busca/entrega). O responsável recebe só os dos próprios dependentes. */
+  previsoes: Record<string, { busca?: number; entrega?: number }>;
+  /** o motorista negou a permissão de localização: a van não aparece no mapa */
+  gpsNegado: boolean;
   ajustarPino: (alunoId: string, tipo: 'busca' | 'entrega', latitude: number, longitude: number) => Promise<void>;
   geocodificarEndereco: (alunoId: string, tipo: 'busca' | 'entrega') => Promise<{ ok: boolean; mensagem?: string }>;
 
@@ -174,7 +178,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [gpsIndex, setGpsIndex] = useState(PARADAS_ROTA[1]);
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
-  const [rotaReal, setRotaReal] = useState<RotaOtimizada | null>(null);
+  const [rotaReal, setRotaReal] = useState<(RotaOtimizada & { calculadoEm: number }) | null>(null);
+  const [previsoesDb, setPrevisoesDb] = useState<PrevisaoChegada[]>([]);
+  const [relogio, setRelogio] = useState(() => Date.now());
+  const [gpsNegado, setGpsNegado] = useState(false);
   const [rotaTick, setRotaTick] = useState(0);
   const gpsRealRef = useRef(gpsReal);
   gpsRealRef.current = gpsReal;
@@ -189,7 +196,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const limpar = () => {
     setAlunos([]); setPessoas([]); setVeiculo(VEICULO_VAZIO); setViagemAtiva(VIAGEM_VAZIA);
     setContratos([]); setMensalidades([]); setPagamentos([]); setNotificacoes([]); setMensagensChat([]); setEventos([]);
-    setCodigoConvite(null); setNomes({}); setGpsReal(null); setPerfil(null);
+    setCodigoConvite(null); setNomes({}); setGpsReal(null); setPerfil(null); setPrevisoesDb([]); setRotaReal(null);
   };
 
   const carregarDemo = (r: TipoUsuario) => {
@@ -224,6 +231,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setVeiculo(d.veiculo ?? VEICULO_VAZIO); setViagemAtiva(d.viagem ?? VIAGEM_VAZIA);
     setContratos(d.contratos); setMensalidades(d.mensalidades); setPagamentos(d.pagamentos);
     setNotificacoes(d.notificacoes); setMensagensChat(d.mensagensChat); setEventos(d.eventosCalendario);
+    setPrevisoesDb(d.previsoes);
   }, [isDemo]);
 
   // Sessão do Supabase
@@ -285,10 +293,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Posição ao vivo da van (pais)
   useEffect(() => {
     if (isDemo || role === 'TRANSPORTADOR' || !viagemAtiva.id || viagemAtiva.status !== 'EM_ANDAMENTO') return;
-    return LocationTrackerService.assinarRastreamentoViagem(viagemAtiva.id, (p) =>
+    let ativo = true;
+    // última posição gravada: a van já aparece ao abrir o app, sem esperar a próxima transmissão
+    DataService.ultimaPosicao(viagemAtiva.id).then((p) => {
+      if (ativo && p) setGpsReal((atual) => atual ?? { ...p, rua: 'Posição em tempo real' });
+    }).catch(() => {});
+    const off = LocationTrackerService.assinarRastreamentoViagem(viagemAtiva.id, (p) =>
       setGpsReal({ latitude: p.latitude, longitude: p.longitude, velocidade: Math.round(p.velocidade ?? 0), rua: 'Posição em tempo real' })
     );
+    return () => { ativo = false; off(); };
   }, [isDemo, role, viagemAtiva.id, viagemAtiva.status]);
+
+  // Motorista: mostra a própria posição no mapa mesmo antes de iniciar a rota (a transmissão só começa com a rota em andamento)
+  useEffect(() => {
+    if (isDemo || role !== 'TRANSPORTADOR' || !userId) return;
+    let ativo = true;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (!ativo) return;
+      setGpsNegado(status !== 'granted');
+      if (status !== 'granted') return;
+      const p = (await Location.getLastKnownPositionAsync().catch(() => null)) ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
+      if (ativo && p) setGpsReal((atual) => atual ?? { latitude: p.coords.latitude, longitude: p.coords.longitude, velocidade: 0, rua: 'Posição em tempo real' });
+    })();
+    return () => { ativo = false; };
+  }, [isDemo, role, userId]);
 
   // GPS do motorista: durante a rota, publica a posição (broadcast + banco) e mostra no próprio mapa
   // shortcut: só em primeiro plano (app aberto na rota); para tela bloqueada, usar expo-task-manager + permissão background
@@ -298,7 +327,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let ativo = true;
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted' || !ativo) { console.warn('Permissão de localização negada'); return; }
+      if (status !== 'granted' || !ativo) { console.warn('Permissão de localização negada'); if (ativo) setGpsNegado(true); return; }
       const s = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
         (loc) => {
@@ -362,7 +391,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const gpsAtivo = isDemo || !!gpsReal;
 
   const estimativaRota = useMemo(() => {
-    if (!isDemo) return null;
+    if (!isDemo) {
+      // Dados reais (motorista): minutos até a última parada, descontando o tempo desde o cálculo da rota
+      if (role !== 'TRANSPORTADOR' || !rotaReal?.partidaConhecida || !rotaReal.ordem.length) return null;
+      const total = rotaReal.ordem[rotaReal.ordem.length - 1].minutos;
+      const restante = Math.max(1, total - Math.floor((relogio - rotaReal.calculadoEm) / 60000));
+      const ativos = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').length;
+      const feitos = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO' || a.statusEmbarque === 'DESEMBARCADO').length;
+      return { km: total ? rotaReal.km * Math.min(1, restante / total) : rotaReal.km, minutos: restante, progresso: ativos ? feitos / ativos : 0 };
+    }
     const rad = (g: number) => (g * Math.PI) / 180;
     const dist = (a: GPSCoordinate, b: GPSCoordinate) => {
       const dLat = rad(b.latitude - a.latitude), dLon = rad(b.longitude - a.longitude);
@@ -377,7 +414,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     const vel = Math.max(ROTA_PONTOS[gpsIndex].velocidade, 15); // km/h, piso para trânsito parado
     return { km: restante, minutos: Math.max(1, Math.round((restante / vel) * 60)), progresso: total ? 1 - restante / total : 1 };
-  }, [isDemo, gpsIndex]);
+  }, [isDemo, gpsIndex, role, rotaReal, relogio, alunos]);
 
   // Rota mais eficiente (motorista, dados reais): recalcula quando muda quem falta buscar/levar ou o sentido da viagem
   const assinaturaRota = alunos.map((a) => `${a.id}:${a.statusEmbarque}`).join('|');
@@ -395,12 +432,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const van = gps ?? (!aguardando.length && lat != null && lon != null ? { latitude: lat, longitude: lon } : null);
     let ativo = true;
     DataService.rotaOtimizada({ tipo: viagemAtiva.tipo_viagem, aguardando, aBordo, van })
-      .then((r) => { if (ativo) setRotaReal(r); })
+      .then((r) => { if (ativo) setRotaReal({ ...r, calculadoEm: Date.now() }); })
       .catch((e) => console.warn('Rota otimizada indisponível:', e));
     return () => { ativo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemo, role, assinaturaRota, temVanGps, viagemAtiva.tipo_viagem, rotaTick]);
   const recalcularRota = () => setRotaTick((t) => t + 1);
+
+  // Previsão de chegada por aluno. Motorista: da rota que ele mesmo calculou. Responsável: só as linhas dos dependentes dele (RLS).
+  const temPrevisao = !!rotaReal || previsoesDb.length > 0;
+  useEffect(() => {
+    if (!temPrevisao) return;
+    const i = setInterval(() => setRelogio(Date.now()), 30000);
+    return () => clearInterval(i);
+  }, [temPrevisao]);
+  const previsoes = useMemo(() => {
+    const out: Record<string, { busca?: number; entrega?: number }> = {};
+    const restante = (min: number, desde: number) => Math.max(0, min - Math.floor((relogio - desde) / 60000));
+    if (role === 'TRANSPORTADOR') {
+      if (rotaReal?.partidaConhecida) {
+        for (const p of rotaReal.ordem) for (const id of p.alunos) (out[id] ??= {})[p.tipo === 'RETIRADA' ? 'busca' : 'entrega'] = restante(p.minutos, rotaReal.calculadoEm);
+      }
+    } else {
+      for (const r of previsoesDb) (out[r.aluno_id] ??= {})[r.evento === 'BUSCA' ? 'busca' : 'entrega'] = restante(r.minutos, Date.parse(r.calculado_em));
+    }
+    return out;
+  }, [role, rotaReal, previsoesDb, relogio]);
+
+  // Durante a rota a previsão é refeita a cada 3 min (trânsito e posição da van mudam); o custo é 2 chamadas ao roteador por vez
+  useEffect(() => {
+    if (isDemo || role !== 'TRANSPORTADOR' || viagemAtiva.status !== 'EM_ANDAMENTO') return;
+    const i = setInterval(() => setRotaTick((t) => t + 1), 180000);
+    return () => clearInterval(i);
+  }, [isDemo, role, viagemAtiva.status]);
 
   const simularCenario = (c: Cenario | null) => {
     if (!isDemo) return;
@@ -704,7 +768,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
     eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? Math.min(4, Math.max(0, PARADAS_ROTA.filter((p) => p <= gpsIndex).length - 1)) : undefined, // posição no mapa esquemático (5 paradas)
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
-    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota,
+    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota, previsoes, gpsNegado,
     ajustarPino, geocodificarEndereco,
     simularPassoGps, simularCenario, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
@@ -713,7 +777,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, rotaReal]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, rotaReal, previsoes, gpsNegado]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

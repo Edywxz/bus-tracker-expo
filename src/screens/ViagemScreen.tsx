@@ -34,7 +34,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
  */
 export const ViagemScreen: React.FC = () => {
   const {
-    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota,
+    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
     simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, simularCenario, horaSimulada,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
@@ -63,6 +63,17 @@ export const ViagemScreen: React.FC = () => {
   const filho = pai ? proximo?.aluno ?? alunos.find((a) => a.statusEmbarque === 'EMBARCADO') ?? alunos[0] : undefined;
   const destino = viagemAtiva.tipo_viagem === 'VOLTA' ? 'até o fim da rota' : 'até a escola';
 
+  // Responsável (dados reais): tempo até a van chegar ao dependente que tem a chegada mais próxima. Só entram os dependentes dele (RLS).
+  const proximaChegada = (() => {
+    if (!pai || !emRota || isDemo) return null;
+    const cand = alunos.flatMap((a) => {
+      const p = previsoes[a.id];
+      const min = a.statusEmbarque === 'AGUARDANDO' ? p?.busca : a.statusEmbarque === 'EMBARCADO' ? p?.entrega : undefined;
+      return min == null ? [] : [{ aluno: a, min, busca: a.statusEmbarque === 'AGUARDANDO' }];
+    });
+    return cand.sort((x, y) => x.min - y.min)[0] ?? null;
+  })();
+
   // Distância da van até a parada que ela atende agora (ida: quem espera; volta: quem está a bordo).
   const kmVan = (() => {
     if (!pai || !emRota || !gpsAtivo) return null;
@@ -87,6 +98,14 @@ export const ViagemScreen: React.FC = () => {
     if (motorista && !emRota) {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
+    if (proximaChegada) {
+      const quem = proximaChegada.aluno.nome.split(' ')[0];
+      const legenda = proximaChegada.busca
+        ? `Van chega para buscar ${quem}`
+        : viagemAtiva.tipo_viagem === 'VOLTA' ? `${quem} chega em casa` : `${quem} chega à escola`;
+      const min = Math.max(1, proximaChegada.min);
+      return { valor: `${min}`, sufixo: 'min', legenda, lado: horaPrevista(min), ladoSub: 'previsão aproximada' };
+    }
     if (proximo && aBordoMeus >= 2) {
       const quem = proximo.aluno.nome.split(' ')[0];
       const onde = viagemAtiva.tipo_viagem === 'VOLTA' ? proximo.aluno.endereco_busca : proximo.aluno.endereco_entrega;
@@ -102,7 +121,7 @@ export const ViagemScreen: React.FC = () => {
     }
     if (emRota) {
       // Dados reais: sem previsão confiável — mostramos onde a van está agora.
-      return { valor: '', sufixo: '', legenda: gpsAtivo ? gpsPosicao.rua : 'Aguardando sinal da van', lado: gpsPosicao.velocidade ? `${gpsPosicao.velocidade} km/h` : '', ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
+      return { valor: '', sufixo: '', legenda: gpsAtivo ? gpsPosicao.rua : motorista && gpsNegado ? 'Permita a localização para mostrar a van' : motorista ? 'Buscando sua posição…' : 'Aguardando sinal da van', lado: gpsPosicao.velocidade ? `${gpsPosicao.velocidade} km/h` : '', ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
     }
     return null;
   })();
