@@ -341,6 +341,18 @@ export class DataService {
     return data;
   }
 
+  static async atualizarAluno(alunoId: string, d: { nome: string; data_nascimento: string; turma: string; turno: Turno; escola_nome: string; observacoes_medicas: string | null }) {
+    const { error } = await db.from('alunos').update(d as any).eq('id', alunoId);
+    if (error) throw error;
+  }
+
+  /** Remove o dependente da lista: sai da rota (contrato e mensalidades futuras cancelados) e fica inativo. O histórico é mantido. */
+  static async removerAluno(alunoId: string, vinculado: boolean) {
+    if (vinculado) await DataService.desvincularAluno(alunoId);
+    const { error } = await db.from('alunos').update({ ativo: false }).eq('id', alunoId);
+    if (error) throw error;
+  }
+
   static async desvincularAluno(alunoId: string) {
     const { error } = await db.rpc('desvincular_aluno', { p_aluno: alunoId });
     if (error) throw error;

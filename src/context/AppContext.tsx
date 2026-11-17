@@ -117,6 +117,8 @@ interface AppContextType {
   removerPessoaAutorizada: (id: string) => Promise<void>;
   renovarCodigoConvite: () => Promise<void>;
   desvincularAluno: (alunoId: string) => Promise<void>;
+  atualizarAluno: (alunoId: string, d: Parameters<typeof DataService.atualizarAluno>[1]) => Promise<void>;
+  removerAluno: (alunoId: string) => Promise<void>;
   vincularAluno: (alunoId: string, codigo: string) => Promise<void>;
   adicionarEventoCalendario: (e: { id?: string; data: string; titulo: string; tipo: MockDataState['eventosCalendario'][number]['tipo']; descricao?: string }) => Promise<void>;
   removerEventoCalendario: (id: string) => Promise<void>;
@@ -717,6 +719,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     animateNextLayout();
     setAlunos((prev) => prev.map((a) => (a.id === alunoId ? { ...a, transportador_id: null } : a)));
   };
+  const atualizarAluno: AppContextType['atualizarAluno'] = async (alunoId, d) => {
+    if (!isDemo) { exigirReal(); await DataService.atualizarAluno(alunoId, d); await recarregar(); return; }
+    setAlunos((prev) => prev.map((a) => (a.id === alunoId ? { ...a, ...d, observacoes_medicas: d.observacoes_medicas ?? undefined } : a)));
+  };
+  const removerAluno = async (alunoId: string) => {
+    if (!isDemo) { exigirReal(); await DataService.removerAluno(alunoId, !!alunos.find((a) => a.id === alunoId)?.transportador_id); await recarregar(); return; }
+    animateNextLayout();
+    setAlunos((prev) => prev.filter((a) => a.id !== alunoId));
+  };
   const vincularAluno = async (alunoId: string, codigo: string) => {
     if (!isDemo) { exigirReal(); await DataService.vincularAluno(alunoId, codigo.trim()); await recarregar(); return; }
     animateNextLayout();
@@ -772,7 +783,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     ajustarPino, geocodificarEndereco,
     simularPassoGps, simularCenario, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
-    registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, renovarCodigoConvite, desvincularAluno, vincularAluno, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
+    registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, renovarCodigoConvite, desvincularAluno, atualizarAluno, removerAluno, vincularAluno, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
     marcarNotificacoesComoLidas, atualizarPerfil, salvarConfigRecebimento,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,

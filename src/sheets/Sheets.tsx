@@ -9,7 +9,7 @@ import { useAction } from './useAction';
 import {
   dateToISO, isoToBR, maskCpf, maskDate, maskPhone, maskPlaca, onlyDigits, parseMoney,
 } from '../utils/format';
-import { PeriodoAusencia, SeveridadeEvento } from '../types/database';
+import { PeriodoAusencia, SeveridadeEvento, Turno } from '../types/database';
 
 const TURNOS = [
   { v: 'MANHA', l: 'Manhã' }, { v: 'TARDE', l: 'Tarde' }, { v: 'INTEGRAL', l: 'Integral' }, { v: 'NOITE', l: 'Noite' },
@@ -174,6 +174,47 @@ export const AddStudentSheet: React.FC<BaseProps> = ({ visible, onClose }) => {
           {error && <Notice tone="error" message={error} />}
         </>
       )}
+    </Sheet>
+  );
+};
+
+/* ------------------------------------------------------------ Editar dependente */
+export const EditStudentSheet: React.FC<BaseProps & { alunoId: string }> = ({ visible, onClose, alunoId }) => {
+  const { alunos, atualizarAluno } = useApp();
+  const { run, loading, error, setError } = useAction();
+  const a = alunos.find((x) => x.id === alunoId);
+  const [f, setF] = useState({ nome: '', nasc: '', turma: '', turno: 'MANHA' as Turno, escola: '', obs: '' });
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
+  useEffect(() => {
+    if (visible && a) { setF({ nome: a.nome, nasc: isoToBR(a.data_nascimento ?? ''), turma: a.turma ?? '', turno: a.turno, escola: a.escola_nome ?? '', obs: a.observacoes_medicas ?? '' }); setErros({}); setError(null); }
+  }, [visible]); // eslint-disable-line
+
+  const salvar = async () => {
+    const e: Record<string, string> = {};
+    if (f.nome.trim().length < 2) e.nome = 'Informe o nome do dependente.';
+    const iso = dateToISO(f.nasc);
+    if (!iso) e.nasc = 'Use o formato DD/MM/AAAA.';
+    if (!f.turma.trim()) e.turma = 'Informe a turma.';
+    if (f.escola.trim().length < 2) e.escola = 'Informe a escola do dependente.';
+    setErros(e);
+    if (Object.keys(e).length) return;
+    if (await run(() => atualizarAluno(alunoId, {
+      nome: f.nome.trim(), data_nascimento: iso!, turma: f.turma.trim(), turno: f.turno, escola_nome: f.escola.trim(), observacoes_medicas: f.obs.trim() || null,
+    }))) onClose();
+  };
+
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Editar dependente" subtitle="Para mudar os endereços, use Embarque e Destino na tela do dependente."
+      footer={<Button size="lg" label="Salvar" onPress={salvar} loading={loading} />}>
+      <TextField label="Nome completo" value={f.nome} onChangeText={set('nome')} error={erros.nome} autoCapitalize="words" />
+      <TextField label="Data de nascimento" value={f.nasc} onChangeText={(v) => set('nasc')(maskDate(v))} error={erros.nasc} keyboardType="number-pad" placeholder="DD/MM/AAAA" />
+      <TextField label="Turma" value={f.turma} onChangeText={set('turma')} error={erros.turma} placeholder="Ex.: 5º Ano B" />
+      <Label>Turno</Label>
+      <Row2>{TURNOS.map((t) => <Chip key={t.v} label={t.l} selected={f.turno === t.v} onPress={() => setF((p) => ({ ...p, turno: t.v }))} />)}</Row2>
+      <TextField label="Escola" value={f.escola} onChangeText={set('escola')} error={erros.escola} icon="school" autoCapitalize="words" />
+      <TextField label="Observações de saúde (opcional)" value={f.obs} onChangeText={set('obs')} multiline helper="Alergias ou cuidados. Só você e o motorista veem." />
+      {error && <Notice tone="error" message={error} />}
     </Sheet>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { gap, radius, spacing } from '../theme/tokens';
@@ -9,7 +10,7 @@ import {
 } from '../components/ui/kit';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
-import { AbsenceSheet, AuthorizedSheet, LinkTransporterSheet } from '../sheets/Sheets';
+import { AbsenceSheet, AuthorizedSheet, EditStudentSheet, LinkTransporterSheet } from '../sheets/Sheets';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { pixCopiaECola } from '../utils/pix';
@@ -20,10 +21,11 @@ const TURNO: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', INTEGRA
 
 /* --------------------------------------------------------- Aluno */
 export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
-  const { alunos, role, pessoasAutorizadas, removerPessoaAutorizada, contratos, desvincularAluno, isDemo } = useApp();
+  const { alunos, role, pessoasAutorizadas, removerPessoaAutorizada, contratos, desvincularAluno, removerAluno, isDemo } = useApp();
   const [absence, setAbsence] = useState(false);
   const [vincular, setVincular] = useState(false);
   const [addPessoa, setAddPessoa] = useState(false);
+  const [editar, setEditar] = useState(false);
   const a = alunos.find((x) => x.id === id);
   if (!a) {
     return <Screen title="Detalhes"><EmptyState icon="alert" title="Não encontrado" message="Ele pode ter sido removido." /></Screen>;
@@ -48,6 +50,16 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
       confirmLabel: pai ? 'Desvincular' : 'Remover', destructive: true,
     });
     if (ok) desvincularAluno(a.id).catch((e) => notify('Erro', mensagemErro(e)));
+  };
+
+  const excluir = async () => {
+    const ok = await confirm({
+      title: 'Remover dependente?',
+      message: `${a.nome.split(' ')[0]} sai da sua lista${a.transportador_id ? ', deixa a rota e o contrato e as mensalidades futuras são cancelados' : ''}. O histórico de pagamentos é mantido.`,
+      confirmLabel: 'Remover', destructive: true,
+    });
+    if (!ok) return;
+    try { await removerAluno(a.id); router.back(); } catch (e) { notify('Erro', mensagemErro(e)); }
   };
 
   return (
@@ -113,6 +125,17 @@ export const StudentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
         </>
       )}
 
+      {pai && (
+        <>
+          <SectionHeader title="Dependente" />
+          <ListSection>
+            <ListRow icon="edit" iconTone="gray" title="Editar dados" onPress={() => setEditar(true)} />
+            <ListRow role="destructive" icon="trash" title="Remover dependente" onPress={excluir} chevron={false} />
+          </ListSection>
+        </>
+      )}
+
+      <EditStudentSheet visible={editar} onClose={() => setEditar(false)} alunoId={a.id} />
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={a.id} />
       <AuthorizedSheet visible={addPessoa} onClose={() => setAddPessoa(false)} alunoId={a.id} />
       <LinkTransporterSheet visible={vincular} onClose={() => setVincular(false)} alunoId={a.id} />
