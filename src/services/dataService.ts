@@ -12,7 +12,7 @@ export type AlunoApp = MockDataState['alunos'][number];
 
 export interface RotaOtimizada {
   /** paradas na ordem de visita (ida: casas e depois a escola; volta: escola e depois as casas) */
-  ordem: { rotulo: string; tipo: 'RETIRADA' | 'ENTREGA'; latitude: number; longitude: number; alunos: string[] }[];
+  ordem: { rotulo: string; tipo: 'RETIRADA' | 'ENTREGA'; latitude: number; longitude: number; alunos: string[]; /** minutos até chegar nesta parada, contados do cálculo */ minutos: number }[];
   /** linha da rota pelas ruas */
   pontos: { latitude: number; longitude: number }[];
   km: number; minutos: number;
@@ -20,7 +20,12 @@ export interface RotaOtimizada {
   semCoordenada: string[];
   /** tempos estimados em linha reta porque o roteador não respondeu a matriz */
   aproximado?: boolean;
+  /** false = sem posição da van no cálculo: os minutos até a primeira parada não são confiáveis */
+  partidaConhecida: boolean;
 }
+
+/** Previsão de chegada da van para um aluno (cada responsável só recebe as dos próprios dependentes). */
+export interface PrevisaoChegada { aluno_id: string; evento: 'BUSCA' | 'ENTREGA'; minutos: number; calculado_em: string }
 
 export interface PerfilApp {
   id: string;
@@ -43,6 +48,7 @@ export interface DadosCarregados {
   mensagensChat: MockDataState['mensagensChat'];
   eventosCalendario: MockDataState['eventosCalendario'];
   nomes: { transportador?: string };
+  previsoes: PrevisaoChegada[];
   /** Para pais: dados de recebimento do transportador. Para o transportador: os próprios. */
   recebimento: { chavePix: string | null; valor: number | null; diaVencimento: number | null };
 }
@@ -61,7 +67,7 @@ export class DataService {
     inicioDia.setHours(0, 0, 0, 0);
     const hoje = new Date().toISOString().slice(0, 10);
 
-    const [perfilR, alunosR, pessoasR, veicR, viagemR, contR, mensR, notifR, msgR, calR, regR, ausR, pagR, endR] =
+    const [perfilR, alunosR, pessoasR, veicR, viagemR, contR, mensR, notifR, msgR, calR, regR, ausR, pagR, endR, prevR] =
       await Promise.all([
         db.from('perfis').select('id,nome,email,tipo_usuario').eq('id', userId).single(),
         db.from('alunos').select('*').eq('ativo', true).order('nome'),
@@ -79,6 +85,7 @@ export class DataService {
           .lte('data_inicio', hoje).gte('data_fim', hoje),
         db.from('pagamentos').select('*').order('data_pagamento', { ascending: false }),
         db.from('enderecos_responsavel').select('id,latitude,longitude'),
+        db.from('previsoes_chegada').select('aluno_id,evento,minutos,calculado_em'),
       ]);
 
     const p = check<any>(perfilR);
@@ -163,6 +170,7 @@ export class DataService {
         id: e.id, data: e.data, titulo: e.titulo, tipo: e.tipo, descricao: e.descricao ?? '',
       })),
       nomes,
+      previsoes: (check<any[]>(prevR) ?? []) as PrevisaoChegada[],
     };
   }
 
@@ -311,6 +319,15 @@ export class DataService {
     if (error) throw error;
   }
 
+  /** Última posição gravada da van nesta viagem (o responsável vê a van ao abrir o app, sem esperar a próxima transmissão). */
+  static async ultimaPosicao(viagemId: string): Promise<{ latitude: number; longitude: number; velocidade: number } | null> {
+    const { data, error } = await db.from('localizacoes_gps').select('posicao,velocidade')
+      .eq('viagem_id', viagemId).order('timestamp', { ascending: false }).limit(1);
+    if (error || !data?.length) return null;
+    const c = (data[0].posicao as { coordinates?: number[] } | null)?.coordinates; // PostgREST devolve geometry como GeoJSON
+    return c && c.length === 2 ? { latitude: c[1], longitude: c[0], velocidade: Math.round(Number(data[0].velocidade ?? 0)) } : null;
+  }
+
   /** Rota mais eficiente do motorista (Edge Function `rota-otimizada`). */
   static async rotaOtimizada(p: { tipo: 'IDA' | 'VOLTA'; aguardando: string[]; aBordo: string[]; van?: { latitude: number; longitude: number } | null }): Promise<RotaOtimizada> {
     const { data, error } = await db.functions.invoke('rota-otimizada', { body: p });
@@ -343,6 +360,7 @@ export class DataService {
       ['viagens', undefined],
       ['pagamentos', undefined],
       ['registros_embarque_desembarque', undefined],
+      ['previsoes_chegada', undefined],
     ];
     for (const [table, filter] of tabelas) {
       ch.on('postgres_changes', { event: '*', schema: 'public', table, ...(filter ? { filter } : {}) }, onChange);

@@ -693,6 +693,12 @@ export type Database = {
           },
         ]
       }
+      previsoes_chegada: {
+        Row: { aluno_id: string; calculado_em: string; evento: string; minutos: number; transportador_id: string }
+        Insert: { aluno_id: string; calculado_em?: string; evento: string; minutos: number; transportador_id: string }
+        Update: { aluno_id?: string; calculado_em?: string; evento?: string; minutos?: number; transportador_id?: string }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           atualizado_em: string
