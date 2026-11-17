@@ -381,19 +381,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Rota mais eficiente (motorista, dados reais): recalcula quando muda quem falta buscar/levar ou o sentido da viagem
   const assinaturaRota = alunos.map((a) => `${a.id}:${a.statusEmbarque}`).join('|');
+  const temVanGps = !!gpsReal && gpsReal.latitude !== 0; // o primeiro sinal de GPS refaz a rota, que antes saía sem ponto de partida
   useEffect(() => {
     if (isDemo || role !== 'TRANSPORTADOR') { setRotaReal(null); return; }
     const aguardando = alunos.filter((a) => a.statusEmbarque === 'AGUARDANDO').map((a) => a.id);
     const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').map((a) => a.id);
     if (!aguardando.length && !aBordo.length) { setRotaReal(null); return; }
-    const van = gpsRealRef.current && gpsRealRef.current.latitude !== 0 ? { latitude: gpsRealRef.current.latitude, longitude: gpsRealRef.current.longitude } : null;
+    const gps = gpsRealRef.current && gpsRealRef.current.latitude !== 0 ? { latitude: gpsRealRef.current.latitude, longitude: gpsRealRef.current.longitude } : null;
+    // shortcut: sem sinal de GPS e sem ninguém para buscar, parte de onde o primeiro aluno a bordo embarcou (a van passou por lá); trocar quando houver posição sempre disponível
+    const emb = alunos.find((a) => a.statusEmbarque === 'EMBARCADO');
+    const lat = viagemAtiva.tipo_viagem === 'IDA' ? emb?.latitude : emb?.entrega_latitude;
+    const lon = viagemAtiva.tipo_viagem === 'IDA' ? emb?.longitude : emb?.entrega_longitude;
+    const van = gps ?? (!aguardando.length && lat != null && lon != null ? { latitude: lat, longitude: lon } : null);
     let ativo = true;
     DataService.rotaOtimizada({ tipo: viagemAtiva.tipo_viagem, aguardando, aBordo, van })
       .then((r) => { if (ativo) setRotaReal(r); })
       .catch((e) => console.warn('Rota otimizada indisponível:', e));
     return () => { ativo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemo, role, assinaturaRota, viagemAtiva.tipo_viagem, rotaTick]);
+  }, [isDemo, role, assinaturaRota, temVanGps, viagemAtiva.tipo_viagem, rotaTick]);
   const recalcularRota = () => setRotaTick((t) => t + 1);
 
   const simularCenario = (c: Cenario | null) => {
