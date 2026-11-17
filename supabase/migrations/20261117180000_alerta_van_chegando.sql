@@ -26,7 +26,7 @@ BEGIN
     FROM public.alunos a
     JOIN public.enderecos_responsavel e ON e.id = a.endereco_busca_id AND e.latitude IS NOT NULL
     WHERE a.transportador_id = v.transportador_id AND a.ativo
-      AND ST_DWithin(ST_SetSRID(ST_MakePoint(e.longitude, e.latitude), 4326)::geography, NEW.posicao::geography, 400)
+      AND public.ST_DWithin(public.ST_SetSRID(public.ST_MakePoint(e.longitude, e.latitude), 4326)::public.geography, NEW.posicao::public.geography, 400)
       AND NOT EXISTS (SELECT 1 FROM public.alertas_proximidade p WHERE p.viagem_id = v.id AND p.aluno_id = a.id)
       AND NOT EXISTS (SELECT 1 FROM public.comunicados_ausencia c WHERE c.aluno_id = a.id
                       AND current_date BETWEEN c.data_inicio AND c.data_fim AND c.periodo::text IN (v.tipo_viagem::text, 'AMBOS'))
