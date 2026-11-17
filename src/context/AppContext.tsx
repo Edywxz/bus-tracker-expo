@@ -13,7 +13,7 @@ import { SecurityService } from '../services/security';
 import { supabase } from '../services/supabase';
 import { AuthService } from '../services/authService';
 import { PushService } from '../services/pushService';
-import { DataService, PerfilApp, AlunoApp } from '../services/dataService';
+import { DataService, PerfilApp, AlunoApp, RotaOtimizada } from '../services/dataService';
 import { Alert } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { mensagemErro } from '../utils/format';
@@ -85,6 +85,8 @@ interface AppContextType {
   estimativaRota: { km: number; minutos: number; progresso: number } | null;
   /** trajeto conhecido da van (só no demo); com dados reais não há polilinha inventada */
   rotaGeo: { latitude: number; longitude: number }[];
+  /** força um novo cálculo da rota mais eficiente (motorista, dados reais) */
+  recalcularRota: () => void;
   ajustarPino: (alunoId: string, tipo: 'busca' | 'entrega', latitude: number, longitude: number) => Promise<void>;
   geocodificarEndereco: (alunoId: string, tipo: 'busca' | 'entrega') => Promise<{ ok: boolean; mensagem?: string }>;
 
@@ -172,6 +174,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [gpsIndex, setGpsIndex] = useState(PARADAS_ROTA[1]);
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
+  const [rotaReal, setRotaReal] = useState<RotaOtimizada | null>(null);
+  const [rotaTick, setRotaTick] = useState(0);
+  const gpsRealRef = useRef(gpsReal);
+  gpsRealRef.current = gpsReal;
 
   const role: TipoUsuario = perfil?.tipo ?? demoRole;
   const userId = perfil?.id ?? '';
@@ -372,6 +378,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const vel = Math.max(ROTA_PONTOS[gpsIndex].velocidade, 15); // km/h, piso para trânsito parado
     return { km: restante, minutos: Math.max(1, Math.round((restante / vel) * 60)), progresso: total ? 1 - restante / total : 1 };
   }, [isDemo, gpsIndex]);
+
+  // Rota mais eficiente (motorista, dados reais): recalcula quando muda quem falta buscar/levar ou o sentido da viagem
+  const assinaturaRota = alunos.map((a) => `${a.id}:${a.statusEmbarque}`).join('|');
+  useEffect(() => {
+    if (isDemo || role !== 'TRANSPORTADOR') { setRotaReal(null); return; }
+    const aguardando = alunos.filter((a) => a.statusEmbarque === 'AGUARDANDO').map((a) => a.id);
+    const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').map((a) => a.id);
+    if (!aguardando.length && !aBordo.length) { setRotaReal(null); return; }
+    const van = gpsRealRef.current && gpsRealRef.current.latitude !== 0 ? { latitude: gpsRealRef.current.latitude, longitude: gpsRealRef.current.longitude } : null;
+    let ativo = true;
+    DataService.rotaOtimizada({ tipo: viagemAtiva.tipo_viagem, aguardando, aBordo, van })
+      .then((r) => { if (ativo) setRotaReal(r); })
+      .catch((e) => console.warn('Rota otimizada indisponível:', e));
+    return () => { ativo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemo, role, assinaturaRota, viagemAtiva.tipo_viagem, rotaTick]);
+  const recalcularRota = () => setRotaTick((t) => t + 1);
 
   const simularCenario = (c: Cenario | null) => {
     if (!isDemo) return;
@@ -675,7 +698,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
     eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? Math.min(4, Math.max(0, PARADAS_ROTA.filter((p) => p <= gpsIndex).length - 1)) : undefined, // posição no mapa esquemático (5 paradas)
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
-    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : [],
+    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota,
     ajustarPino, geocodificarEndereco,
     simularPassoGps, simularCenario, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
@@ -684,7 +707,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, rotaReal]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

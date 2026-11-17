@@ -10,6 +10,18 @@ const db = supabase;
 
 export type AlunoApp = MockDataState['alunos'][number];
 
+export interface RotaOtimizada {
+  /** paradas na ordem de visita (ida: casas e depois a escola; volta: escola e depois as casas) */
+  ordem: { rotulo: string; tipo: 'RETIRADA' | 'ENTREGA'; latitude: number; longitude: number; alunos: string[] }[];
+  /** linha da rota pelas ruas */
+  pontos: { latitude: number; longitude: number }[];
+  km: number; minutos: number;
+  /** alunos deixados de fora por falta de coordenadas */
+  semCoordenada: string[];
+  /** tempos estimados em linha reta porque o roteador não respondeu a matriz */
+  aproximado?: boolean;
+}
+
 export interface PerfilApp {
   id: string;
   nome: string;
@@ -294,6 +306,13 @@ export class DataService {
   static async removerCalendario(id: string) {
     const { error } = await db.from('calendario_escolar').delete().eq('id', id);
     if (error) throw error;
+  }
+
+  /** Rota mais eficiente do motorista (Edge Function `rota-otimizada`). */
+  static async rotaOtimizada(p: { tipo: 'IDA' | 'VOLTA'; aguardando: string[]; aBordo: string[]; van?: { latitude: number; longitude: number } | null }): Promise<RotaOtimizada> {
+    const { data, error } = await db.functions.invoke('rota-otimizada', { body: p });
+    if (error) throw error;
+    return data as RotaOtimizada;
   }
 
   static async renovarCodigoConvite(): Promise<string> {

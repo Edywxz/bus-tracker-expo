@@ -34,7 +34,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
  */
 export const ViagemScreen: React.FC = () => {
   const {
-    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo,
+    role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota,
     simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, simularCenario, horaSimulada,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
@@ -196,6 +196,7 @@ export const ViagemScreen: React.FC = () => {
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
     ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
     ...(isDemo ? [...(Object.keys(CENARIOS) as Cenario[]).map((c) => ({ label: `Simular: ${CENARIOS[c]}`, onPress: () => simularCenario(c) })), { label: 'Simular: hora real', onPress: () => simularCenario(null) }] : []),
+    ...(motorista && !isDemo ? [{ label: 'Recalcular rota', onPress: recalcularRota }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
   ];
