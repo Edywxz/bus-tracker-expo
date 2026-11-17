@@ -106,7 +106,7 @@ export const AccountScreen: React.FC = () => {
           <ListRow icon="logout" iconTone="gray" title={isDemo ? 'Sair do modo de exemplo' : 'Sair'} onPress={confirmarSair} chevron={false} />
           {!isDemo && <ListRow role="destructive" icon="trash" title="Excluir conta" onPress={confirmarExcluir} chevron={false} />}
         </ListSection>
-        <SectionFooter>VanEscolar GPS · versão 1.0</SectionFooter>
+        <SectionFooter>{'VanEscolar GPS · versão 1.0\nRotas por Geoapify · Dados © colaboradores do OpenStreetMap'}</SectionFooter>
       </FadeInUp>
 
       <EditProfileSheet visible={edit} onClose={() => setEdit(false)} />
