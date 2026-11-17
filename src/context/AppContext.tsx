@@ -6,6 +6,7 @@ import {
   MetodoPagamento, SeveridadeEvento, PeriodoAusencia, Pagamento,
 } from '../types/database';
 import { initialMockData, MockDataState } from '../services/mockData';
+import { DEMO_ROTA } from '../services/demoRota';
 import { BoardingService } from '../services/boardingService';
 import { LocationTrackerService } from '../services/locationTracker';
 import { SecurityService } from '../services/security';
@@ -127,13 +128,10 @@ export const CENARIOS: Record<Cenario, string> = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const ROTA_PONTOS: GPSCoordinate[] = [
-  { latitude: -23.55052, longitude: -46.633308, velocidade: 28, rua: 'Av. Paulista, próx. ao MASP' },
-  { latitude: -23.55312, longitude: -46.638411, velocidade: 35, rua: 'Rua Augusta, 980' },
-  { latitude: -23.55743, longitude: -46.64219, velocidade: 22, rua: 'Rua das Flores, 142' },
-  { latitude: -23.56105, longitude: -46.64732, velocidade: 40, rua: 'Av. Brasil, sentido Jardins' },
-  { latitude: -23.56581, longitude: -46.65214, velocidade: 15, rua: 'Av. Tiradentes, 850' },
-];
+// Rota do modo demonstração: a mais eficiente por todas as paradas, seguindo as ruas (gerada por scripts/gerar-rota-demo.js).
+const VELOCIDADE_DEMO = 30; // km/h médio urbano
+const ROTA_PONTOS: GPSCoordinate[] = DEMO_ROTA.pontos.map((p) => ({ latitude: p.latitude, longitude: p.longitude, velocidade: VELOCIDADE_DEMO, rua: p.rua }));
+const PARADAS_ROTA: number[] = DEMO_ROTA.paradas.map((p) => p.indice);
 const SEM_SINAL: GPSCoordinate = { latitude: 0, longitude: 0, velocidade: 0, rua: 'Aguardando sinal da van' };
 
 const VEICULO_VAZIO: Veiculo = {
@@ -171,7 +169,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [eventosCalendario, setEventos] = useState<MockDataState['eventosCalendario']>([]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
-  const [gpsIndex, setGpsIndex] = useState(2);
+  const [gpsIndex, setGpsIndex] = useState(PARADAS_ROTA[1]);
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
 
@@ -398,7 +396,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const simularPassoGps = () => {
     if (!isDemo) return;
-    setGpsIndex((i) => (i + 1) % ROTA_PONTOS.length);
+    // cada toque leva a van até a próxima parada da rota (e volta ao início depois da última)
+    setGpsIndex((i) => PARADAS_ROTA.find((p) => p > i) ?? 0);
   };
 
   const buscarTransportador = (codigo: string) => DataService.buscarTransportador(codigo);
@@ -674,7 +673,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     entrarDemo, entrar, cadastrar, recuperarSenha, reenviarConfirmacao, sair, excluirConta, recarregar,
     role, setRole, alunos, pessoasAutorizadas, veiculo, temVeiculo: !!veiculo.id,
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
-    eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? gpsIndex : undefined,
+    eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? Math.min(4, Math.max(0, PARADAS_ROTA.filter((p) => p <= gpsIndex).length - 1)) : undefined, // posição no mapa esquemático (5 paradas)
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : [],
     ajustarPino, geocodificarEndereco,

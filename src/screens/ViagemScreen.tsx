@@ -203,12 +203,22 @@ export const ViagemScreen: React.FC = () => {
   const filhoIdx = filho ? alunos.indexOf(filho) : undefined;
 
   // Mapa real: cada passageiro aparece onde importa agora (a bordo → onde desce; senão → onde embarca).
-  const paradasMapa: MapaParada[] = alunos.flatMap((a) => {
+  const escolas = new Map<string, MapaParada>(); // destinos da rota, um marcador por local (vários alunos vão à mesma escola)
+  for (const a of alunos) {
+    if (a.entrega_latitude == null || a.entrega_longitude == null) continue;
+    escolas.set(`${a.entrega_latitude},${a.entrega_longitude}`, {
+      id: `escola-${a.entrega_latitude},${a.entrega_longitude}`, nome: a.escola_nome ?? 'Escola',
+      latitude: a.entrega_latitude, longitude: a.entrega_longitude, status: 'AGUARDANDO', escola: true,
+    });
+  }
+  const paradasMapa: MapaParada[] = [...escolas.values(), ...alunos.flatMap((a) => {
     const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
     const p = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) ?? casa : casa;
     if (!p) return [];
-    return [{ id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque: aBordoMeus >= 2 && proximo?.aluno.id === a.id, casa: pai && a.id === filho?.id }];
-  });
+    const destaque = aBordoMeus >= 2 && proximo?.aluno.id === a.id;
+    if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) return []; // quem está a bordo já aparece no marcador da escola
+    return [{ id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }];
+  })];
   const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 
