@@ -278,9 +278,12 @@ export class DataService {
   }
 
   static async salvarVeiculo(transportadorId: string, v: Partial<Veiculo>) {
+    // Veículo ainda não cadastrado chega com id '': sem o campo o banco gera o UUID.
+    const { id, ...campos } = v;
     const { error } = await db.from('veiculos').upsert(
       // o banco valida os NOT NULL; o formulário já envia todos os campos ao cadastrar
-      { ...v, transportador_id: transportadorId } as Database['public']['Tables']['veiculos']['Insert'], { onConflict: 'placa' }
+      { ...campos, ...(id ? { id } : {}), transportador_id: transportadorId } as Database['public']['Tables']['veiculos']['Insert'],
+      { onConflict: 'placa' }
     );
     if (error) throw error;
   }
