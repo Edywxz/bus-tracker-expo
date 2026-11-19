@@ -69,10 +69,32 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.pull_request.number }}
       REPO: ${{ github.repository }}
+      SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      # Espera o Gemini revisar este commit. Com comentários, não mescla: o workflow gemini-fix corrige, o push dispara
+      # um novo CI e este job roda de novo. Sem revisão em 10 min (app fora do ar, PR de bot), mescla mesmo assim.
+      - name: Espera a revisão do Gemini
+        id: gemini
+        run: |
+          echo "merge=true" >> "$GITHUB_OUTPUT"
+          for i in $(seq 20); do
+            id=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq "[.[] | select(.user.login==\"gemini-code-assist[bot]\" and .commit_id==\"$SHA\")] | last | .id // empty")
+            if [ -n "$id" ]; then
+              n=$(gh api "repos/$REPO/pulls/$PR/reviews/$id/comments" --jq length)
+              if [ "$n" -gt 0 ]; then
+                echo "Gemini deixou $n comentário(s): não mescla, aguarda a correção."
+                echo "merge=false" >> "$GITHUB_OUTPUT"
+              fi
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::warning::Gemini não revisou em 10 min; mesclando sem a revisão."
       - name: Squash merge e apaga a branch
+        if: steps.gemini.outputs.merge == 'true'
         run: gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
       - name: Publica o site se o PR mexeu nele
+        if: steps.gemini.outputs.merge == 'true'
         run: |
           if gh pr view "$PR" --repo "$REPO" --json files --jq '.files[].path' | grep -qE '^(site/|\.github/workflows/site\.yml$)'; then
             gh workflow run site.yml --repo "$REPO" --ref main
