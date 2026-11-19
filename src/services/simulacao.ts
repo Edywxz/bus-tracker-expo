@@ -127,7 +127,7 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
     }
     else if (e.tipo === 'FIM' || e.tipo === 'ENCERRADA') fase = e.tipo === 'FIM' ? 'FIM' : 'ENCERRADA';
     else if (e.tipo === 'CHEGANDO' || e.tipo === 'EMBARQUE' || e.tipo === 'DESEMBARQUE') {
-      const nome = NOMES[e.alunoId];
+      const nome = NOMES[e.alunoId] ?? 'Aluno';
       if (e.tipo !== 'CHEGANDO') statusAluno[e.alunoId] = e.tipo === 'EMBARQUE' ? 'EMBARCADO' : 'DESEMBARCADO';
       notificacoes.push(e.tipo === 'CHEGANDO'
         ? { id: `sim-${e.tipo}-${e.alunoId}-${e.t}`, tipo: 'CHEGANDO', titulo: 'A van está chegando', alunoId: e.alunoId,

@@ -26,7 +26,10 @@ export const SimulacaoSheet: React.FC<{ visible: boolean; onClose: () => void }>
       <SegmentedControl value={sentido} onChange={setSentido} options={[{ value: 'IDA', label: 'Ida à escola' }, { value: 'VOLTA', label: 'Volta para casa' }]} />
       <Text style={st.label}>Alunos na viagem</Text>
       <View style={st.wrap}>
-        {IDS.map((id) => <Chip key={id} label={`${nomeDe(id)?.nome.split(' ')[0]} · ${nomeDe(id)?.escola_nome}`} selected={ids.includes(id)} onPress={() => alterna(id)} />)}
+        {IDS.map((id) => {
+          const aluno = nomeDe(id);
+          return <Chip key={id} label={`${aluno?.nome?.split(' ')[0] ?? 'Aluno'} · ${aluno?.escola_nome ?? 'Escola'}`} selected={ids.includes(id)} onPress={() => alterna(id)} />;
+        })}
       </View>
       <Text style={st.muted}>{ids.length ? `${ids.length} ${ids.length === 1 ? 'aluno' : 'alunos'} · ${escolas === 1 ? '1 escola' : `${escolas} escolas`}` : 'Escolha ao menos um aluno.'}</Text>
       <Text style={st.label}>Ocorrência no meio do caminho</Text>

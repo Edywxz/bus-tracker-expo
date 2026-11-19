@@ -476,15 +476,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ---------- Simulação de viagem (demo) -------------------------------------
   const teto = (x: { linha: Linha; retomado: boolean }) => (!x.retomado && x.linha.pausaManualEm !== null ? x.linha.pausaManualEm : Infinity);
 
+  const simAcabou = !!sim && sim.t >= sim.linha.duracaoMs;
   useEffect(() => { // relógio da simulação: avança 500 ms por tick e para na pausa manual (Alta) ou no fim
-    if (!sim) return;
+    if (!sim || simAcabou) return;
     const i = setInterval(() => setSim((s) => {
       if (!s) return s;
       const t = Math.min(s.t + 500, s.linha.duracaoMs, Math.max(s.t, teto(s)));
       return t === s.t ? s : { ...s, t };
     }), 500);
     return () => clearInterval(i);
-  }, [!!sim]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [!!sim, simAcabou]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { // copia o estado derivado da simulação para o estado do app
     if (!isDemo || !sim || !estadoSim) return;
