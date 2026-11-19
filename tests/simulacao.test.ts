@@ -46,7 +46,7 @@ test('estadoEm: fases e relógio antes e depois da saída', () => {
   const l = montarSimulacao(ida());
   const a = estadoEm(l, 0), b = estadoEm(l, 3000), c = estadoEm(l, 6000);
   assert.deepEqual([a.fase, a.hora, a.viagem], ['PREPARAR', [6, 30], 'AGENDADA']);
-  assert.deepEqual([b.fase, b.hora, b.viagem], ['ESPERANDO', [6, 45], 'AGENDADA']);
+  assert.deepEqual([b.fase, b.hora, b.viagem], ['ESPERANDO', [6, 55], 'AGENDADA']); // depois das 06:45, senão o lembrete ainda diz "hora de preparar"
   assert.deepEqual([c.fase, c.hora, c.viagem], ['EM_ROTA', [6, 50], 'EM_ANDAMENTO']);
 });
 
@@ -170,5 +170,15 @@ test('a ocorrência não altera nada que aconteceu antes dela', () => {
   for (const g of ['BAIXA', 'MEDIA', 'ALTA', 'EMERGENCIA'] as const) {
     const antes = (l: Linha) => l.eventos.filter((e) => e.t < T && e.tipo !== 'OCORRENCIA');
     assert.deepEqual(antes(comOcorr(g)), antes(normal));
+  }
+});
+
+test('ocorrência antes da saída só vale a partir da saída (não quebra a linha do tempo)', () => {
+  for (const g of ['BAIXA', 'MEDIA', 'ALTA', 'EMERGENCIA'] as const) {
+    for (const sentido of ['IDA', 'VOLTA'] as const) {
+      const l = montarSimulacao({ sentido, alunoIds: TODOS, ocorrencia: g, ocorrenciaEmMs: 0 });
+      assert.equal(l.ocorrenciaEm, 6000, `${g} ${sentido}`);
+      for (const t of [0, 3000, 6000, l.duracaoMs]) assert.doesNotThrow(() => estadoEm(l, t), `${g} ${sentido} t=${t}`);
+    }
   }
 });

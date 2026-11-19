@@ -47,7 +47,7 @@ export const ALUNOS_SIM: Record<string, { casa: string; escola: string }> = {
 };
 const NOMES: Record<string, string> = { 'aluno-1': 'Lucas', 'aluno-2': 'Beatriz', 'aluno-3': 'Gabriel', 'aluno-4': 'Sofia', 'aluno-5': 'Ana' };
 const HORA: Record<Sentido, [number, number][]> = {
-  IDA: [[6, 30], [6, 45], [6, 50]],
+  IDA: [[6, 30], [6, 55], [6, 50]], // esperando depois das 06:45, quando o lembrete deixa de dizer "hora de preparar"
   VOLTA: [[11, 50], [12, 5], [12, 10]],
 };
 
@@ -140,7 +140,7 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
 
   const seg = [...l.segmentos].reverse().find((s) => s.t0 <= t) ?? l.segmentos[0];
   const antesDaSaida = t < l.segmentos[0].t0;
-  const f = antesDaSaida ? 0 : Math.min(1, (t - seg.t0) / (seg.t1 - seg.t0));
+  const f = antesDaSaida || seg.t1 <= seg.t0 ? 0 : Math.min(1, (t - seg.t0) / (seg.t1 - seg.t0));
   const indice = antesDaSaida ? seg.de : Math.round(seg.de + (seg.para - seg.de) * f);
   const total = l.segmentos.reduce((s, x) => s + kmEntre(x.de, x.para), 0);
   const kmRestantes = antesDaSaida ? total
@@ -168,12 +168,14 @@ export function montarSimulacao(c: ConfigSim): Linha {
   const base = montarBase(c);
   if (!c.ocorrencia) return base;
   const g = c.ocorrencia;
-  const T = Math.min(c.ocorrenciaEmMs ?? Math.floor(base.duracaoMs / 2), base.duracaoMs);
+  // a ocorrência é na estrada: nunca antes da saída
+  const T = Math.min(Math.max(c.ocorrenciaEmMs ?? Math.floor(base.duracaoMs / 2), T_SAIDA), base.duracaoMs);
   const ocorr: EventoSim = { t: T, tipo: 'OCORRENCIA', gravidade: g };
   const antes = (e: EventoSim) => e.t < T || (e.t === T && e.tipo !== 'FIM');
 
   if (g === 'EMERGENCIA') {
-    const segmentos = cortar(base.segmentos, T).filter((s) => s.t1 <= T);
+    let segmentos = cortar(base.segmentos, T).filter((s) => s.t1 <= T);
+    if (!segmentos.length) segmentos = [{ t0: T, t1: T, de: base.segmentos[0].de, para: base.segmentos[0].de }]; // urgente na saída: van parada na origem
     const eventos = [...base.eventos.filter(antes), ocorr, { t: T, tipo: 'ENCERRADA' } as EventoSim];
     return { ...base, segmentos, eventos, duracaoMs: T, ocorrenciaEm: T, pausaManualEm: null };
   }

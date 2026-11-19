@@ -20,7 +20,7 @@ export const FaixaSimulacao: React.FC = () => {
   const { linha, t, estado } = simulacao;
   const acabou = estado.fase === 'FIM' || estado.fase === 'ENCERRADA';
   const espera = estado.fase === 'PREPARAR' || estado.fase === 'ESPERANDO';
-  const podeOcorrer = !acabou && (linha.ocorrenciaEm === null || t < linha.ocorrenciaEm);
+  const podeOcorrer = !acabou && !espera && (linha.ocorrenciaEm === null || t < linha.ocorrenciaEm);
   const status = estado.esperandoRetomar ? 'Pausada por ocorrência' : estado.fase === 'EM_ROTA' && estado.parada ? 'Em rota · parada' : FASE[estado.fase];
 
   return (
