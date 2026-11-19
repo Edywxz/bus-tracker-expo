@@ -18,7 +18,7 @@ A interface visual foi concebida seguindo rigorosamente as diretrizes da **Apple
 
 | Módulo / Tela | Descrição e Requisitos Atendidos |
 | :--- | :--- |
-| **Rastreamento** | Mapa interativo estilo Apple Maps com telemetria GPS em tempo real, velocímetro, cálculo de ETA, itinerário sequencial de paradas, botão de simulação de avanço e aviso de chegada (**RF003, RF020, RF011**). |
+| **Rastreamento** | Mapa interativo estilo Apple Maps com telemetria GPS em tempo real, velocímetro, cálculo de ETA, itinerário sequencial de paradas, simulação de viagem em tempo real na demonstração (ida ou volta, alunos escolhidos e ocorrência por gravidade, com atalhos para pular partes) e aviso de chegada (**RF003, RF020, RF011**). |
 | **Embarque** | Lista de alunos atendidos no roteiro, registro de entrada e saída na van em 1 toque, suporte completo a **operação offline** com fila local no AsyncStorage e sincronização em lote (**RF007, RF017, RNF005**). |
 | **Financeiro** | Resumo financeiro anual, histórico de mensalidades e liquidação via **PIX** (QR Code + Copia e Cola), **Cartão de Crédito** (prévia Apple Card) e **Boleto Bancário**, com emissão de **Recibo Digital Autenticado com Hash** e consulta de **Contrato de Transporte** (**RF005, RF006, RF012, RF016**). |
 | **Recados & Chat** | Alertas automáticos do sistema (aproximação da van, confirmação de embarque, avisos de trânsito) e canal de **Chat Direto operacional** no estilo iMessage entre pais, motorista e coordenação (**RF004, RF008**). |

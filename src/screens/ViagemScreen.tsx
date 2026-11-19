@@ -13,11 +13,13 @@ import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { PainelArrastavel } from '../components/PainelArrastavel';
+import { FaixaSimulacao } from '../components/FaixaSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
 import { lembrete } from '../utils/lembrete';
 import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
+import { SimulacaoSheet } from '../sheets/SimulacaoSheet';
 
 const TURNO: Record<string, string> = { MANHA: 'manhã', TARDE: 'tarde', INTEGRAL: 'integral', NOITE: 'noite' };
 
@@ -45,6 +47,7 @@ export const ViagemScreen: React.FC = () => {
   const [start, setStart] = useState(false);
   const [addStudent, setAddStudent] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [simular, setSimular] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const emRota = viagemAtiva.status === 'EM_ANDAMENTO';
@@ -213,6 +216,7 @@ export const ViagemScreen: React.FC = () => {
   /* ------------------------------------------------------------------ menu "…" */
   const acoes = [
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
+    ...(isDemo ? [{ label: 'Simular viagem', onPress: () => setSimular(true) }] : []),
     ...(motorista && !isDemo ? [{ label: 'Recalcular rota', onPress: recalcularRota }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
@@ -267,7 +271,7 @@ export const ViagemScreen: React.FC = () => {
         <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
+      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}><FaixaSimulacao />{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
       </PainelArrastavel>
 
@@ -275,6 +279,7 @@ export const ViagemScreen: React.FC = () => {
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
+      <SimulacaoSheet visible={simular} onClose={() => setSimular(false)} />
     </View>
   );
 };
