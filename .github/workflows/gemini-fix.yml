@@ -34,7 +34,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: gemini-code-assist
-          claude_args: --max-turns 30 --allowedTools "Bash(git:*),Bash(gh pr:*),Bash(npm:*),Bash(npx:*),Edit,Write,Read,Glob,Grep"
+          claude_args: --max-turns 30 --allowedTools "Bash(git:*),Bash(gh pr:*),Bash(gh api:*),Bash(npm:*),Bash(npx:*),Edit,Write,Read,Glob,Grep"
           prompt: |
             REPO: ${{ github.repository }}
             PR: #${{ github.event.pull_request.number }} (você já está na branch dele)
@@ -52,5 +52,8 @@ jobs:
             6. LIMITE: conte os commits do PR cujo assunto começa com "fix(revisão)". Se já forem 3 ou mais, NÃO altere
                nada: comente no PR que o limite foi atingido e que precisa de revisão humana.
             7. Se a revisão não trouxer nada acionável (só resumo/elogio), não faça nada e não peça nova revisão: o loop termina.
+
+            8. Sempre termine com UM comentário curto no PR (`gh pr comment`) dizendo o que corrigiu, o que recusou e por quê,
+               ou que não havia nada acionável. Assim o resultado fica visível mesmo sem commit.
 
             Use "fix(revisão): ..." como prefixo dos commits.
