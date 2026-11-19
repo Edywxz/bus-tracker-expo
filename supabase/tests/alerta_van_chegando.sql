@@ -2,23 +2,23 @@
 BEGIN;
 DO $$
 DECLARE t uuid := gen_random_uuid(); r1 uuid := gen_random_uuid(); r2 uuid := gen_random_uuid();
-        cod text; a1 uuid; a2 uuid; v uuid; ins uuid := '00000000-0000-0000-0000-000000000000';
+        cod text; e1 uuid; e2 uuid; a1 uuid; a2 uuid; v uuid; ins uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
   INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at) VALUES
     (t,  ins, 'authenticated', 'authenticated', 'ch-t@teste.local',  '{"nome":"T","tipo_usuario":"TRANSPORTADOR"}', now(), now()),
     (r1, ins, 'authenticated', 'authenticated', 'ch-r1@teste.local', '{"nome":"R1","tipo_usuario":"RESPONSAVEL"}', now(), now()),
     (r2, ins, 'authenticated', 'authenticated', 'ch-r2@teste.local', '{"nome":"R2","tipo_usuario":"RESPONSAVEL"}', now(), now());
   SELECT codigo_convite INTO cod FROM public.transportadores WHERE id = t;
+  -- casas: a1 em (-23.5000, -46.6000); a2 a ~5 km dali
+  INSERT INTO public.enderecos_responsavel (responsavel_id, endereco_texto, latitude, longitude) VALUES (r1, 'Rua A', -23.5000, -46.6000) RETURNING id INTO e1;
+  INSERT INTO public.enderecos_responsavel (responsavel_id, endereco_texto, latitude, longitude) VALUES (r2, 'Rua C', -23.5450, -46.6000) RETURNING id INTO e2;
   PERFORM set_config('role', 'authenticated', true);
   PERFORM set_config('request.jwt.claim.sub', r1::text, true);
-  a1 := public.cadastrar_aluno('Aluno1', '2015-01-01', '1', '5A', 'MANHA', 'Rua A', 'Rua B', '', cod);
+  a1 := public.cadastrar_aluno('Aluno1', '2015-01-01', '1', '5A', 'MANHA', 'Rua A', 'Rua B', '', cod, p_endereco_busca_id => e1);
   PERFORM set_config('request.jwt.claim.sub', r2::text, true);
-  a2 := public.cadastrar_aluno('Aluno2', '2015-01-01', '2', '5B', 'MANHA', 'Rua C', 'Rua D', '', cod);
+  a2 := public.cadastrar_aluno('Aluno2', '2015-01-01', '2', '5B', 'MANHA', 'Rua C', 'Rua D', '', cod, p_endereco_busca_id => e2);
   PERFORM set_config('role', 'postgres', true);
 
-  -- casas: a1 em (-23.5000, -46.6000); a2 a ~5 km dali
-  UPDATE public.enderecos_responsavel e SET latitude = -23.5000, longitude = -46.6000 FROM public.alunos a WHERE a.id = a1 AND e.id = a.endereco_busca_id;
-  UPDATE public.enderecos_responsavel e SET latitude = -23.5450, longitude = -46.6000 FROM public.alunos a WHERE a.id = a2 AND e.id = a.endereco_busca_id;
   INSERT INTO public.veiculos (transportador_id, placa, modelo, ano, capacidade_assentos, renavam, numero_alvara, validade_vistoria)
     VALUES (t, 'TST2B34', 'Van', 2020, 15, '1', '1', '2030-01-01');
   INSERT INTO public.viagens (transportador_id, veiculo_id, tipo_viagem, turno, status)
