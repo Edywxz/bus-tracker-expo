@@ -52,11 +52,13 @@ const HORA: Record<Sentido, [number, number][]> = {
 };
 
 const indiceDe = (lugar: string) => DEMO_ROTA.paradas.find((p) => p.id === lugar)!.indice;
-const kmEntre = (de: number, para: number) => {
-  let km = 0;
-  for (let i = Math.min(de, para); i < Math.max(de, para); i++) km += distanciaKm(DEMO_ROTA.pontos[i], DEMO_ROTA.pontos[i + 1]);
-  return km;
-};
+// km acumulados até cada ponto da rota; índices fracionários (trechos cortados pela ocorrência) interpolam entre pontos.
+const KM_ATE: number[] = DEMO_ROTA.pontos.reduce<number[]>((a, p, i) => [...a, i ? a[i - 1] + distanciaKm(DEMO_ROTA.pontos[i - 1], p) : 0], []);
+const kmAte = (x: number) => { const i = Math.min(Math.floor(x), KM_ATE.length - 2); return KM_ATE[i] + (x - i) * (KM_ATE[i + 1] - KM_ATE[i]); };
+const kmEntre = (de: number, para: number) => Math.abs(kmAte(para) - kmAte(de));
+const ROTULO: Record<Gravidade, string> = { BAIXA: 'Trânsito intenso', MEDIA: 'Desvio de via', ALTA: 'Pane mecânica', EMERGENCIA: 'Acidente na pista' };
+const BAIXA_JANELA_MS = 7500; // estrada normal coberta durante o trânsito; leva o dobro do tempo
+const MEDIA_PARADA_MS = 10000;
 
 interface Parada { lugar: string; casa: boolean }
 
@@ -70,7 +72,7 @@ function paradasDe(c: ConfigSim): Parada[] {
   return c.sentido === 'IDA' ? [...cs, ...es] : [...es.reverse(), ...cs.reverse()];
 }
 
-export function montarSimulacao(c: ConfigSim): Linha {
+function montarBase(c: ConfigSim): Linha {
   if (!c.alunoIds.length) throw new Error('Escolha ao menos um aluno.');
   const eventos: EventoSim[] = [
     { t: 0, tipo: 'FASE', fase: 'PREPARAR' }, { t: T_ESPERANDO, tipo: 'FASE', fase: 'ESPERANDO' }, { t: T_SAIDA, tipo: 'FASE', fase: 'SAIDA' },
@@ -113,10 +115,16 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
   const statusAluno: Record<string, StatusAlunoSim> = {};
   for (const id of Object.keys(ALUNOS_SIM)) statusAluno[id] = c.alunoIds.includes(id) ? 'AGUARDANDO' : 'AUSENTE';
   const notificacoes: NotifSim[] = [];
+  let ocorrencia: Gravidade | null = null;
   let fase: EstadoSim['fase'] = 'PREPARAR';
   let faseHora = 0;
   for (const e of feitos) {
     if (e.tipo === 'FASE') { faseHora = e.fase === 'PREPARAR' ? 0 : e.fase === 'ESPERANDO' ? 1 : 2; fase = e.fase === 'SAIDA' ? 'EM_ROTA' : e.fase; }
+    else if (e.tipo === 'OCORRENCIA') {
+      ocorrencia = e.gravidade;
+      notificacoes.push({ id: `sim-OCORRENCIA-${e.t}`, tipo: 'EMERGENCIA', titulo: `Alerta de rota: ${ROTULO[e.gravidade]}`,
+        mensagem: e.gravidade === 'EMERGENCIA' ? 'A viagem foi interrompida. Aguarde o contato do motorista.' : 'A van foi afetada e pode atrasar.' });
+    }
     else if (e.tipo === 'FIM' || e.tipo === 'ENCERRADA') fase = e.tipo === 'FIM' ? 'FIM' : 'ENCERRADA';
     else if (e.tipo === 'CHEGANDO' || e.tipo === 'EMBARQUE' || e.tipo === 'DESEMBARQUE') {
       const nome = NOMES[e.alunoId];
@@ -138,12 +146,54 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
   const kmRestantes = antesDaSaida ? total
     : l.segmentos.reduce((s, x) => s + (x.t0 > t ? kmEntre(x.de, x.para) : x === seg ? kmEntre(x.de, x.para) * (1 - f) : 0), 0);
 
+  const esperandoRetomar = l.pausaManualEm !== null && t === l.pausaManualEm; // o executor segura t aqui até o usuário retomar
   return {
     indice, fase, viagem: fase === 'FIM' || fase === 'ENCERRADA' ? 'CONCLUIDA' : fase === 'EM_ROTA' ? 'EM_ANDAMENTO' : 'AGENDADA',
     hora: HORA[c.sentido][faseHora], statusAluno, notificacoes,
-    parada: antesDaSaida || (seg.de === seg.para && t < seg.t1), kmRestantes, progresso: total ? 1 - kmRestantes / total : 1,
-    ocorrencia: null, esperandoRetomar: false,
+    parada: antesDaSaida || (seg.de === seg.para && t < seg.t1) || esperandoRetomar, kmRestantes, progresso: total ? 1 - kmRestantes / total : 1,
+    ocorrencia, esperandoRetomar,
   };
+}
+
+/** Parte o segmento que contém t (se t cai dentro dele) em dois, com índice fracionário no corte. */
+function cortar(segs: Segmento[], t: number): Segmento[] {
+  return segs.flatMap((s) => {
+    if (!(s.t0 < t && t < s.t1)) return [s];
+    const m = s.de + (s.para - s.de) * ((t - s.t0) / (s.t1 - s.t0));
+    return [{ ...s, t1: t, para: m }, { ...s, t0: t, de: m }];
+  });
+}
+
+export function montarSimulacao(c: ConfigSim): Linha {
+  const base = montarBase(c);
+  if (!c.ocorrencia) return base;
+  const g = c.ocorrencia;
+  const T = Math.min(c.ocorrenciaEmMs ?? Math.floor(base.duracaoMs / 2), base.duracaoMs);
+  const ocorr: EventoSim = { t: T, tipo: 'OCORRENCIA', gravidade: g };
+  const antes = (e: EventoSim) => e.t < T || (e.t === T && e.tipo !== 'FIM');
+
+  if (g === 'EMERGENCIA') {
+    const segmentos = cortar(base.segmentos, T).filter((s) => s.t1 <= T);
+    const eventos = [...base.eventos.filter(antes), ocorr, { t: T, tipo: 'ENCERRADA' } as EventoSim];
+    return { ...base, segmentos, eventos, duracaoMs: T, ocorrenciaEm: T, pausaManualEm: null };
+  }
+  if (g === 'ALTA') {
+    return { ...base, eventos: [...base.eventos, ocorr].sort((a, b) => a.t - b.t), ocorrenciaEm: T, pausaManualEm: T };
+  }
+  // BAIXA e MEDIA deformam o tempo depois de T
+  const fim = T + BAIXA_JANELA_MS;
+  const warp = (t: number) => g === 'MEDIA' ? (t <= T ? t : t + MEDIA_PARADA_MS)
+    : t <= T ? t : t <= fim ? T + (t - T) * 2 : t + BAIXA_JANELA_MS;
+  let segs = cortar(base.segmentos, T);
+  if (g === 'BAIXA') segs = cortar(segs, fim);
+  const k = segs.findIndex((s) => s.t0 >= T);
+  const parado = g === 'MEDIA'
+    ? [{ t0: T, t1: T + MEDIA_PARADA_MS, de: (segs[k] ?? segs[segs.length - 1]).de, para: (segs[k] ?? segs[segs.length - 1]).de }] : [];
+  const mapa = segs.map((s) => ({ ...s, t0: g === 'MEDIA' && s.t0 >= T ? s.t0 + MEDIA_PARADA_MS : warp(s.t0), t1: g === 'MEDIA' && s.t1 <= T ? s.t1 : warp(s.t1) }));
+  const segmentos = k < 0 ? [...mapa, ...(g === 'MEDIA' ? [{ ...parado[0], de: segs[segs.length - 1].para, para: segs[segs.length - 1].para }] : [])]
+    : [...mapa.slice(0, k), ...parado, ...mapa.slice(k)];
+  const eventos = [...base.eventos.map((e) => ({ ...e, t: warp(e.t) })), ocorr].sort((a, b) => a.t - b.t);
+  return { ...base, segmentos, eventos, duracaoMs: warp(base.duracaoMs), ocorrenciaEm: T, pausaManualEm: null };
 }
 
 /** Instante para onde um atalho leva a simulação. */

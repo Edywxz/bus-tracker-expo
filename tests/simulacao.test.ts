@@ -98,3 +98,77 @@ test('alvoDoPulo: saída, próxima parada e fim', () => {
 test('montarSimulacao lança sem alunos', () => {
   assert.throws(() => montarSimulacao(ida([])));
 });
+
+// ---- ocorrência por gravidade ----
+// 31000 ms cai no meio da perna sofia→gabriel (12,9 s de estrada), então anda de verdade antes e depois.
+const T = 31000;
+const normal = montarSimulacao(ida());
+const comOcorr = (g: 'BAIXA' | 'MEDIA' | 'ALTA' | 'EMERGENCIA', em: number | undefined = T) =>
+  montarSimulacao({ ...ida(), ocorrencia: g, ocorrenciaEmMs: em });
+
+test('sem ocorrência: ocorrenciaEm e pausaManualEm são null', () => {
+  assert.equal(normal.ocorrenciaEm, null);
+  assert.equal(normal.pausaManualEm, null);
+});
+
+test('ocorrência sem horário cai na metade da viagem', () => {
+  const l = montarSimulacao({ ...ida(), ocorrencia: 'MEDIA' });
+  assert.equal(l.ocorrenciaEm, Math.floor(normal.duracaoMs / 2));
+});
+
+test('BAIXA: janela de 7,5 s de estrada leva 15 s, à metade da velocidade', () => {
+  const l = comOcorr('BAIXA');
+  assert.equal(l.ocorrenciaEm, T);
+  assert.equal(l.duracaoMs, normal.duracaoMs + 7500);
+  assert.equal(estadoEm(l, T + 15000).indice, estadoEm(normal, T + 7500).indice);
+  assert.equal(estadoEm(l, T + 7500).indice, estadoEm(normal, T + 3750).indice);
+  assert.equal(l.pausaManualEm, null);
+});
+
+test('MEDIA: para 10 s e segue como se nada tivesse acontecido', () => {
+  const l = comOcorr('MEDIA');
+  assert.equal(l.duracaoMs, normal.duracaoMs + 10000);
+  assert.equal(estadoEm(l, T + 5000).parada, true);
+  assert.equal(estadoEm(l, T + 5000).indice, estadoEm(l, T).indice);
+  assert.equal(estadoEm(l, T + 11000).parada, false);
+  assert.equal(estadoEm(l, 50000).indice, estadoEm(normal, 40000).indice);
+});
+
+test('ALTA: espera o usuário retomar, sem mudar a duração', () => {
+  const l = comOcorr('ALTA');
+  assert.equal(l.pausaManualEm, T);
+  assert.equal(l.duracaoMs, normal.duracaoMs);
+  assert.equal(estadoEm(l, T).esperandoRetomar, true);
+  assert.equal(estadoEm(l, T - 1).esperandoRetomar, false);
+  assert.equal(estadoEm(l, T + 1).esperandoRetomar, false);
+});
+
+test('EMERGENCIA: a viagem encerra e quem estava a bordo continua a bordo', () => {
+  const l = comOcorr('EMERGENCIA', 50000);
+  assert.equal(l.duracaoMs, 50000);
+  assert.equal(l.eventos[l.eventos.length - 1].tipo, 'ENCERRADA');
+  assert.ok(l.eventos.every((e) => e.t <= 50000));
+  const fim = estadoEm(l, l.duracaoMs);
+  assert.deepEqual([fim.fase, fim.viagem], ['ENCERRADA', 'CONCLUIDA']);
+  assert.equal(fim.statusAluno['aluno-2'], 'EMBARCADO');
+  assert.ok(Object.values(fim.statusAluno).every((s) => s !== 'DESEMBARCADO'));
+});
+
+test('toda ocorrência avisa os responsáveis com o rótulo da gravidade', () => {
+  const rotulos = { BAIXA: 'Trânsito intenso', MEDIA: 'Desvio de via', ALTA: 'Pane mecânica', EMERGENCIA: 'Acidente na pista' } as const;
+  for (const g of Object.keys(rotulos) as (keyof typeof rotulos)[]) {
+    const l = comOcorr(g);
+    assert.equal(estadoEm(l, T - 1).notificacoes.some((n) => n.tipo === 'EMERGENCIA'), false);
+    const e = estadoEm(l, T);
+    const n = e.notificacoes.find((x) => x.tipo === 'EMERGENCIA');
+    assert.equal(n?.titulo, `Alerta de rota: ${rotulos[g]}`);
+    assert.equal(e.ocorrencia, g);
+  }
+});
+
+test('a ocorrência não altera nada que aconteceu antes dela', () => {
+  for (const g of ['BAIXA', 'MEDIA', 'ALTA', 'EMERGENCIA'] as const) {
+    const antes = (l: Linha) => l.eventos.filter((e) => e.t < T && e.tipo !== 'OCORRENCIA');
+    assert.deepEqual(antes(comOcorr(g)), antes(normal));
+  }
+});
