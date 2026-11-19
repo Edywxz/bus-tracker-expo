@@ -7,6 +7,7 @@ import {
 } from '../types/database';
 import { initialMockData, MockDataState } from '../services/mockData';
 import { DEMO_ROTA } from '../services/demoRota';
+import { alvoDoPulo, estadoEm, montarSimulacao, type ConfigSim, type EstadoSim, type Gravidade, type Linha } from '../services/simulacao';
 import { BoardingService } from '../services/boardingService';
 import { LocationTrackerService } from '../services/locationTracker';
 import { SecurityService } from '../services/security';
@@ -95,9 +96,14 @@ interface AppContextType {
   geocodificarEndereco: (alunoId: string, tipo: 'busca' | 'entrega') => Promise<{ ok: boolean; mensagem?: string }>;
 
   // Ações
-  simularPassoGps: () => void;
-  /** Demo: força um estado do app (hora, viagem, alunos, van) para testar as telas. null volta à hora real. */
-  simularCenario: (c: Cenario | null) => void;
+  /** Demo: viagem simulada em andamento (null = nenhuma). `t` em ms desde o início da simulação. */
+  simulacao: { linha: Linha; t: number; estado: EstadoSim } | null;
+  iniciarSimulacao: (c: ConfigSim) => void;
+  pararSimulacao: () => void;
+  /** Demo: continua depois de uma ocorrência de gravidade Alta. */
+  retomarSimulacao: () => void;
+  pularSimulacao: (alvo: 'SAIDA' | 'PARADA' | 'FIM') => void;
+  dispararOcorrencia: (g: Gravidade) => void;
   /** Hora de mentira definida pelo cenário (demo); null = usar a hora real. */
   horaSimulada: Date | null;
   buscarTransportador: (codigo: string) => Promise<{ id: string; nome: string } | null>;
@@ -127,12 +133,6 @@ interface AppContextType {
   atualizarPerfil: (d: { nome?: string; telefone?: string }) => Promise<void>;
   salvarConfigRecebimento: (d: { valor: number; dia: number; chavePix: string }) => Promise<void>;
 }
-
-export type Cenario = 'FORA_HORARIO' | 'PREPARAR' | 'ESPERANDO_MOTORISTA' | 'VAN_A_CAMINHO' | 'ALUNO_CHEGANDO' | 'A_BORDO' | 'VOLTA' | 'FINALIZADA';
-export const CENARIOS: Record<Cenario, string> = {
-  FORA_HORARIO: 'Fora do horário', PREPARAR: 'Hora de preparar', ESPERANDO_MOTORISTA: 'Esperando o motorista',
-  VAN_A_CAMINHO: 'Van a caminho', ALUNO_CHEGANDO: 'Van chegando', A_BORDO: 'Aluno a bordo', VOLTA: 'Voltando para casa', FINALIZADA: 'Corrida finalizada',
-};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -179,6 +179,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isOnline, setIsOnline] = useState(true);
   const [gpsIndex, setGpsIndex] = useState(PARADAS_ROTA[1]);
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
+  const [sim, setSim] = useState<{ linha: Linha; t: number; retomado: boolean } | null>(null);
+  const estadoSim = useMemo(() => (sim ? estadoEm(sim.linha, sim.t) : null), [sim]);
   const [gpsReal, setGpsReal] = useState<GPSCoordinate | null>(null);
   const [rotaReal, setRotaReal] = useState<(RotaOtimizada & { calculadoEm: number }) | null>(null);
   const [previsoesDb, setPrevisoesDb] = useState<PrevisaoChegada[]>([]);
@@ -198,7 +200,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const limpar = () => {
     setAlunos([]); setPessoas([]); setVeiculo(VEICULO_VAZIO); setViagemAtiva(VIAGEM_VAZIA);
     setContratos([]); setMensalidades([]); setPagamentos([]); setNotificacoes([]); setMensagensChat([]); setEventos([]);
-    setCodigoConvite(null); setNomes({}); setGpsReal(null); setPerfil(null); setPrevisoesDb([]); setRotaReal(null);
+    setSim(null); setHoraSimulada(null); setCodigoConvite(null); setNomes({}); setGpsReal(null); setPerfil(null); setPrevisoesDb([]); setRotaReal(null);
   };
 
   const carregarDemo = (r: TipoUsuario) => {
@@ -363,7 +365,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isDemo, atualizarContadorOffline]);
 
   // ---------- Sessão: ações ---------------------------------------------------
-  const entrarDemo = (r: TipoUsuario) => { animateNextLayout(); carregarDemo(r); };
+  const entrarDemo = (r: TipoUsuario) => { animateNextLayout(); setSim(null); setHoraSimulada(null); carregarDemo(r); };
   const entrar = async (email: string, senha: string) => { await AuthService.entrar(email, senha); };
   const cadastrar: AppContextType['cadastrar'] = (p) => AuthService.cadastrar(p);
   const recuperarSenha = (email: string) => AuthService.recuperarSenha(email);
@@ -393,6 +395,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const gpsAtivo = isDemo || !!gpsReal;
 
   const estimativaRota = useMemo(() => {
+    if (isDemo && estadoSim) {
+      return { km: estadoSim.kmRestantes, minutos: Math.max(1, Math.round((estadoSim.kmRestantes / 30) * 60)), progresso: estadoSim.progresso };
+    }
     if (!isDemo) {
       // Dados reais (motorista): minutos até a última parada, descontando o tempo desde o cálculo da rota
       if (role !== 'TRANSPORTADOR' || !rotaReal?.partidaConhecida || !rotaReal.ordem.length) return null;
@@ -416,7 +421,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     const vel = Math.max(ROTA_PONTOS[gpsIndex].velocidade, 15); // km/h, piso para trânsito parado
     return { km: restante, minutos: Math.max(1, Math.round((restante / vel) * 60)), progresso: total ? 1 - restante / total : 1 };
-  }, [isDemo, gpsIndex, role, rotaReal, relogio, alunos]);
+  }, [isDemo, estadoSim, gpsIndex, role, rotaReal, relogio, alunos]);
 
   // Rota mais eficiente (motorista, dados reais): recalcula quando muda quem falta buscar/levar ou o sentido da viagem
   const assinaturaRota = alunos.map((a) => `${a.id}:${a.statusEmbarque}`).join('|');
@@ -468,32 +473,64 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => clearInterval(i);
   }, [isDemo, role, viagemAtiva.status]);
 
-  const simularCenario = (c: Cenario | null) => {
-    if (!isDemo) return;
-    if (!c) { setHoraSimulada(null); return; }
-    const hora: Record<Cenario, [number, number]> = {
-      FORA_HORARIO: [22, 0], PREPARAR: [6, 30], ESPERANDO_MOTORISTA: [6, 55], VAN_A_CAMINHO: [6, 50], ALUNO_CHEGANDO: [6, 55], A_BORDO: [7, 10], VOLTA: [12, 30], FINALIZADA: [7, 40],
-    };
-    const d = new Date(); d.setHours(hora[c][0], hora[c][1], 0, 0);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); // aviso só vale em dia de aula
-    setHoraSimulada(d);
-    const andamento = ['VAN_A_CAMINHO', 'ALUNO_CHEGANDO', 'A_BORDO', 'VOLTA'].includes(c);
-    const status: ViagemTransporte['status'] = c === 'FINALIZADA' ? 'CONCLUIDA' : andamento ? 'EM_ANDAMENTO' : 'AGENDADA';
-    setViagemAtiva((v) => ({ ...v, id: v.id || 'viagem-simulada', tipo_viagem: c === 'VOLTA' ? 'VOLTA' : 'IDA', status }));
-    const st = c === 'A_BORDO' || c === 'VOLTA' ? 'EMBARCADO' : c === 'FINALIZADA' ? 'DESEMBARCADO' : 'AGUARDANDO';
-    setAlunos((prev) => prev.map((a) => (a.statusEmbarque === 'AUSENTE' ? a : { ...a, statusEmbarque: st })));
-    if (c === 'ALUNO_CHEGANDO') {
-      const a = alunos.find((x) => x.latitude != null && x.longitude != null);
-      setGpsIndex(a ? ROTA_PONTOS.reduce((m, p, i) => (
-        Math.hypot(p.latitude - a.latitude!, p.longitude - a.longitude!) < Math.hypot(ROTA_PONTOS[m].latitude - a.latitude!, ROTA_PONTOS[m].longitude - a.longitude!) ? i : m), 0) : ROTA_PONTOS.length - 1);
-    } else if (c === 'VAN_A_CAMINHO') setGpsIndex(0);
-  };
+  // ---------- Simulação de viagem (demo) -------------------------------------
+  const teto = (x: { linha: Linha; retomado: boolean }) => (!x.retomado && x.linha.pausaManualEm !== null ? x.linha.pausaManualEm : Infinity);
 
-  const simularPassoGps = () => {
+  const simAcabou = !!sim && sim.t >= sim.linha.duracaoMs;
+  useEffect(() => { // relógio da simulação: avança 500 ms por tick e para na pausa manual (Alta) ou no fim
+    if (!sim || simAcabou) return;
+    const i = setInterval(() => setSim((s) => {
+      if (!s) return s;
+      const t = Math.min(s.t + 500, s.linha.duracaoMs, Math.max(s.t, teto(s)));
+      return t === s.t ? s : { ...s, t };
+    }), 500);
+    return () => clearInterval(i);
+  }, [!!sim, simAcabou]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { // copia o estado derivado da simulação para o estado do app
+    if (!isDemo || !sim || !estadoSim) return;
+    const e = estadoSim;
+    setGpsIndex(e.indice);
+    setViagemAtiva((v) => (v.id && v.status === e.viagem && v.tipo_viagem === sim.linha.config.sentido ? v
+      : { ...v, id: v.id || 'viagem-simulada', tipo_viagem: sim.linha.config.sentido, status: e.viagem }));
+    setAlunos((prev) => (prev.some((a) => e.statusAluno[a.id] && e.statusAluno[a.id] !== a.statusEmbarque)
+      ? prev.map((a) => (e.statusAluno[a.id] ? { ...a, statusEmbarque: e.statusAluno[a.id] } : a)) : prev));
+    setNotificacoes((prev) => {
+      const ids = new Set(prev.map((n) => n.id));
+      const novas = e.notificacoes.filter((n) => !ids.has(n.id) && (!n.alunoId || alunos.some((a) => a.id === n.alunoId)));
+      return novas.length ? [...novas.reverse().map((n) => ({ id: n.id, tipo: n.tipo, titulo: n.titulo, mensagem: n.mensagem, dataHora: new Date().toISOString(), lida: false })), ...prev] : prev;
+    });
+  }, [estadoSim, role, isDemo, alunos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const horaKey = estadoSim ? estadoSim.hora.join(':') : null;
+  useEffect(() => { // hora de mentira da simulação (próximo dia de aula, para o aviso do dia valer)
+    if (!horaKey || !estadoSim) return;
+    const d = new Date(); d.setHours(estadoSim.hora[0], estadoSim.hora[1], 0, 0);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    setHoraSimulada(d);
+  }, [horaKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const iniciarSimulacao = (c: ConfigSim) => {
     if (!isDemo) return;
-    // cada toque leva a van até a próxima parada da rota (e volta ao início depois da última)
-    setGpsIndex((i) => PARADAS_ROTA.find((p) => p > i) ?? 0);
+    carregarDemo(role); // começa de um estado limpo
+    setSim({ linha: montarSimulacao(c), t: 0, retomado: false });
   };
+  const pararSimulacao = () => {
+    if (!isDemo) return;
+    setSim(null); setHoraSimulada(null); setGpsIndex(PARADAS_ROTA[1]); carregarDemo(role);
+  };
+  const retomarSimulacao = () => setSim((s) => (s ? { ...s, retomado: true } : s));
+  const pularSimulacao = (alvo: 'SAIDA' | 'PARADA' | 'FIM') => setSim((s) => {
+    if (!s) return s;
+    const t = Math.min(alvoDoPulo(s.linha, s.t, alvo), teto(s));
+    return t > s.t ? { ...s, t } : s;
+  });
+  const dispararOcorrencia = (g: Gravidade) => setSim((s) => {
+    if (!s || s.t >= s.linha.duracaoMs || (s.linha.ocorrenciaEm !== null && s.t >= s.linha.ocorrenciaEm)) return s;
+    return { ...s, retomado: false, linha: montarSimulacao({ ...s.linha.config, ocorrencia: g, ocorrenciaEmMs: s.t }) };
+  });
+  const simulacao = useMemo(() => (sim && estadoSim
+    ? { linha: sim.linha, t: sim.t, estado: { ...estadoSim, esperandoRetomar: estadoSim.esperandoRetomar && !sim.retomado } } : null), [sim, estadoSim]);
 
   const buscarTransportador = (codigo: string) => DataService.buscarTransportador(codigo);
 
@@ -781,14 +818,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota, previsoes, gpsNegado,
     ajustarPino, geocodificarEndereco,
-    simularPassoGps, simularCenario, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
+    simulacao, iniciarSimulacao, pararSimulacao, retomarSimulacao, pularSimulacao, dispararOcorrencia, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
     registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, renovarCodigoConvite, desvincularAluno, atualizarAluno, removerAluno, vincularAluno, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
     marcarNotificacoesComoLidas, atualizarPerfil, salvarConfigRecebimento,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, rotaReal, previsoes, gpsNegado]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, simulacao, rotaReal, previsoes, gpsNegado]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

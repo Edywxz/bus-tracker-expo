@@ -10,14 +10,16 @@ import {
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
-import { CENARIOS, useApp, type Cenario } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { PainelArrastavel } from '../components/PainelArrastavel';
+import { FaixaSimulacao } from '../components/FaixaSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
 import { lembrete } from '../utils/lembrete';
 import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
+import { SimulacaoSheet } from '../sheets/SimulacaoSheet';
 
 const TURNO: Record<string, string> = { MANHA: 'manhã', TARDE: 'tarde', INTEGRAL: 'integral', NOITE: 'noite' };
 
@@ -35,7 +37,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, simularCenario, horaSimulada,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -45,6 +47,7 @@ export const ViagemScreen: React.FC = () => {
   const [start, setStart] = useState(false);
   const [addStudent, setAddStudent] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [simular, setSimular] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const emRota = viagemAtiva.status === 'EM_ANDAMENTO';
@@ -213,8 +216,7 @@ export const ViagemScreen: React.FC = () => {
   /* ------------------------------------------------------------------ menu "…" */
   const acoes = [
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
-    ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
-    ...(isDemo ? [...(Object.keys(CENARIOS) as Cenario[]).map((c) => ({ label: `Simular: ${CENARIOS[c]}`, onPress: () => simularCenario(c) })), { label: 'Simular: hora real', onPress: () => simularCenario(null) }] : []),
+    ...(isDemo ? [{ label: 'Simular viagem', onPress: () => setSimular(true) }] : []),
     ...(motorista && !isDemo ? [{ label: 'Recalcular rota', onPress: recalcularRota }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
@@ -269,7 +271,7 @@ export const ViagemScreen: React.FC = () => {
         <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
+      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}><FaixaSimulacao />{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
       </PainelArrastavel>
 
@@ -277,6 +279,7 @@ export const ViagemScreen: React.FC = () => {
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
+      <SimulacaoSheet visible={simular} onClose={() => setSimular(false)} />
     </View>
   );
 };
