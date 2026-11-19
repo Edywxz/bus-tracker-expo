@@ -53,7 +53,8 @@ const HORA: Record<Sentido, [number, number][]> = {
 
 const indiceDe = (lugar: string) => DEMO_ROTA.paradas.find((p) => p.id === lugar)!.indice;
 // km acumulados até cada ponto da rota; índices fracionários (trechos cortados pela ocorrência) interpolam entre pontos.
-const KM_ATE: number[] = DEMO_ROTA.pontos.reduce<number[]>((a, p, i) => [...a, i ? a[i - 1] + distanciaKm(DEMO_ROTA.pontos[i - 1], p) : 0], []);
+const KM_ATE: number[] = [];
+DEMO_ROTA.pontos.forEach((p, i) => KM_ATE.push(i ? KM_ATE[i - 1] + distanciaKm(DEMO_ROTA.pontos[i - 1], p) : 0));
 const kmAte = (x: number) => { const i = Math.min(Math.floor(x), KM_ATE.length - 2); return KM_ATE[i] + (x - i) * (KM_ATE[i + 1] - KM_ATE[i]); };
 const kmEntre = (de: number, para: number) => Math.abs(kmAte(para) - kmAte(de));
 const ROTULO: Record<Gravidade, string> = { BAIXA: 'Trânsito intenso', MEDIA: 'Desvio de via', ALTA: 'Pane mecânica', EMERGENCIA: 'Acidente na pista' };

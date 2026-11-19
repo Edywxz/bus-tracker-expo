@@ -500,7 +500,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const novas = e.notificacoes.filter((n) => !ids.has(n.id) && (!n.alunoId || alunos.some((a) => a.id === n.alunoId)));
       return novas.length ? [...novas.reverse().map((n) => ({ id: n.id, tipo: n.tipo, titulo: n.titulo, mensagem: n.mensagem, dataHora: new Date().toISOString(), lida: false })), ...prev] : prev;
     });
-  }, [estadoSim, role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [estadoSim, role, isDemo, alunos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const horaKey = estadoSim ? estadoSim.hora.join(':') : null;
   useEffect(() => { // hora de mentira da simulação (próximo dia de aula, para o aviso do dia valer)
