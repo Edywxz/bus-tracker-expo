@@ -10,7 +10,7 @@ import {
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
-import { CENARIOS, useApp, type Cenario } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { PainelArrastavel } from '../components/PainelArrastavel';
 import { ListaAlunos } from '../components/ListaAlunos';
@@ -35,7 +35,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    simularPassoGps, finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, simularCenario, horaSimulada,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -213,8 +213,6 @@ export const ViagemScreen: React.FC = () => {
   /* ------------------------------------------------------------------ menu "…" */
   const acoes = [
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
-    ...(isDemo && emRota ? [{ label: 'Avançar van (simulação)', onPress: simularPassoGps }] : []),
-    ...(isDemo ? [...(Object.keys(CENARIOS) as Cenario[]).map((c) => ({ label: `Simular: ${CENARIOS[c]}`, onPress: () => simularCenario(c) })), { label: 'Simular: hora real', onPress: () => simularCenario(null) }] : []),
     ...(motorista && !isDemo ? [{ label: 'Recalcular rota', onPress: recalcularRota }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
