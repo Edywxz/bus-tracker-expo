@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { montarSimulacao, estadoEm, alvoDoPulo, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
+import { montarSimulacao, estadoEm, alvoDoPulo, visaoDoResponsavel, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
 
 const TODOS = ['aluno-1', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5'];
 const ida = (alunoIds = TODOS): ConfigSim => ({ sentido: 'IDA', alunoIds, ocorrencia: null });
@@ -181,4 +181,56 @@ test('ocorrência antes da saída só vale a partir da saída (não quebra a lin
       for (const t of [0, 3000, 6000, l.duracaoMs]) assert.doesNotThrow(() => estadoEm(l, t), `${g} ${sentido} t=${t}`);
     }
   }
+});
+
+// ---- visão do responsável: fim da corrida e paradas anteriores ----
+const desemb = (l: Linha, alunoId: string) => l.eventos.find((e) => e.tipo === 'DESEMBARQUE' && e.alunoId === alunoId)!.t;
+const fimDe = (l: Linha) => l.eventos.find((e) => e.tipo === 'FIM')!.t;
+
+test('volta: a corrida do responsável acaba quando o filho desembarca, antes do fim da rota', () => {
+  const l = montarSimulacao(volta(['aluno-1', 'aluno-2', 'aluno-3']));
+  const t = desemb(l, 'aluno-1');
+  assert.ok(t < fimDe(l), 'a van ainda tem paradas depois');
+  assert.equal(visaoDoResponsavel(l, t - 1, ['aluno-1']).concluida, false);
+  assert.equal(visaoDoResponsavel(l, t, ['aluno-1']).concluida, true);
+});
+
+test('com dois filhos, só conclui quando o último desembarca', () => {
+  const l = montarSimulacao(ida());
+  const meus = ['aluno-1', 'aluno-5'];
+  const t = Math.max(desemb(l, 'aluno-1'), desemb(l, 'aluno-5'));
+  assert.equal(visaoDoResponsavel(l, desemb(l, 'aluno-1'), meus).concluida, desemb(l, 'aluno-5') <= desemb(l, 'aluno-1'));
+  assert.equal(visaoDoResponsavel(l, t - 1, meus).concluida, false);
+  assert.equal(visaoDoResponsavel(l, t, meus).concluida, true);
+});
+
+test('sem filho na viagem, a corrida nunca conclui para o responsável', () => {
+  const l = montarSimulacao(ida(['aluno-2']));
+  assert.equal(visaoDoResponsavel(l, l.duracaoMs, ['aluno-1']).concluida, false);
+});
+
+test('ida: as paradas antes da casa do filho aparecem anônimas e o que vem depois da última própria some', () => {
+  const l = montarSimulacao(ida());
+  const v = visaoDoResponsavel(l, 0, ['aluno-1']);
+  assert.deepEqual(v.paradas.map((p) => p.propria), [false, false, false, true, false, true]); // beatriz sofia gabriel LUCAS ana SANTA MARIA
+  assert.equal(v.paradas.at(-1)!.rotulo.includes('Aurora'), false);
+  assert.ok(v.paradas.filter((p) => !p.propria).every((p) => p.rotulo === 'Parada de outro passageiro'));
+});
+
+test('paradas ficam feitas conforme a van chega', () => {
+  const l = montarSimulacao(ida());
+  const chegada = (lugar: string) => paradas(l).find((p) => p.lugar === lugar)!.t;
+  const v = visaoDoResponsavel(l, chegada('sofia'), ['aluno-1']);
+  assert.deepEqual(v.paradas.map((p) => p.feita), [true, true, false, false, false, false]);
+});
+
+test('a visão do responsável não vaza nome nem id de outro aluno', () => {
+  const l = montarSimulacao(ida());
+  const json = JSON.stringify(visaoDoResponsavel(l, l.duracaoMs, ['aluno-1']));
+  for (const x of ['Beatriz', 'Gabriel', 'Sofia', 'Ana', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5']) assert.equal(json.includes(x), false, x);
+});
+
+test('só filhos próprios: todas as paradas são do responsável', () => {
+  const l = montarSimulacao(ida(['aluno-1', 'aluno-5']));
+  assert.ok(visaoDoResponsavel(l, 0, ['aluno-1', 'aluno-5']).paradas.every((p) => p.propria));
 });

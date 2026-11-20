@@ -1,6 +1,6 @@
 // Simulação de viagem do modo demonstração. Puro (sem React Native): monta a linha do tempo da viagem a partir das
 // escolhas do usuário e diz, para qualquer instante t, em que estado o app deve estar. Pular = escolher outro t.
-import { DEMO_ROTA } from './demoRota.ts';
+import { DEMO_ROTA, DEMO_LUGARES } from './demoRota.ts';
 import { distanciaKm } from '../utils/proximidade.ts';
 
 // Tempos (ms ou s) da simulação; ajuste aqui.
@@ -204,4 +204,23 @@ export function alvoDoPulo(l: Linha, t: number, alvo: 'SAIDA' | 'PARADA' | 'FIM'
   if (alvo === 'SAIDA') return T_SAIDA;
   if (alvo === 'FIM') return l.duracaoMs;
   return l.eventos.find((e) => e.tipo === 'PARADA' && e.t > t)?.t ?? l.duracaoMs;
+}
+
+export interface ParadaVista { id: string; rotulo: string; propria: boolean; feita: boolean; latitude: number; longitude: number }
+
+/**
+ * O que o responsável pode ver da viagem: ela acaba quando os filhos dele desembarcam (a van segue para o motorista)
+ * e as paradas até a última dele aparecem, as de outros alunos sem nome.
+ */
+export function visaoDoResponsavel(l: Linha, t: number, meusIds: string[]): { concluida: boolean; paradas: ParadaVista[] } {
+  const meus = l.config.alunoIds.filter((a) => meusIds.includes(a));
+  const concluida = meus.length > 0 && meus.every((a) => l.eventos.some((e) => e.tipo === 'DESEMBARQUE' && e.alunoId === a && e.t <= t));
+  const todas = l.eventos.flatMap((e) => (e.tipo === 'PARADA' ? [e] : [])).map((e, i) => {
+    const casa = l.config.alunoIds.some((a) => ALUNOS_SIM[a].casa === e.lugar);
+    const propria = meus.some((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar);
+    const lugar = DEMO_LUGARES[e.lugar as keyof typeof DEMO_LUGARES];
+    return { id: `parada-${i}`, rotulo: propria ? lugar.rotulo : 'Parada de outro passageiro', propria, feita: e.t <= t, latitude: lugar.latitude, longitude: lugar.longitude };
+  });
+  const ultima = todas.map((p) => p.propria).lastIndexOf(true);
+  return { concluida, paradas: todas.slice(0, ultima + 1) };
 }

@@ -37,7 +37,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -87,6 +87,12 @@ export const ViagemScreen: React.FC = () => {
   })();
   const aviso = pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida, kmVan }) : null;
 
+  // Simulação (responsável): quantas paradas de outros passageiros faltam antes da próxima parada do filho.
+  const proxPropria = paradasSim ? paradasSim.findIndex((p) => p.propria && !p.feita) : -1;
+  const antes = paradasSim && proxPropria >= 0 ? paradasSim.slice(0, proxPropria).filter((p) => !p.feita).length : null;
+  const restantes = antes == null ? `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}`
+    : antes === 0 ? 'Próxima parada é a do seu filho' : `${antes} ${antes === 1 ? 'parada' : 'paradas'} antes da sua`;
+
   const concluir = async () => {
     setFinishing(true); setErro(null);
     try { await finalizarViagem(); } catch (e) { setErro((e as Error).message); } finally { setFinishing(false); }
@@ -120,7 +126,7 @@ export const ViagemScreen: React.FC = () => {
       return { valor: proximo.km.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: proximo.km < 10 ? 1 : 0 }), sufixo: 'km', legenda: `${quem} chega primeiro · ${onde}`, lado: '', ladoSub: '' };
     }
     if (est) {
-      return { valor: `${est.minutos}`, sufixo: 'min', legenda: destino, lado: horaPrevista(est.minutos), ladoSub: `${aguardando} ${aguardando === 1 ? 'parada restante' : 'paradas restantes'}` };
+      return { valor: `${est.minutos}`, sufixo: 'min', legenda: destino, lado: horaPrevista(est.minutos), ladoSub: restantes };
     }
     if (emRota) {
       // Dados reais: sem previsão confiável — mostramos onde a van está agora.
@@ -233,7 +239,9 @@ export const ViagemScreen: React.FC = () => {
       latitude: a.entrega_latitude, longitude: a.entrega_longitude, status: 'AGUARDANDO', escola: true,
     });
   }
-  const paradasMapa: MapaParada[] = [...escolas.values(), ...alunos.flatMap((a) => {
+  const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
+    .map((p) => ({ id: p.id, nome: p.rotulo, latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
+  const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(), ...alunos.flatMap((a) => {
     const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
     const p = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) ?? casa : casa;
     if (!p) return [];
@@ -273,6 +281,14 @@ export const ViagemScreen: React.FC = () => {
 
       <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}><FaixaSimulacao />{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
+        {paradasSim?.length ? (
+          <View style={{ paddingHorizontal: layout.gutter, paddingBottom: spacing.lg, gap: 4 }}>
+            <Text style={s.caption}>TRAJETO ATÉ O SEU FILHO</Text>
+            {paradasSim.map((p) => (
+              <Text key={p.id} style={p.propria ? s.title : s.sub}>{p.feita ? '✓ ' : '• '}{p.rotulo}</Text>
+            ))}
+          </View>
+        ) : null}
       </PainelArrastavel>
 
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={filho?.id} />

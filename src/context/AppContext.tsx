@@ -7,7 +7,7 @@ import {
 } from '../types/database';
 import { initialMockData, MockDataState } from '../services/mockData';
 import { DEMO_ROTA } from '../services/demoRota';
-import { alvoDoPulo, estadoEm, montarSimulacao, type ConfigSim, type EstadoSim, type Gravidade, type Linha } from '../services/simulacao';
+import { alvoDoPulo, estadoEm, montarSimulacao, type ConfigSim, type EstadoSim, type Gravidade, type Linha, type ParadaVista, visaoDoResponsavel } from '../services/simulacao';
 import { BoardingService } from '../services/boardingService';
 import { LocationTrackerService } from '../services/locationTracker';
 import { SecurityService } from '../services/security';
@@ -98,6 +98,8 @@ interface AppContextType {
   // Ações
   /** Demo: viagem simulada em andamento (null = nenhuma). `t` em ms desde o início da simulação. */
   simulacao: { linha: Linha; t: number; estado: EstadoSim } | null;
+  /** Responsável na demo: paradas da viagem até a última do seu dependente (as de outros alunos, sem nome). */
+  paradasSim: ParadaVista[] | null;
   iniciarSimulacao: (c: ConfigSim) => void;
   pararSimulacao: () => void;
   /** Demo: continua depois de uma ocorrência de gravidade Alta. */
@@ -491,8 +493,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isDemo || !sim || !estadoSim) return;
     const e = estadoSim;
     setGpsIndex(e.indice);
-    setViagemAtiva((v) => (v.id && v.status === e.viagem && v.tipo_viagem === sim.linha.config.sentido ? v
-      : { ...v, id: v.id || 'viagem-simulada', tipo_viagem: sim.linha.config.sentido, status: e.viagem }));
+    // para o responsável a corrida acaba quando os filhos dele desembarcam; o motorista segue até o fim da rota
+    const viagem = visaoDoResponsavel(sim.linha, sim.t, alunos.map((a) => a.id));
+    const status = role === 'RESPONSAVEL' && viagem.concluida ? 'CONCLUIDA' : e.viagem;
+    setViagemAtiva((v) => (v.id && v.status === status && v.tipo_viagem === sim.linha.config.sentido ? v
+      : { ...v, id: v.id || 'viagem-simulada', tipo_viagem: sim.linha.config.sentido, status }));
     setAlunos((prev) => (prev.some((a) => e.statusAluno[a.id] && e.statusAluno[a.id] !== a.statusEmbarque)
       ? prev.map((a) => (e.statusAluno[a.id] ? { ...a, statusEmbarque: e.statusAluno[a.id] } : a)) : prev));
     setNotificacoes((prev) => {
@@ -529,6 +534,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!s || s.t >= s.linha.duracaoMs || (s.linha.ocorrenciaEm !== null && s.t >= s.linha.ocorrenciaEm)) return s;
     return { ...s, retomado: false, linha: montarSimulacao({ ...s.linha.config, ocorrencia: g, ocorrenciaEmMs: s.t }) };
   });
+  const paradasSim = useMemo(
+    () => (sim && role === 'RESPONSAVEL' ? visaoDoResponsavel(sim.linha, sim.t, alunos.map((a) => a.id)).paradas : null), [sim, role, alunos]);
   const simulacao = useMemo(() => (sim && estadoSim
     ? { linha: sim.linha, t: sim.t, estado: { ...estadoSim, esperandoRetomar: estadoSim.esperandoRetomar && !sim.retomado } } : null), [sim, estadoSim]);
 
@@ -818,14 +825,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
     rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota, previsoes, gpsNegado,
     ajustarPino, geocodificarEndereco,
-    simulacao, iniciarSimulacao, pararSimulacao, retomarSimulacao, pularSimulacao, dispararOcorrencia, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
+    simulacao, paradasSim, iniciarSimulacao, pararSimulacao, retomarSimulacao, pularSimulacao, dispararOcorrencia, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,
     registrarEventoRota, adicionarPessoaAutorizada, removerPessoaAutorizada, renovarCodigoConvite, desvincularAluno, atualizarAluno, removerAluno, vincularAluno, adicionarEventoCalendario, removerEventoCalendario, atualizarVeiculo,
     marcarNotificacoesComoLidas, atualizarPerfil, salvarConfigRecebimento,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authStatus, isDemo, perfil, codigoConvite, nomes, recebimento, carregandoDados, role, alunos, pessoasAutorizadas,
     veiculo, viagemAtiva, contratos, mensalidades, pagamentos, notificacoes, mensagensChat, eventosCalendario,
-    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, simulacao, rotaReal, previsoes, gpsNegado]);
+    offlineQueueCount, isOnline, gpsIndex, gpsReal, estimativaRota, horaSimulada, simulacao, paradasSim, rotaReal, previsoes, gpsNegado]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
