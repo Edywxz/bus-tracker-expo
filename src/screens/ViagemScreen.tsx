@@ -279,7 +279,7 @@ export const ViagemScreen: React.FC = () => {
     escolas.set(chave, { ...e, nome, rotulo: nome, status: feito ? 'DESEMBARCADO' : 'AGUARDANDO' });
   }
   const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
-    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: 'Outra parada', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
+    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: '', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
   // Só há pinos de van, escola e residência: os alunos viajam com a van e, fora dela, estão na escola ou em casa.
   // Irmãos no mesmo endereço dividem a residência.
   const residencias = new Map<string, { pin: MapaParada; nomes: string[] }>();
