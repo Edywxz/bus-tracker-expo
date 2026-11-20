@@ -9,6 +9,7 @@ import {
   Button, IconButton, Notice, ProgressBar, PullDownButton, StatusPill,
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
+import { ChegadaSegura } from '../components/ChegadaSegura';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
@@ -104,6 +105,7 @@ export const ViagemScreen: React.FC = () => {
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
   const destaque = (() => {
+    if (concluida && (pai || motorista)) return null; // a confirmação de chegada ocupa o lugar da previsão
     if (motorista && !emRota) {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
@@ -144,6 +146,12 @@ export const ViagemScreen: React.FC = () => {
         <View style={{ flex: 1 }} />
         {emRota ? <Text style={s.meta}>ao vivo</Text> : null}
       </View>
+
+      {concluida && (pai || alunos.length > 0) ? (
+        <View style={{ marginTop: spacing.md }}>
+          <ChegadaSegura entregues={alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO')} tipo={viagemAtiva.tipo_viagem} hora={agora} motorista={motorista} />
+        </View>
+      ) : null}
 
       {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
 
@@ -249,7 +257,7 @@ export const ViagemScreen: React.FC = () => {
     if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) return []; // quem está a bordo já aparece no marcador da escola
     return [{ id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }];
   })];
-  const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
+  const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 
   return (
