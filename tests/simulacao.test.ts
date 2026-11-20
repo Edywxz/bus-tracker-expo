@@ -11,7 +11,7 @@ const paradas = (l: Linha) => l.eventos.filter((e): e is Parada => e.tipo === 'P
 const lugares = (l: Linha) => paradas(l).map((p) => p.lugar);
 
 test('ida com todos: paradas na ordem da rota', () => {
-  assert.deepEqual(lugares(montarSimulacao(ida())), ['beatriz', 'sofia', 'gabriel', 'lucas', 'ana', 'santaMaria', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida())), ['beatriz', 'sofia', 'gabriel', 'lucas', 'santaMaria', 'aurora']);
 });
 
 test('ida: primeira casa em ~10 s depois da saída', () => {
@@ -25,19 +25,19 @@ test('ida: perna curta dura no mínimo 6 s e a perna até a escola no mínimo 15
     const a = p.find((x) => x.lugar === de)!, b = p.find((x) => x.lugar === para)!;
     return b.t - a.t - 4000; // 4 s parado em cada parada
   };
-  assert.equal(perna('lucas', 'ana'), 6000); // 0,79 km daria 3,5 s
-  assert.equal(perna('ana', 'santaMaria'), 15000); // 0,73 km daria 3,3 s
+  assert.equal(perna('gabriel', 'lucas'), 6000); // 0,94 km daria 4,2 s
+  assert.equal(perna('lucas', 'santaMaria'), 15000); // perna até a primeira escola
 });
 
 test('subconjuntos: só as paradas dos alunos escolhidos e as escolas deles', () => {
-  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-1', 'aluno-5']))), ['lucas', 'ana', 'santaMaria', 'aurora']);
-  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-5']))), ['ana', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-1', 'aluno-5']))), ['lucas', 'santaMaria', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-5']))), ['lucas', 'aurora']);
   assert.deepEqual(lugares(montarSimulacao(ida(['aluno-2']))), ['beatriz', 'santaMaria']);
 });
 
 test('volta: começa na escola e percorre a rota ao contrário', () => {
   const l = montarSimulacao(volta());
-  assert.deepEqual(lugares(l), ['aurora', 'santaMaria', 'ana', 'lucas', 'gabriel', 'sofia', 'beatriz']);
+  assert.deepEqual(lugares(l), ['aurora', 'santaMaria', 'lucas', 'gabriel', 'sofia', 'beatriz']);
   assert.equal(paradas(l)[0].t, 6000);
   assert.ok(l.segmentos.filter((s) => s.de !== s.para).every((s) => s.de > s.para));
 });
@@ -212,7 +212,7 @@ test('sem filho na viagem, a corrida nunca conclui para o responsável', () => {
 test('ida: as paradas antes da casa do filho aparecem anônimas e o que vem depois da última própria some', () => {
   const l = montarSimulacao(ida());
   const v = visaoDoResponsavel(l, 0, ['aluno-1']);
-  assert.deepEqual(v.paradas.map((p) => p.propria), [false, false, false, true, false, true]); // beatriz sofia gabriel LUCAS ana SANTA MARIA
+  assert.deepEqual(v.paradas.map((p) => p.propria), [false, false, false, true, true]); // beatriz sofia gabriel LUCAS SANTA MARIA
   assert.equal(v.paradas.at(-1)!.rotulo.includes('Aurora'), false);
   assert.ok(v.paradas.filter((p) => !p.propria).every((p) => p.rotulo === 'Parada de outro passageiro'));
 });
@@ -221,7 +221,7 @@ test('paradas ficam feitas conforme a van chega', () => {
   const l = montarSimulacao(ida());
   const chegada = (lugar: string) => paradas(l).find((p) => p.lugar === lugar)!.t;
   const v = visaoDoResponsavel(l, chegada('sofia'), ['aluno-1']);
-  assert.deepEqual(v.paradas.map((p) => p.feita), [true, true, false, false, false, false]);
+  assert.deepEqual(v.paradas.map((p) => p.feita), [true, true, false, false, false]);
 });
 
 test('a visão do responsável não vaza nome nem id de outro aluno', () => {
@@ -233,4 +233,16 @@ test('a visão do responsável não vaza nome nem id de outro aluno', () => {
 test('só filhos próprios: todas as paradas são do responsável', () => {
   const l = montarSimulacao(ida(['aluno-1', 'aluno-5']));
   assert.ok(visaoDoResponsavel(l, 0, ['aluno-1', 'aluno-5']).paradas.every((p) => p.propria));
+});
+
+test('Lucas e Ana moram juntos: uma só parada em casa, com os dois embarcando', () => {
+  const l = montarSimulacao(ida(['aluno-1', 'aluno-5']));
+  assert.equal(lugares(l).filter((x) => x === 'lucas').length, 1);
+  const emb = l.eventos.filter((e) => e.tipo === 'EMBARQUE').map((e) => (e as { alunoId: string }).alunoId).sort();
+  assert.deepEqual(emb, ['aluno-1', 'aluno-5']);
+});
+
+test('as paradas do responsável dizem de quem são: "Casa de…" e "Escola de…"', () => {
+  const v = visaoDoResponsavel(montarSimulacao(ida(['aluno-1', 'aluno-5'])), 0, ['aluno-1', 'aluno-5']);
+  assert.deepEqual(v.paradas.map((p) => p.rotulo), ['Casa de Lucas e Ana', 'Escola de Lucas', 'Escola de Ana']);
 });

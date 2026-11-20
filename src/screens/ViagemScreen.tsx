@@ -251,23 +251,37 @@ export const ViagemScreen: React.FC = () => {
 
   // Mapa real: cada passageiro aparece onde importa agora (a bordo → onde desce; senão → onde embarca).
   const escolas = new Map<string, MapaParada>(); // destinos da rota, um marcador por local (vários alunos vão à mesma escola)
+  const filhosDaEscola = new Map<string, string[]>();
+  const primeiroNome = (n: string) => n.split(' ')[0];
+  const junta = (n: string[]) => (n.length > 1 ? `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}` : n[0]);
   for (const a of alunos) {
     if (a.entrega_latitude == null || a.entrega_longitude == null) continue;
-    escolas.set(`${a.entrega_latitude},${a.entrega_longitude}`, {
-      id: `escola-${a.entrega_latitude},${a.entrega_longitude}`, nome: a.escola_nome ?? 'Escola',
+    const chave = `${a.entrega_latitude},${a.entrega_longitude}`;
+    filhosDaEscola.set(chave, [...(filhosDaEscola.get(chave) ?? []), primeiroNome(a.nome)]);
+    escolas.set(chave, {
+      id: `escola-${chave}`, nome: a.escola_nome ?? 'Escola',
       latitude: a.entrega_latitude, longitude: a.entrega_longitude, status: 'AGUARDANDO', escola: true,
     });
   }
+  // Responsável: "Escola de Lucas" diz onde cada filho estuda (o motorista continua vendo o nome da escola).
+  if (pai) for (const [chave, e] of escolas) escolas.set(chave, { ...e, nome: `Escola de ${junta(filhosDaEscola.get(chave)!)}` });
   const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
     .map((p) => ({ id: p.id, nome: p.rotulo, latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
-  const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(), ...alunos.flatMap((a) => {
+  // Casas: irmãos no mesmo endereço (e no mesmo estado) viram um só marcador.
+  const casas = new Map<string, { pin: MapaParada; nomes: string[] }>();
+  for (const a of alunos) {
     const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
     const p = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) ?? casa : casa;
-    if (!p) return [];
+    if (!p) continue;
     const destaque = aBordoMeus >= 2 && proximo?.aluno.id === a.id;
-    if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) return []; // quem está a bordo já aparece no marcador da escola
-    return [{ id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }];
-  })];
+    if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) continue; // quem está a bordo já aparece no marcador da escola
+    const chave = `${p.latitude},${p.longitude},${a.statusEmbarque},${destaque}`;
+    const dele = casas.get(chave);
+    if (dele) { dele.nomes.push(primeiroNome(a.nome)); dele.pin.casa = dele.pin.casa || (pai && a.id === filho?.id); continue; }
+    casas.set(chave, { pin: { id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }, nomes: [primeiroNome(a.nome)] });
+  }
+  const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(),
+    ...[...casas.values()].map(({ pin, nomes }) => (nomes.length > 1 ? { ...pin, nome: junta(nomes) } : pin))];
   const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 

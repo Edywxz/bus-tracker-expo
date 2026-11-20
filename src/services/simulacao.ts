@@ -43,7 +43,7 @@ export const ALUNOS_SIM: Record<string, { casa: string; escola: string }> = {
   'aluno-2': { casa: 'beatriz', escola: 'santaMaria' },
   'aluno-3': { casa: 'gabriel', escola: 'santaMaria' },
   'aluno-4': { casa: 'sofia', escola: 'santaMaria' },
-  'aluno-5': { casa: 'ana', escola: 'aurora' },
+  'aluno-5': { casa: 'lucas', escola: 'aurora' }, // Ana mora com o Lucas: mesma casa, mesma parada
 };
 const NOMES: Record<string, string> = { 'aluno-1': 'Lucas', 'aluno-2': 'Beatriz', 'aluno-3': 'Gabriel', 'aluno-4': 'Sofia', 'aluno-5': 'Ana' };
 const HORA: Record<Sentido, [number, number][]> = {
@@ -65,7 +65,7 @@ interface Parada { lugar: string; casa: boolean }
 
 /** Paradas da viagem, na ordem em que a van passa. */
 function paradasDe(c: ConfigSim): Parada[] {
-  const casas = c.alunoIds.map((a) => ALUNOS_SIM[a].casa);
+  const casas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].casa))];
   const escolas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].escola))];
   const porIndice = (a: string, b: string) => indiceDe(a) - indiceDe(b);
   const cs = casas.sort(porIndice).map((lugar) => ({ lugar, casa: true }));
@@ -217,9 +217,11 @@ export function visaoDoResponsavel(l: Linha, t: number, meusIds: string[]): { co
   const concluida = meus.length > 0 && meus.every((a) => l.eventos.some((e) => e.tipo === 'DESEMBARQUE' && e.alunoId === a && e.t <= t));
   const todas = l.eventos.flatMap((e) => (e.tipo === 'PARADA' ? [e] : [])).map((e, i) => {
     const casa = l.config.alunoIds.some((a) => ALUNOS_SIM[a].casa === e.lugar);
-    const propria = meus.some((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar);
+    const meusAqui = meus.filter((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar).map((a) => NOMES[a]);
+    const propria = meusAqui.length > 0;
+    const quem = meusAqui.length > 1 ? `${meusAqui.slice(0, -1).join(', ')} e ${meusAqui[meusAqui.length - 1]}` : meusAqui[0];
     const lugar = DEMO_LUGARES[e.lugar as keyof typeof DEMO_LUGARES];
-    return { id: `parada-${i}`, rotulo: propria ? lugar.rotulo : 'Parada de outro passageiro', propria, feita: e.t <= t, latitude: lugar.latitude, longitude: lugar.longitude };
+    return { id: `parada-${i}`, rotulo: propria ? `${casa ? 'Casa' : 'Escola'} de ${quem}` : 'Parada de outro passageiro', propria, feita: e.t <= t, latitude: lugar.latitude, longitude: lugar.longitude };
   });
   const ultima = todas.map((p) => p.propria).lastIndexOf(true);
   return { concluida, paradas: todas.slice(0, ultima + 1) };

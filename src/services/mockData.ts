@@ -145,9 +145,9 @@ export const initialMockData: MockDataState = {
       documento: '63.118.442-1',
       turma: '2º Ano A',
       turno: 'MANHA',
-      endereco_busca: 'Av. Paulista, 1578',
+      endereco_busca: 'Rua Haddock Lobo, 595 - Apto 31', // mora com o irmão Lucas
       endereco_entrega: 'Escola Municipal Aurora (Portão 1)',
-      latitude: L.ana.latitude, longitude: L.ana.longitude, entrega_latitude: L.aurora.latitude, entrega_longitude: L.aurora.longitude, parada: parada('ana'),
+      latitude: L.lucas.latitude, longitude: L.lucas.longitude, entrega_latitude: L.aurora.latitude, entrega_longitude: L.aurora.longitude, parada: parada('lucas'),
       ativo: true,
       criado_em: '2026-02-12T09:00:00Z',
       statusEmbarque: 'AGUARDANDO',
