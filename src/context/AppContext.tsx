@@ -393,7 +393,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const canalTransportador = () =>
     role === 'TRANSPORTADOR' ? userId : alunos.find((a) => a.transportador_id)?.transportador_id ?? '';
 
-  const gpsPosicao: GPSCoordinate = isDemo ? ROTA_PONTOS[gpsIndex] : gpsReal ?? SEM_SINAL;
+  // Demo: com simulação a van segue o percurso montado para ela (só as paradas escolhidas); sem ela, a rota guardada.
+  const pontosDemo = useMemo<GPSCoordinate[]>(
+    () => (sim ? sim.linha.pontos.map((p) => ({ latitude: p.latitude, longitude: p.longitude, velocidade: VELOCIDADE_DEMO, rua: p.rua })) : ROTA_PONTOS),
+    [sim?.linha]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pontoDemo = pontosDemo[Math.min(gpsIndex, pontosDemo.length - 1)];
+  const gpsPosicao: GPSCoordinate = isDemo ? pontoDemo : gpsReal ?? SEM_SINAL;
   const gpsAtivo = isDemo || !!gpsReal;
 
   const estimativaRota = useMemo(() => {
@@ -554,7 +559,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       throw new Error('Inicie uma rota antes de registrar embarques.');
     }
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const pos = isDemo ? ROTA_PONTOS[gpsIndex] : gpsReal;
+    const pos = isDemo ? pontoDemo : gpsReal;
     await BoardingService.registrar({
       viagemId: viagemAtiva.id, alunoId, tipo, latitude: pos?.latitude, longitude: pos?.longitude,
     });
@@ -821,9 +826,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     entrarDemo, entrar, cadastrar, recuperarSenha, reenviarConfirmacao, sair, excluirConta, recarregar,
     role, setRole, alunos, pessoasAutorizadas, veiculo, temVeiculo: !!veiculo.id,
     viagemAtiva, temViagem: !!viagemAtiva.id, contratos, mensalidades, pagamentos, notificacoes, mensagensChat,
-    eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? Math.min(4, Math.max(0, PARADAS_ROTA.filter((p) => p <= gpsIndex).length - 1)) : undefined, // posição no mapa esquemático (5 paradas)
-    gpsTotalPassos: isDemo ? ROTA_PONTOS.length : undefined, estimativaRota,
-    rotaGeo: isDemo ? ROTA_PONTOS.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota, previsoes, gpsNegado,
+    eventosCalendario, offlineQueueCount, isOnline, gpsPosicao, gpsAtivo, gpsStep: isDemo ? (estadoSim ? Math.min(4, Math.floor(estadoSim.progresso * 5)) : Math.min(4, Math.max(0, PARADAS_ROTA.filter((p) => p <= gpsIndex).length - 1))) : undefined, // posição no mapa esquemático (5 paradas)
+    gpsTotalPassos: isDemo ? pontosDemo.length : undefined, estimativaRota,
+    rotaGeo: isDemo ? pontosDemo.map((p) => ({ latitude: p.latitude, longitude: p.longitude })) : rotaReal?.pontos ?? [], recalcularRota, previsoes, gpsNegado,
     ajustarPino, geocodificarEndereco,
     simulacao, paradasSim, iniciarSimulacao, pararSimulacao, retomarSimulacao, pularSimulacao, dispararOcorrencia, horaSimulada, buscarTransportador, cadastrarAluno, registrarEmbarque, comunicarAusencia,
     pagarMensalidade, confirmarRecebimento, enviarMensagem, sincronizarFilaOffline, iniciarViagem, finalizarViagem,

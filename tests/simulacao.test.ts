@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { DEMO_PERNAS } from '../src/services/demoPernas.ts';
 import { montarSimulacao, estadoEm, alvoDoPulo, visaoDoResponsavel, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
 
 const TODOS = ['aluno-1', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5'];
@@ -35,11 +36,11 @@ test('subconjuntos: só as paradas dos alunos escolhidos e as escolas deles', ()
   assert.deepEqual(lugares(montarSimulacao(ida(['aluno-2']))), ['beatriz', 'santaMaria']);
 });
 
-test('volta: começa na escola e percorre a rota ao contrário', () => {
+test('volta: começa nas escolas e depois deixa cada aluno em casa', () => {
   const l = montarSimulacao(volta());
-  assert.deepEqual(lugares(l), ['aurora', 'santaMaria', 'lucas', 'gabriel', 'sofia', 'beatriz']);
+  assert.deepEqual(lugares(l).slice(0, 2).sort(), ['aurora', 'santaMaria']);
+  assert.deepEqual(lugares(l).slice(2).sort(), ['beatriz', 'gabriel', 'lucas', 'sofia']);
   assert.equal(paradas(l)[0].t, 6000);
-  assert.ok(l.segmentos.filter((s) => s.de !== s.para).every((s) => s.de > s.para));
 });
 
 test('estadoEm: fases e relógio antes e depois da saída', () => {
@@ -79,7 +80,7 @@ test('estadoEm: mesmo instante dá o mesmo estado e a van só anda no sentido da
     let anterior = estadoEm(l, 0).indice;
     for (let t = 0; t <= l.duracaoMs; t += 500) {
       const i = estadoEm(l, t).indice;
-      assert.ok(cfg.sentido === 'IDA' ? i >= anterior : i <= anterior, `${cfg.sentido} voltou de ${anterior} para ${i} em ${t}`);
+      assert.ok(i >= anterior, `${cfg.sentido} voltou de ${anterior} para ${i} em ${t}`);
       anterior = i;
     }
   }
@@ -245,4 +246,34 @@ test('Lucas e Ana moram juntos: uma só parada em casa, com os dois embarcando',
 test('as paradas do responsável dizem de quem são: "Casa de…" e "Escola de…"', () => {
   const v = visaoDoResponsavel(montarSimulacao(ida(['aluno-1', 'aluno-5'])), 0, ['aluno-1', 'aluno-5']);
   assert.deepEqual(v.paradas.map((p) => p.rotulo), ['Casa de Lucas e Ana', 'Escola de Lucas', 'Escola de Ana']);
+});
+
+// ---- trajeto dinâmico: só as paradas escolhidas, na ordem mais rápida pelas ruas ----
+const custo = (ordem: string[], comGaragem: boolean) => ordem.reduce((s, id, i) => s + (i ? DEMO_PERNAS[`${ordem[i - 1]}>${id}`].s : comGaragem ? DEMO_PERNAS[`garagem>${id}`].s : 0), 0);
+const perms = <T,>(a: T[]): T[][] => (a.length <= 1 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p])));
+
+test('a ordem das paradas é a mais rápida pelas ruas (ida e volta, vários subconjuntos)', () => {
+  const casa: Record<string, string> = { 'aluno-1': 'lucas', 'aluno-2': 'beatriz', 'aluno-3': 'gabriel', 'aluno-4': 'sofia', 'aluno-5': 'lucas' };
+  const escola: Record<string, string> = { 'aluno-1': 'santaMaria', 'aluno-2': 'santaMaria', 'aluno-3': 'santaMaria', 'aluno-4': 'santaMaria', 'aluno-5': 'aurora' };
+  for (const ids of [TODOS, ['aluno-2', 'aluno-4'], ['aluno-3'], ['aluno-1', 'aluno-5', 'aluno-4']]) {
+    const casas = [...new Set(ids.map((a) => casa[a]))], escolas = [...new Set(ids.map((a) => escola[a]))];
+    const melhorIda = Math.min(...perms(casas).flatMap((c) => perms(escolas).map((e) => custo([...c, ...e], true))));
+    assert.equal(custo(lugares(montarSimulacao(ida(ids))), true), melhorIda, `ida ${ids}`);
+    const melhorVolta = Math.min(...perms(escolas).flatMap((e) => perms(casas).map((c) => custo([...e, ...c], false))));
+    assert.equal(custo(lugares(montarSimulacao(volta(ids))), false), melhorVolta, `volta ${ids}`);
+  }
+});
+
+test('o percurso é só o necessário: com menos alunos a rota é mais curta', () => {
+  const total = (l: Linha) => l.km[l.km.length - 1];
+  assert.ok(total(montarSimulacao(ida(['aluno-3']))) < total(montarSimulacao(ida())));
+  assert.ok(total(montarSimulacao(volta(['aluno-2']))) < total(montarSimulacao(volta())));
+});
+
+test('a van termina exatamente na última parada do percurso', () => {
+  for (const c of [ida(), ida(['aluno-3']), volta(['aluno-2', 'aluno-4'])]) {
+    const l = montarSimulacao(c);
+    assert.equal(estadoEm(l, l.duracaoMs).indice, l.pontos.length - 1);
+    assert.equal(estadoEm(l, 0).indice, 0);
+  }
 });
