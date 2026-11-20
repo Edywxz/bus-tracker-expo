@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import {
 } from '../components/ui/kit';
 import { RouteMap } from '../components/RouteMap';
 import { ChegadaSegura } from '../components/ChegadaSegura';
+import { ChegadaTelaCheia } from '../components/ChegadaTelaCheia';
 import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
@@ -54,7 +55,15 @@ export const ViagemScreen: React.FC = () => {
   const emRota = viagemAtiva.status === 'EM_ANDAMENTO';
   const concluida = temViagem && viagemAtiva.status === 'CONCLUIDA';
   const motorista = role === 'TRANSPORTADOR';
+  // Tela cheia de chegada só quando a corrida termina com a tela aberta (não ao abrir uma corrida já concluída).
+  const [chegada, setChegada] = useState(false);
+  const eraConcluida = useRef(concluida);
+  useEffect(() => {
+    if (concluida && !eraConcluida.current) setChegada(true);
+    eraConcluida.current = concluida;
+  }, [concluida]);
   const pai = role === 'RESPONSAVEL';
+  const entregues = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO');
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;
   const naEscola = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO').length;
   const ativos = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').length;
@@ -149,7 +158,7 @@ export const ViagemScreen: React.FC = () => {
 
       {concluida && (pai || alunos.length > 0) ? (
         <View style={{ marginTop: spacing.md }}>
-          <ChegadaSegura entregues={alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO')} tipo={viagemAtiva.tipo_viagem} hora={agora} motorista={motorista} />
+          <ChegadaSegura entregues={entregues} tipo={viagemAtiva.tipo_viagem} hora={agora} motorista={motorista} />
         </View>
       ) : null}
 
@@ -304,6 +313,12 @@ export const ViagemScreen: React.FC = () => {
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
       <SimulacaoSheet visible={simular} onClose={() => setSimular(false)} />
+      {chegada ? (
+        <ChegadaTelaCheia
+          titulo={motorista ? 'Rota concluída' : entregues.length === 1 ? `${entregues[0].nome.split(' ')[0]} chegou em segurança` : 'Seus filhos chegaram em segurança'}
+          sub={motorista ? `${entregues.length} ${entregues.length === 1 ? 'aluno entregue' : 'alunos entregues'} em segurança` : viagemAtiva.tipo_viagem === 'VOLTA' ? 'Entregue em casa' : 'Desembarque confirmado na escola'}
+          onFim={() => setChegada(false)} />
+      ) : null}
     </View>
   );
 };

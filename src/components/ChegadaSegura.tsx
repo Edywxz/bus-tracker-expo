@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { colors } from '../theme/colors';
 import { motion, radius, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
@@ -27,10 +26,6 @@ export const ChegadaSegura: React.FC<Props> = ({ entregues, tipo, hora, motorist
   const sub = motorista
     ? `${n} ${n === 1 ? 'aluno entregue' : 'alunos entregues'} em segurança · ${quando}`
     : tipo === 'VOLTA' ? `Entregue em casa às ${quando}.` : `Desembarque confirmado na escola às ${quando}.`;
-
-  useEffect(() => {
-    if (process.env.EXPO_OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  }, []);
 
   // Um disparo só (estado raro): o cartão aparece e o selo "pousa" logo depois. Com "reduzir movimento", só opacidade.
   const [reduzir, setReduzir] = useState(false);
