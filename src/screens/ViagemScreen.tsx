@@ -322,14 +322,6 @@ export const ViagemScreen: React.FC = () => {
 
       <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
-        {paradasSim?.length && !concluida ? (
-          <View style={{ paddingHorizontal: layout.gutter, paddingBottom: spacing.lg, gap: 4 }}>
-            <Text style={s.caption}>TRAJETO ATÉ O SEU FILHO</Text>
-            {paradasSim.map((p) => (
-              <Text key={p.id} style={p.propria ? s.title : s.sub}>{p.feita ? '✓ ' : '• '}{p.rotulo}</Text>
-            ))}
-          </View>
-        ) : null}
       </PainelArrastavel>
 
       <AbsenceSheet visible={absence} onClose={() => setAbsence(false)} alunoId={filho?.id} />
