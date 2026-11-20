@@ -18,6 +18,8 @@ export interface MapaParada {
   destaque?: boolean;
   /** a casa/dependente do usuário (marcador de casa) */
   casa?: boolean;
+  /** texto sob o marcador (padrão: primeiro nome); ex.: "Minha casa", "Escola de Lucas" */
+  rotulo?: string;
   /** destino da rota (marcador de escola) */
   escola?: boolean;
 }
@@ -86,11 +88,11 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
           const feito = p.status === 'EMBARCADO' || p.status === 'DESEMBARCADO' || p.status === 'AUSENTE';
           const grande = p.casa || p.destaque;
           return (
-            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}`} zIndex={p.destaque ? 3 : 1}>
+            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}${p.rotulo}`} zIndex={p.destaque ? 3 : 1}>
               <View style={s.pin}>
                 <StopMarker kind={p.escola ? 'school' : grande ? 'home' : 'stop'} done={feito} label={p.nome} />
                 <Text style={[s.rotulo, p.destaque && s.rotuloDestaque]} numberOfLines={1}>
-                  {p.destaque ? `${p.nome.split(' ')[0]} · chega primeiro` : p.nome.split(' ')[0]}
+                  {p.destaque ? `${p.nome.split(' ')[0]} · chega primeiro` : p.rotulo ?? p.nome.split(' ')[0]}
                 </Text>
               </View>
             </Pin>
