@@ -110,7 +110,7 @@ export const ViagemScreen: React.FC = () => {
 
   const pill = emRota
     ? <StatusPill tone="signal" live label={est ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
-    : concluida ? <StatusPill tone="success" label="Rota concluída" /> : <StatusPill tone="neutral" label="Rota não iniciada" />;
+    : concluida ? null : <StatusPill tone="neutral" label="Rota não iniciada" /> // concluída: o cartão de chegada já diz;
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
   const destaque = (() => {
