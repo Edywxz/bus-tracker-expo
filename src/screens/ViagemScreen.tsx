@@ -127,14 +127,19 @@ export const ViagemScreen: React.FC = () => {
       return { valor: `${min}`, sufixo: 'min', legenda, lado: horaPrevista(min), ladoSub: 'previsão aproximada' };
     }
     if (proximo && aBordoMeus >= 2) {
-      const quem = proximo.aluno.nome.split(' ')[0];
+      const alvo = pontoDeDescida(proximo.aluno, viagemAtiva.tipo_viagem);
+      const juntos = alunos.filter((a) => {
+        const d = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) : null;
+        return !!d && !!alvo && d.latitude === alvo.latitude && d.longitude === alvo.longitude;
+      }).map((a) => a.nome.split(' ')[0]);
+      const quem = juntos.length > 1 ? `${juntos.slice(0, -1).join(', ')} e ${juntos[juntos.length - 1]}` : proximo.aluno.nome.split(' ')[0];
       const onde = viagemAtiva.tipo_viagem === 'VOLTA' ? proximo.aluno.endereco_busca : proximo.aluno.endereco_entrega;
       if (isDemo) {
         const min = Math.max(1, Math.round((proximo.km / Math.max(gpsPosicao.velocidade, 15)) * 60));
-        return { valor: `${min}`, sufixo: 'min', legenda: `${quem} chega primeiro · ${onde}`, lado: horaPrevista(min), ladoSub: `${km(proximo.km)} de distância` };
+        return { valor: `${min}`, sufixo: 'min', legenda: `${quem} ${juntos.length > 1 ? 'chegam' : 'chega primeiro'} · ${onde}`, lado: horaPrevista(min), ladoSub: `${km(proximo.km)} de distância` };
       }
       // Dados reais: só distância em linha reta, sem inventar horário de chegada.
-      return { valor: proximo.km.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: proximo.km < 10 ? 1 : 0 }), sufixo: 'km', legenda: `${quem} chega primeiro · ${onde}`, lado: '', ladoSub: '' };
+      return { valor: proximo.km.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: proximo.km < 10 ? 1 : 0 }), sufixo: 'km', legenda: `${quem} ${juntos.length > 1 ? 'chegam' : 'chega primeiro'} · ${onde}`, lado: '', ladoSub: '' };
     }
     if (est) {
       return { valor: `${est.minutos}`, sufixo: 'min', legenda: destino, lado: horaPrevista(est.minutos), ladoSub: restantes };
@@ -283,13 +288,13 @@ export const ViagemScreen: React.FC = () => {
     if (!p) continue;
     const destaque = aBordoMeus >= 2 && proximo?.aluno.id === a.id;
     if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) continue; // quem está a bordo já aparece no marcador da escola
-    const chave = `${p.latitude},${p.longitude},${a.statusEmbarque},${destaque}`;
+    const chave = `${p.latitude},${p.longitude},${a.statusEmbarque}`;
     const dele = casas.get(chave);
-    if (dele) { dele.nomes.push(primeiroNome(a.nome)); dele.pin.casa = dele.pin.casa || (pai && a.id === filho?.id); continue; }
+    if (dele) { dele.nomes.push(primeiroNome(a.nome)); dele.pin.casa = dele.pin.casa || (pai && a.id === filho?.id); dele.pin.destaque = dele.pin.destaque || destaque; continue; }
     casas.set(chave, { pin: { id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }, nomes: [primeiroNome(a.nome)] });
   }
   const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(),
-    ...[...casas.values()].map(({ pin, nomes }) => (pin.destaque ? pin : { ...pin, rotulo: pai ? 'Minha casa' : junta(nomes) }))];
+    ...[...casas.values()].map(({ pin, nomes }) => ({ ...pin, rotulo: pai ? 'Minha casa' : junta(nomes) }))];
   const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 
