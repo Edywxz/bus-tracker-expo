@@ -279,22 +279,19 @@ export const ViagemScreen: React.FC = () => {
     escolas.set(chave, { ...e, nome, rotulo: nome, status: feito ? 'DESEMBARCADO' : 'AGUARDANDO' });
   }
   const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
-    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: 'Outro passageiro', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
-  // Casas: irmãos no mesmo endereço (e no mesmo estado) viram um só marcador.
-  const casas = new Map<string, { pin: MapaParada; nomes: string[] }>();
+    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: 'Outra parada', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
+  // Só há pinos de van, escola e residência: os alunos viajam com a van e, fora dela, estão na escola ou em casa.
+  // Irmãos no mesmo endereço dividem a residência.
+  const residencias = new Map<string, { pin: MapaParada; nomes: string[] }>();
   for (const a of alunos) {
-    const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
-    const p = a.statusEmbarque === 'EMBARCADO' ? pontoDeDescida(a, viagemAtiva.tipo_viagem) ?? casa : casa;
-    if (!p) continue;
-    const destaque = aBordoMeus >= 2 && proximo?.aluno.id === a.id;
-    if (!destaque && escolas.has(`${p.latitude},${p.longitude}`)) continue; // quem está a bordo já aparece no marcador da escola
-    const chave = `${p.latitude},${p.longitude},${a.statusEmbarque}`;
-    const dele = casas.get(chave);
-    if (dele) { dele.nomes.push(primeiroNome(a.nome)); dele.pin.casa = dele.pin.casa || (pai && a.id === filho?.id); dele.pin.destaque = dele.pin.destaque || destaque; continue; }
-    casas.set(chave, { pin: { id: a.id, nome: a.nome, ...p, status: a.statusEmbarque, destaque, casa: pai && a.id === filho?.id }, nomes: [primeiroNome(a.nome)] });
+    if (a.latitude == null || a.longitude == null) continue;
+    const chave = `${a.latitude},${a.longitude}`;
+    const r = residencias.get(chave);
+    if (r) { r.nomes.push(primeiroNome(a.nome)); continue; }
+    residencias.set(chave, { pin: { id: `casa-${chave}`, nome: a.nome, latitude: a.latitude, longitude: a.longitude, status: 'AGUARDANDO', casa: true }, nomes: [primeiroNome(a.nome)] });
   }
   const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(),
-    ...[...casas.values()].map(({ pin, nomes }) => ({ ...pin, rotulo: pai ? 'Minha casa' : junta(nomes) }))];
+    ...[...residencias.values()].map(({ pin, nomes }) => ({ ...pin, rotulo: pai ? 'Minha casa' : junta(nomes) }))];
   const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 
