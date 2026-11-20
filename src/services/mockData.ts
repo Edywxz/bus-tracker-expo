@@ -71,8 +71,8 @@ export const initialMockData: MockDataState = {
       observacoes_medicas: 'Alérgico a amendoim. Leva bombinha de asma na mochila.',
       ativo: true,
       criado_em: '2026-01-15T08:00:00Z',
-      statusEmbarque: 'EMBARCADO',
-      ultimoRegistro: 'Hoje às 07:15 (Embarcou na residência)',
+      statusEmbarque: 'AGUARDANDO',
+      ultimoRegistro: 'Aguardando embarque',
     },
     {
       id: 'aluno-2',
@@ -111,8 +111,8 @@ export const initialMockData: MockDataState = {
       observacoes_medicas: 'Usa óculos para leitura.',
       ativo: true,
       criado_em: '2026-02-01T10:00:00Z',
-      statusEmbarque: 'EMBARCADO',
-      ultimoRegistro: 'Hoje às 07:05 (Embarcou na residência)',
+      statusEmbarque: 'AGUARDANDO',
+      ultimoRegistro: 'Aguardando embarque',
     },
     {
       id: 'aluno-4',
@@ -150,8 +150,8 @@ export const initialMockData: MockDataState = {
       latitude: L.ana.latitude, longitude: L.ana.longitude, entrega_latitude: L.aurora.latitude, entrega_longitude: L.aurora.longitude, parada: parada('ana'),
       ativo: true,
       criado_em: '2026-02-12T09:00:00Z',
-      statusEmbarque: 'EMBARCADO',
-      ultimoRegistro: 'Hoje às 07:05 (Embarcou na residência)',
+      statusEmbarque: 'AGUARDANDO',
+      ultimoRegistro: 'Aguardando embarque',
     },
   ],
 
@@ -195,9 +195,8 @@ export const initialMockData: MockDataState = {
     veiculo_id: 'veic-1',
     tipo_viagem: 'IDA',
     turno: 'MANHA',
-    data_hora_inicio: '2026-10-31T06:45:00Z',
-    status: 'EM_ANDAMENTO',
-    km_percorrido: 7.4,
+    status: 'AGENDADA', // a demo começa com a rota ainda não iniciada
+    km_percorrido: 0,
     criado_em: '2026-10-31T06:40:00Z',
   },
 
@@ -263,22 +262,6 @@ export const initialMockData: MockDataState = {
 
   notificacoes: [
     {
-      id: 'notif-1',
-      tipo: 'CHEGANDO',
-      titulo: '🚌 Van se aproximando!',
-      mensagem: 'O Tio Marcos está a aproximadamente 4 minutos da sua residência (Rua das Flores).',
-      dataHora: '2026-10-31T07:11:00Z',
-      lida: false,
-    },
-    {
-      id: 'notif-2',
-      tipo: 'EMBARQUE',
-      titulo: '🎒 Embarque Confirmado',
-      mensagem: 'Lucas Silva embarcou na van escolar às 07:15.',
-      dataHora: '2026-10-31T07:15:22Z',
-      lida: false,
-    },
-    {
       id: 'notif-3',
       tipo: 'PAGAMENTO',
       titulo: '💰 Mensalidade de Outubro',
@@ -289,26 +272,6 @@ export const initialMockData: MockDataState = {
   ],
 
   mensagensChat: [
-    {
-      id: 'msg-1',
-      remetenteId: 'transp-1',
-      remetenteNome: 'Tio Marcos (Motorista)',
-      destinatarioNome: 'Carlos Silva (Responsável)',
-      texto: 'Bom dia Carlos! Já estou na Rua das Flores, chego em 3 minutos.',
-      dataHora: '2026-10-31T07:10:00Z',
-      origem: 'MOTORISTA',
-      responsavelId: 'resp-1',
-    },
-    {
-      id: 'msg-2',
-      remetenteId: 'resp-1',
-      remetenteNome: 'Carlos Silva (Responsável)',
-      destinatarioNome: 'Tio Marcos (Motorista)',
-      texto: 'Bom dia Tio Marcos! Perfeito, o Lucas já está descendo com a mochila.',
-      dataHora: '2026-10-31T07:12:00Z',
-      origem: 'PAIS',
-      responsavelId: 'resp-1',
-    },
     {
       id: 'msg-3',
       remetenteId: 'transp-1',

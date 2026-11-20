@@ -179,7 +179,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [eventosCalendario, setEventos] = useState<MockDataState['eventosCalendario']>([]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
-  const [gpsIndex, setGpsIndex] = useState(PARADAS_ROTA[1]);
+  const [gpsIndex, setGpsIndex] = useState(0); // van na garagem até a rota começar
   const [horaSimulada, setHoraSimulada] = useState<Date | null>(null);
   const [sim, setSim] = useState<{ linha: Linha; t: number; retomado: boolean } | null>(null);
   const estadoSim = useMemo(() => (sim ? estadoEm(sim.linha, sim.t) : null), [sim]);
@@ -522,7 +522,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
   const pararSimulacao = () => {
     if (!isDemo) return;
-    setSim(null); setHoraSimulada(null); setGpsIndex(PARADAS_ROTA[1]); carregarDemo(role);
+    setSim(null); setHoraSimulada(null); setGpsIndex(0); carregarDemo(role);
   };
   const retomarSimulacao = () => setSim((s) => (s ? { ...s, retomado: true } : s));
   const pularSimulacao = (alvo: 'SAIDA' | 'PARADA' | 'FIM') => setSim((s) => {
