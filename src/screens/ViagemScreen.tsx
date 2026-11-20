@@ -162,7 +162,7 @@ export const ViagemScreen: React.FC = () => {
         </View>
       ) : null}
 
-      {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
+      {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={concluida ? 'school' : aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
 
       {vazio ? (
         pai ? (
@@ -197,7 +197,7 @@ export const ViagemScreen: React.FC = () => {
                 </View>
               ) : null}
             </View>
-          ) : (
+          ) : concluida ? null : (
             <View style={{ marginTop: spacing.md }}>
               <Text style={s.title}>{nomes.transportador ? `${nomes.transportador} ainda não iniciou a rota` : 'A rota de hoje ainda não começou'}</Text>
               <Text style={s.sub}>Avisamos você assim que a van sair.</Text>
