@@ -15,7 +15,7 @@ import { LiveMap, type MapaParada } from '../components/LiveMap';
 import { useApp } from '../context/AppContext';
 import { go } from '../navigation/routes';
 import { PainelArrastavel } from '../components/PainelArrastavel';
-import { FaixaSimulacao } from '../components/FaixaSimulacao';
+import { useControlesSimulacao } from '../components/useControlesSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
 import { lembrete } from '../utils/lembrete';
@@ -204,7 +204,7 @@ export const ViagemScreen: React.FC = () => {
             </View>
           )}
 
-          {(emRota || motorista) && ativos > 0 ? (
+          {emRota && ativos > 0 ? (
             <View style={{ marginTop: spacing.lg }}>
               <ProgressBar value={progresso} total={1} tone="signal" accessibilityLabel="Progresso da rota" />
             </View>
@@ -237,9 +237,11 @@ export const ViagemScreen: React.FC = () => {
   );
 
   /* ------------------------------------------------------------------ menu "…" */
+  const controles = useControlesSimulacao();
   const acoes = [
     { label: 'Atualizar', onPress: () => { recarregar().catch(() => {}); } },
-    ...(isDemo ? [{ label: 'Simular viagem', onPress: () => setSimular(true) }] : []),
+    ...(isDemo && !controles.acoes.length ? [{ label: 'Simular viagem', onPress: () => setSimular(true) }] : []),
+    ...controles.acoes,
     ...(motorista && !isDemo ? [{ label: 'Recalcular rota', onPress: recalcularRota }] : []),
     ...(motorista ? [{ label: 'Veículo', onPress: go.vehicle }] : []),
     ...(pai ? [{ label: 'Adicionar dependente', onPress: () => setAddStudent(true) }] : []),
@@ -276,7 +278,7 @@ export const ViagemScreen: React.FC = () => {
         <LiveMap
           van={vanGeo}
           vanAtiva={emRota && gpsAtivo}
-          trilha={rotaGeo}
+          trilha={isDemo && !emRota ? [] : rotaGeo} // demo sem corrida: nada de trajeto desenhado
           paradas={paradasMapa}
           accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
         />
@@ -293,10 +295,10 @@ export const ViagemScreen: React.FC = () => {
       {/* botões de vidro sobre o mapa */}
       <SafeAreaView edges={['top']} style={s.top} pointerEvents="box-none">
         <IconButton icon="location" label="Atualizar posição da van" variant="glass" onPress={() => { recarregar().catch(() => {}); }} />
-        <PullDownButton label="Mais opções" variant="glass" actions={acoes} />
+        <PullDownButton label="Mais opções" title={controles.titulo} variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}><FaixaSimulacao />{sheet}</View>}>
+      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
         {paradasSim?.length ? (
           <View style={{ paddingHorizontal: layout.gutter, paddingBottom: spacing.lg, gap: 4 }}>
@@ -312,6 +314,7 @@ export const ViagemScreen: React.FC = () => {
       <EmergencySheet visible={emergency} onClose={() => setEmergency(false)} />
       <StartRouteSheet visible={start} onClose={() => setStart(false)} />
       <AddStudentSheet visible={addStudent} onClose={() => setAddStudent(false)} />
+      {controles.sheet}
       <SimulacaoSheet visible={simular} onClose={() => setSimular(false)} />
       {chegada ? (
         <ChegadaTelaCheia
