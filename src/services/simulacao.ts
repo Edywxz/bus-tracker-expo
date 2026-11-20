@@ -1,6 +1,7 @@
 // Simulação de viagem do modo demonstração. Puro (sem React Native): monta a linha do tempo da viagem a partir das
 // escolhas do usuário e diz, para qualquer instante t, em que estado o app deve estar. Pular = escolher outro t.
-import { DEMO_ROTA } from './demoRota.ts';
+import { DEMO_LUGARES } from './demoRota.ts';
+import { DEMO_PERNAS, type PontoRota } from './demoPernas.ts';
 import { distanciaKm } from '../utils/proximidade.ts';
 
 // Tempos (ms ou s) da simulação; ajuste aqui.
@@ -17,7 +18,7 @@ export type Sentido = 'IDA' | 'VOLTA';
 export type Gravidade = 'BAIXA' | 'MEDIA' | 'ALTA' | 'EMERGENCIA';
 export interface ConfigSim { sentido: Sentido; alunoIds: string[]; ocorrencia: Gravidade | null; ocorrenciaEmMs?: number }
 export type StatusAlunoSim = 'AGUARDANDO' | 'EMBARCADO' | 'DESEMBARCADO' | 'AUSENTE';
-/** Trecho em que a van anda de `de` até `para` (índices de DEMO_ROTA.pontos); parada quando de === para. */
+/** Trecho em que a van anda de `de` até `para` (índices de `Linha.pontos`); parada quando de === para. */
 export interface Segmento { t0: number; t1: number; de: number; para: number }
 export type EventoSim =
   | { t: number; tipo: 'FASE'; fase: 'PREPARAR' | 'ESPERANDO' | 'SAIDA' }
@@ -28,6 +29,8 @@ export type EventoSim =
 export interface Linha {
   config: ConfigSim; duracaoMs: number; segmentos: Segmento[]; eventos: EventoSim[];
   ocorrenciaEm: number | null; pausaManualEm: number | null;
+  /** Percurso da van pelas ruas, só com as paradas da viagem; `km` = quilômetros acumulados em cada ponto. */
+  pontos: PontoRota[]; km: number[];
 }
 export interface NotifSim { id: string; tipo: 'CHEGANDO' | 'EMBARQUE' | 'EMERGENCIA'; titulo: string; mensagem: string; alunoId?: string }
 export interface EstadoSim {
@@ -43,7 +46,7 @@ export const ALUNOS_SIM: Record<string, { casa: string; escola: string }> = {
   'aluno-2': { casa: 'beatriz', escola: 'santaMaria' },
   'aluno-3': { casa: 'gabriel', escola: 'santaMaria' },
   'aluno-4': { casa: 'sofia', escola: 'santaMaria' },
-  'aluno-5': { casa: 'ana', escola: 'aurora' },
+  'aluno-5': { casa: 'lucas', escola: 'aurora' }, // Ana mora com o Lucas: mesma casa, mesma parada
 };
 const NOMES: Record<string, string> = { 'aluno-1': 'Lucas', 'aluno-2': 'Beatriz', 'aluno-3': 'Gabriel', 'aluno-4': 'Sofia', 'aluno-5': 'Ana' };
 const HORA: Record<Sentido, [number, number][]> = {
@@ -51,26 +54,30 @@ const HORA: Record<Sentido, [number, number][]> = {
   VOLTA: [[11, 50], [12, 5], [12, 10]],
 };
 
-const indiceDe = (lugar: string) => DEMO_ROTA.paradas.find((p) => p.id === lugar)!.indice;
-// km acumulados até cada ponto da rota; índices fracionários (trechos cortados pela ocorrência) interpolam entre pontos.
-const KM_ATE: number[] = [];
-DEMO_ROTA.pontos.forEach((p, i) => KM_ATE.push(i ? KM_ATE[i - 1] + distanciaKm(DEMO_ROTA.pontos[i - 1], p) : 0));
-const kmAte = (x: number) => { const i = Math.min(Math.floor(x), KM_ATE.length - 2); return KM_ATE[i] + (x - i) * (KM_ATE[i + 1] - KM_ATE[i]); };
-const kmEntre = (de: number, para: number) => Math.abs(kmAte(para) - kmAte(de));
+// km acumulados até cada ponto do percurso; índices fracionários (trechos cortados pela ocorrência) interpolam entre pontos.
+const kmAte = (km: number[], x: number) => { const i = Math.min(Math.floor(x), km.length - 2); return km[i] + (x - i) * (km[i + 1] - km[i]); };
+const kmEntre = (km: number[], de: number, para: number) => Math.abs(kmAte(km, para) - kmAte(km, de));
 const ROTULO: Record<Gravidade, string> = { BAIXA: 'Trânsito intenso', MEDIA: 'Desvio de via', ALTA: 'Pane mecânica', EMERGENCIA: 'Acidente na pista' };
 const BAIXA_JANELA_MS = 7500; // estrada normal coberta durante o trânsito; leva o dobro do tempo
 const MEDIA_PARADA_MS = 10000;
 
 interface Parada { lugar: string; casa: boolean }
 
-/** Paradas da viagem, na ordem em que a van passa. */
+const perna = (a: string, b: string) => {
+  const p = DEMO_PERNAS[`${a}>${b}`];
+  if (!p) throw new Error(`Sem trajeto de ${a} para ${b}`);
+  return p;
+};
+const permutacoes = <T,>(a: T[]): T[][] => (a.length <= 1 ? [a] : a.flatMap((x, i) => permutacoes([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p])));
+
+/** Paradas da viagem na ordem mais rápida pelas ruas: ida = casas e depois escolas; volta = escolas e depois casas. */
 function paradasDe(c: ConfigSim): Parada[] {
-  const casas = c.alunoIds.map((a) => ALUNOS_SIM[a].casa);
+  const casas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].casa))]; // irmãos na mesma casa = uma parada
   const escolas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].escola))];
-  const porIndice = (a: string, b: string) => indiceDe(a) - indiceDe(b);
-  const cs = casas.sort(porIndice).map((lugar) => ({ lugar, casa: true }));
-  const es = escolas.sort(porIndice).map((lugar) => ({ lugar, casa: false }));
-  return c.sentido === 'IDA' ? [...cs, ...es] : [...es.reverse(), ...cs.reverse()];
+  const [antes, depois] = c.sentido === 'IDA' ? [casas, escolas] : [escolas, casas];
+  const custo = (o: string[]) => o.reduce((s, id, i) => s + (i ? perna(o[i - 1], id).s : c.sentido === 'IDA' ? perna('garagem', id).s : 0), 0);
+  const melhor = permutacoes(antes).flatMap((a) => permutacoes(depois).map((d) => [...a, ...d])).reduce((m, o) => (custo(o) < custo(m) ? o : m));
+  return melhor.map((lugar) => ({ lugar, casa: casas.includes(lugar) }));
 }
 
 function montarBase(c: ConfigSim): Linha {
@@ -80,16 +87,27 @@ function montarBase(c: ConfigSim): Linha {
   ];
   const segmentos: Segmento[] = [];
   const paradas = paradasDe(c);
+  // percurso: as pernas pelas ruas encadeadas (ida sai da garagem; volta começa na primeira escola)
+  const ordem = c.sentido === 'IDA' ? ['garagem', ...paradas.map((p) => p.lugar)] : paradas.map((p) => p.lugar);
+  const pontos: PontoRota[] = [];
+  const indiceDe: Record<string, number> = { [ordem[0]]: 0 };
+  ordem.slice(1).forEach((lugar, i) => {
+    const pts = perna(ordem[i], lugar).pontos;
+    pontos.push(...(pontos.length ? pts.slice(1) : pts)); // a perna seguinte começa onde a anterior terminou
+    indiceDe[lugar] = pontos.length - 1;
+  });
+  const km: number[] = [];
+  pontos.forEach((p, i) => km.push(i ? km[i - 1] + distanciaKm(pontos[i - 1], p) : 0));
   let t = T_SAIDA;
-  let atual = c.sentido === 'IDA' ? 0 : indiceDe(paradas[0].lugar);
+  let atual = 0;
   const primeiraEscola = paradas.find((p) => !p.casa)!.lugar;
 
   for (const p of paradas) {
-    const destino = indiceDe(p.lugar);
+    const destino = indiceDe[p.lugar];
     const inicioPerna = t;
     if (destino !== atual) {
       const minimo = (c.sentido === 'IDA' && p.lugar === primeiraEscola ? PERNA_ESCOLA_MIN_S : PERNA_MIN_S) * 1000;
-      const dur = Math.round(Math.max(kmEntre(atual, destino) * S_POR_KM * 1000, minimo));
+      const dur = Math.round(Math.max(kmEntre(km, atual, destino) * S_POR_KM * 1000, minimo));
       segmentos.push({ t0: t, t1: t + dur, de: atual, para: destino });
       t += dur;
     }
@@ -107,7 +125,7 @@ function montarBase(c: ConfigSim): Linha {
   }
   eventos.push({ t, tipo: 'FIM' });
   eventos.sort((a, b) => a.t - b.t);
-  return { config: c, duracaoMs: t, segmentos, eventos, ocorrenciaEm: null, pausaManualEm: null };
+  return { config: c, duracaoMs: t, segmentos, eventos, ocorrenciaEm: null, pausaManualEm: null, pontos, km };
 }
 
 export function estadoEm(l: Linha, t: number): EstadoSim {
@@ -143,9 +161,9 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
   const antesDaSaida = t < l.segmentos[0].t0;
   const f = antesDaSaida || seg.t1 <= seg.t0 ? 0 : Math.min(1, (t - seg.t0) / (seg.t1 - seg.t0));
   const indice = antesDaSaida ? seg.de : Math.round(seg.de + (seg.para - seg.de) * f);
-  const total = l.segmentos.reduce((s, x) => s + kmEntre(x.de, x.para), 0);
+  const total = l.segmentos.reduce((s, x) => s + kmEntre(l.km, x.de, x.para), 0);
   const kmRestantes = antesDaSaida ? total
-    : l.segmentos.reduce((s, x) => s + (x.t0 > t ? kmEntre(x.de, x.para) : x === seg ? kmEntre(x.de, x.para) * (1 - f) : 0), 0);
+    : l.segmentos.reduce((s, x) => s + (x.t0 > t ? kmEntre(l.km, x.de, x.para) : x === seg ? kmEntre(l.km, x.de, x.para) * (1 - f) : 0), 0);
 
   const esperandoRetomar = l.pausaManualEm !== null && t === l.pausaManualEm; // o executor segura t aqui até o usuário retomar
   return {
@@ -204,4 +222,25 @@ export function alvoDoPulo(l: Linha, t: number, alvo: 'SAIDA' | 'PARADA' | 'FIM'
   if (alvo === 'SAIDA') return T_SAIDA;
   if (alvo === 'FIM') return l.duracaoMs;
   return l.eventos.find((e) => e.tipo === 'PARADA' && e.t > t)?.t ?? l.duracaoMs;
+}
+
+export interface ParadaVista { id: string; rotulo: string; propria: boolean; feita: boolean; latitude: number; longitude: number }
+
+/**
+ * O que o responsável pode ver da viagem: ela acaba quando os filhos dele desembarcam (a van segue para o motorista)
+ * e as paradas até a última dele aparecem, as de outros alunos sem nome.
+ */
+export function visaoDoResponsavel(l: Linha, t: number, meusIds: string[]): { concluida: boolean; paradas: ParadaVista[] } {
+  const meus = l.config.alunoIds.filter((a) => meusIds.includes(a));
+  const concluida = meus.length > 0 && meus.every((a) => l.eventos.some((e) => e.tipo === 'DESEMBARQUE' && e.alunoId === a && e.t <= t));
+  const todas = l.eventos.flatMap((e) => (e.tipo === 'PARADA' ? [e] : [])).map((e, i) => {
+    const casa = l.config.alunoIds.some((a) => ALUNOS_SIM[a].casa === e.lugar);
+    const meusAqui = meus.filter((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar).map((a) => NOMES[a]);
+    const propria = meusAqui.length > 0;
+    const quem = meusAqui.length > 1 ? `${meusAqui.slice(0, -1).join(', ')} e ${meusAqui[meusAqui.length - 1]}` : meusAqui[0];
+    const lugar = DEMO_LUGARES[e.lugar as keyof typeof DEMO_LUGARES];
+    return { id: `parada-${i}`, rotulo: propria ? `${casa ? 'Casa' : 'Escola'} de ${quem}` : 'Parada de outro passageiro', propria, feita: e.t <= t, latitude: lugar.latitude, longitude: lugar.longitude };
+  });
+  const ultima = todas.map((p) => p.propria).lastIndexOf(true);
+  return { concluida, paradas: todas.slice(0, ultima + 1) };
 }

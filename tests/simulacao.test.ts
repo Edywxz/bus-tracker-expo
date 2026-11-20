@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { montarSimulacao, estadoEm, alvoDoPulo, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
+import { DEMO_PERNAS } from '../src/services/demoPernas.ts';
+import { montarSimulacao, estadoEm, alvoDoPulo, visaoDoResponsavel, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
 
 const TODOS = ['aluno-1', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5'];
 const ida = (alunoIds = TODOS): ConfigSim => ({ sentido: 'IDA', alunoIds, ocorrencia: null });
@@ -11,7 +12,7 @@ const paradas = (l: Linha) => l.eventos.filter((e): e is Parada => e.tipo === 'P
 const lugares = (l: Linha) => paradas(l).map((p) => p.lugar);
 
 test('ida com todos: paradas na ordem da rota', () => {
-  assert.deepEqual(lugares(montarSimulacao(ida())), ['beatriz', 'sofia', 'gabriel', 'lucas', 'ana', 'santaMaria', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida())), ['beatriz', 'sofia', 'gabriel', 'lucas', 'santaMaria', 'aurora']);
 });
 
 test('ida: primeira casa em ~10 s depois da saída', () => {
@@ -25,21 +26,21 @@ test('ida: perna curta dura no mínimo 6 s e a perna até a escola no mínimo 15
     const a = p.find((x) => x.lugar === de)!, b = p.find((x) => x.lugar === para)!;
     return b.t - a.t - 4000; // 4 s parado em cada parada
   };
-  assert.equal(perna('lucas', 'ana'), 6000); // 0,79 km daria 3,5 s
-  assert.equal(perna('ana', 'santaMaria'), 15000); // 0,73 km daria 3,3 s
+  assert.equal(perna('gabriel', 'lucas'), 6000); // 0,94 km daria 4,2 s
+  assert.equal(perna('lucas', 'santaMaria'), 15000); // perna até a primeira escola
 });
 
 test('subconjuntos: só as paradas dos alunos escolhidos e as escolas deles', () => {
-  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-1', 'aluno-5']))), ['lucas', 'ana', 'santaMaria', 'aurora']);
-  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-5']))), ['ana', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-1', 'aluno-5']))), ['lucas', 'santaMaria', 'aurora']);
+  assert.deepEqual(lugares(montarSimulacao(ida(['aluno-5']))), ['lucas', 'aurora']);
   assert.deepEqual(lugares(montarSimulacao(ida(['aluno-2']))), ['beatriz', 'santaMaria']);
 });
 
-test('volta: começa na escola e percorre a rota ao contrário', () => {
+test('volta: começa nas escolas e depois deixa cada aluno em casa', () => {
   const l = montarSimulacao(volta());
-  assert.deepEqual(lugares(l), ['aurora', 'santaMaria', 'ana', 'lucas', 'gabriel', 'sofia', 'beatriz']);
+  assert.deepEqual(lugares(l).slice(0, 2).sort(), ['aurora', 'santaMaria']);
+  assert.deepEqual(lugares(l).slice(2).sort(), ['beatriz', 'gabriel', 'lucas', 'sofia']);
   assert.equal(paradas(l)[0].t, 6000);
-  assert.ok(l.segmentos.filter((s) => s.de !== s.para).every((s) => s.de > s.para));
 });
 
 test('estadoEm: fases e relógio antes e depois da saída', () => {
@@ -79,7 +80,7 @@ test('estadoEm: mesmo instante dá o mesmo estado e a van só anda no sentido da
     let anterior = estadoEm(l, 0).indice;
     for (let t = 0; t <= l.duracaoMs; t += 500) {
       const i = estadoEm(l, t).indice;
-      assert.ok(cfg.sentido === 'IDA' ? i >= anterior : i <= anterior, `${cfg.sentido} voltou de ${anterior} para ${i} em ${t}`);
+      assert.ok(i >= anterior, `${cfg.sentido} voltou de ${anterior} para ${i} em ${t}`);
       anterior = i;
     }
   }
@@ -180,5 +181,99 @@ test('ocorrência antes da saída só vale a partir da saída (não quebra a lin
       assert.equal(l.ocorrenciaEm, 6000, `${g} ${sentido}`);
       for (const t of [0, 3000, 6000, l.duracaoMs]) assert.doesNotThrow(() => estadoEm(l, t), `${g} ${sentido} t=${t}`);
     }
+  }
+});
+
+// ---- visão do responsável: fim da corrida e paradas anteriores ----
+const desemb = (l: Linha, alunoId: string) => l.eventos.find((e) => e.tipo === 'DESEMBARQUE' && e.alunoId === alunoId)!.t;
+const fimDe = (l: Linha) => l.eventos.find((e) => e.tipo === 'FIM')!.t;
+
+test('volta: a corrida do responsável acaba quando o filho desembarca, antes do fim da rota', () => {
+  const l = montarSimulacao(volta(['aluno-1', 'aluno-2', 'aluno-3']));
+  const t = desemb(l, 'aluno-1');
+  assert.ok(t < fimDe(l), 'a van ainda tem paradas depois');
+  assert.equal(visaoDoResponsavel(l, t - 1, ['aluno-1']).concluida, false);
+  assert.equal(visaoDoResponsavel(l, t, ['aluno-1']).concluida, true);
+});
+
+test('com dois filhos, só conclui quando o último desembarca', () => {
+  const l = montarSimulacao(ida());
+  const meus = ['aluno-1', 'aluno-5'];
+  const t = Math.max(desemb(l, 'aluno-1'), desemb(l, 'aluno-5'));
+  assert.equal(visaoDoResponsavel(l, desemb(l, 'aluno-1'), meus).concluida, desemb(l, 'aluno-5') <= desemb(l, 'aluno-1'));
+  assert.equal(visaoDoResponsavel(l, t - 1, meus).concluida, false);
+  assert.equal(visaoDoResponsavel(l, t, meus).concluida, true);
+});
+
+test('sem filho na viagem, a corrida nunca conclui para o responsável', () => {
+  const l = montarSimulacao(ida(['aluno-2']));
+  assert.equal(visaoDoResponsavel(l, l.duracaoMs, ['aluno-1']).concluida, false);
+});
+
+test('ida: as paradas antes da casa do filho aparecem anônimas e o que vem depois da última própria some', () => {
+  const l = montarSimulacao(ida());
+  const v = visaoDoResponsavel(l, 0, ['aluno-1']);
+  assert.deepEqual(v.paradas.map((p) => p.propria), [false, false, false, true, true]); // beatriz sofia gabriel LUCAS SANTA MARIA
+  assert.equal(v.paradas.at(-1)!.rotulo.includes('Aurora'), false);
+  assert.ok(v.paradas.filter((p) => !p.propria).every((p) => p.rotulo === 'Parada de outro passageiro'));
+});
+
+test('paradas ficam feitas conforme a van chega', () => {
+  const l = montarSimulacao(ida());
+  const chegada = (lugar: string) => paradas(l).find((p) => p.lugar === lugar)!.t;
+  const v = visaoDoResponsavel(l, chegada('sofia'), ['aluno-1']);
+  assert.deepEqual(v.paradas.map((p) => p.feita), [true, true, false, false, false]);
+});
+
+test('a visão do responsável não vaza nome nem id de outro aluno', () => {
+  const l = montarSimulacao(ida());
+  const json = JSON.stringify(visaoDoResponsavel(l, l.duracaoMs, ['aluno-1']));
+  for (const x of ['Beatriz', 'Gabriel', 'Sofia', 'Ana', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5']) assert.equal(json.includes(x), false, x);
+});
+
+test('só filhos próprios: todas as paradas são do responsável', () => {
+  const l = montarSimulacao(ida(['aluno-1', 'aluno-5']));
+  assert.ok(visaoDoResponsavel(l, 0, ['aluno-1', 'aluno-5']).paradas.every((p) => p.propria));
+});
+
+test('Lucas e Ana moram juntos: uma só parada em casa, com os dois embarcando', () => {
+  const l = montarSimulacao(ida(['aluno-1', 'aluno-5']));
+  assert.equal(lugares(l).filter((x) => x === 'lucas').length, 1);
+  const emb = l.eventos.filter((e) => e.tipo === 'EMBARQUE').map((e) => (e as { alunoId: string }).alunoId).sort();
+  assert.deepEqual(emb, ['aluno-1', 'aluno-5']);
+});
+
+test('as paradas do responsável dizem de quem são: "Casa de…" e "Escola de…"', () => {
+  const v = visaoDoResponsavel(montarSimulacao(ida(['aluno-1', 'aluno-5'])), 0, ['aluno-1', 'aluno-5']);
+  assert.deepEqual(v.paradas.map((p) => p.rotulo), ['Casa de Lucas e Ana', 'Escola de Lucas', 'Escola de Ana']);
+});
+
+// ---- trajeto dinâmico: só as paradas escolhidas, na ordem mais rápida pelas ruas ----
+const custo = (ordem: string[], comGaragem: boolean) => ordem.reduce((s, id, i) => s + (i ? DEMO_PERNAS[`${ordem[i - 1]}>${id}`].s : comGaragem ? DEMO_PERNAS[`garagem>${id}`].s : 0), 0);
+const perms = <T,>(a: T[]): T[][] => (a.length <= 1 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p])));
+
+test('a ordem das paradas é a mais rápida pelas ruas (ida e volta, vários subconjuntos)', () => {
+  const casa: Record<string, string> = { 'aluno-1': 'lucas', 'aluno-2': 'beatriz', 'aluno-3': 'gabriel', 'aluno-4': 'sofia', 'aluno-5': 'lucas' };
+  const escola: Record<string, string> = { 'aluno-1': 'santaMaria', 'aluno-2': 'santaMaria', 'aluno-3': 'santaMaria', 'aluno-4': 'santaMaria', 'aluno-5': 'aurora' };
+  for (const ids of [TODOS, ['aluno-2', 'aluno-4'], ['aluno-3'], ['aluno-1', 'aluno-5', 'aluno-4']]) {
+    const casas = [...new Set(ids.map((a) => casa[a]))], escolas = [...new Set(ids.map((a) => escola[a]))];
+    const melhorIda = Math.min(...perms(casas).flatMap((c) => perms(escolas).map((e) => custo([...c, ...e], true))));
+    assert.equal(custo(lugares(montarSimulacao(ida(ids))), true), melhorIda, `ida ${ids}`);
+    const melhorVolta = Math.min(...perms(escolas).flatMap((e) => perms(casas).map((c) => custo([...e, ...c], false))));
+    assert.equal(custo(lugares(montarSimulacao(volta(ids))), false), melhorVolta, `volta ${ids}`);
+  }
+});
+
+test('o percurso é só o necessário: com menos alunos a rota é mais curta', () => {
+  const total = (l: Linha) => l.km[l.km.length - 1];
+  assert.ok(total(montarSimulacao(ida(['aluno-3']))) < total(montarSimulacao(ida())));
+  assert.ok(total(montarSimulacao(volta(['aluno-2']))) < total(montarSimulacao(volta())));
+});
+
+test('a van termina exatamente na última parada do percurso', () => {
+  for (const c of [ida(), ida(['aluno-3']), volta(['aluno-2', 'aluno-4'])]) {
+    const l = montarSimulacao(c);
+    assert.equal(estadoEm(l, l.duracaoMs).indice, l.pontos.length - 1);
+    assert.equal(estadoEm(l, 0).indice, 0);
   }
 });

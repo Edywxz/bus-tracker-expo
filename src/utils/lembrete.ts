@@ -32,6 +32,13 @@ export function lembrete(p: {
   if (!diaLetivo(agora, eventos)) return null;
   const nomes = (st: string) => alunos.filter((a) => a.statusEmbarque === st).map((a) => primeiro(a.nome));
 
+  // Ida concluída: os filhos já estão na escola; falta esperar a saída.
+  if (concluida && tipo === 'IDA') {
+    const n = nomes('DESEMBARCADO');
+    if (!n.length) return null;
+    return { tone: 'info', texto: `${lista(n)} ${n.length > 1 ? 'estão' : 'está'} na escola. Aguarde o horário de saída; avisamos quando a van sair para buscá-${n.length > 1 ? 'los' : 'lo'}.` };
+  }
+
   if (emRota && tipo === 'VOLTA') {
     const n = nomes('EMBARCADO');
     if (!n.length) return null;

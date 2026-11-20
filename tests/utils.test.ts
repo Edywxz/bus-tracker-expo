@@ -114,3 +114,13 @@ test('mensagemErro: sessão expirada, rede e permissão', () => {
   assert.match(mensagemErro({ message: 'TypeError: Network request failed' }), /Sem conexão/);
   assert.match(mensagemErro({ message: 'new row violates row-level security policy' }), /permissão/);
 });
+
+test('lembrete: filhos deixados na escola → aguardar o horário de saída; na volta, nada', () => {
+  const naEscola = { ...ana, statusEmbarque: 'DESEMBARCADO' };
+  const r = lembrete({ ...base, agora: seg(7, 10), alunos: [naEscola], concluida: true });
+  assert.equal(r!.tone, 'info');
+  assert.match(r!.texto, /na escola/);
+  assert.match(r!.texto, /horário de saída/);
+  assert.equal(lembrete({ ...base, agora: seg(7, 10), alunos: [naEscola], concluida: true, tipo: 'VOLTA' }), null);
+  assert.equal(lembrete({ ...base, agora: seg(7, 10), alunos: [ana], concluida: true }), null); // ninguém desembarcou
+});
