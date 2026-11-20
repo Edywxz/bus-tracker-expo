@@ -92,7 +92,7 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
               <View style={s.pin}>
                 <StopMarker kind={p.escola ? 'school' : grande ? 'home' : 'stop'} done={feito} label={p.nome} />
                 <Text style={[s.rotulo, p.destaque && s.rotuloDestaque]} numberOfLines={1}>
-                  {p.destaque ? `${p.nome.split(' ')[0]} · chega primeiro` : p.rotulo ?? p.nome.split(' ')[0]}
+                  {p.rotulo ?? p.nome.split(' ')[0]}
                 </Text>
               </View>
             </Pin>

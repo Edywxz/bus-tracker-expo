@@ -252,12 +252,14 @@ export const ViagemScreen: React.FC = () => {
   // Mapa real: cada passageiro aparece onde importa agora (a bordo → onde desce; senão → onde embarca).
   const escolas = new Map<string, MapaParada>(); // destinos da rota, um marcador por local (vários alunos vão à mesma escola)
   const filhosDaEscola = new Map<string, string[]>();
+  const alunosDaEscola = new Map<string, typeof alunos>(); // quem não está ausente, para saber quando a escola está "concluída"
   const primeiroNome = (n: string) => n.split(' ')[0];
   const junta = (n: string[]) => (n.length > 1 ? `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}` : n[0]);
   for (const a of alunos) {
     if (a.entrega_latitude == null || a.entrega_longitude == null) continue;
     const chave = `${a.entrega_latitude},${a.entrega_longitude}`;
     filhosDaEscola.set(chave, [...(filhosDaEscola.get(chave) ?? []), primeiroNome(a.nome)]);
+    if (a.statusEmbarque !== 'AUSENTE') alunosDaEscola.set(chave, [...(alunosDaEscola.get(chave) ?? []), a]);
     escolas.set(chave, {
       id: `escola-${chave}`, nome: a.escola_nome ?? 'Escola',
       latitude: a.entrega_latitude, longitude: a.entrega_longitude, status: 'AGUARDANDO', escola: true,
@@ -266,7 +268,10 @@ export const ViagemScreen: React.FC = () => {
   // Responsável: "Escola de Lucas" diz onde cada filho estuda (o motorista continua vendo o nome da escola).
   for (const [chave, e] of escolas) {
     const nome = pai ? `Escola de ${junta(filhosDaEscola.get(chave)!)}` : e.nome;
-    escolas.set(chave, { ...e, nome, rotulo: nome });
+    // Ida: concluída quando todos desembarcaram nela. Volta: quando todos já saíram dela.
+    const quem = alunosDaEscola.get(chave) ?? [];
+    const feito = quem.length > 0 && quem.every((a) => (viagemAtiva.tipo_viagem === 'VOLTA' ? a.statusEmbarque !== 'AGUARDANDO' : a.statusEmbarque === 'DESEMBARCADO'));
+    escolas.set(chave, { ...e, nome, rotulo: nome, status: feito ? 'DESEMBARCADO' : 'AGUARDANDO' });
   }
   const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
     .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: 'Outro passageiro', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
