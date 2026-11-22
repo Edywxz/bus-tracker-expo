@@ -167,9 +167,10 @@ export const VanMarker: React.FC<{ live?: boolean }> = ({ live = true }) => {
 };
 export const StopMarker: React.FC<{ kind?: 'stop' | 'home' | 'school'; done?: boolean; label?: string }> = ({ kind = 'stop', done, label }) => {
   if (kind === 'stop') return <View style={[mk.stop, { borderColor: done ? colors.routeDone : colors.route }]} accessibilityLabel={label} />;
+  const ok = done && kind === 'school'; // todos já desembarcaram aqui: pino de concluído
   return (
-    <View style={mk.home} accessibilityLabel={label}>
-      <Icon name={kind === 'home' ? 'homeFill' : 'school'} size={15} color={colors.onPrimary} />
+    <View style={[mk.home, ok && { backgroundColor: colors.success }]} accessibilityLabel={ok ? `${label ?? 'Escola'} (concluído)` : label}>
+      <Icon name={ok ? 'check' : kind === 'home' ? 'homeFill' : 'school'} size={15} color={ok ? colors.onSuccess : colors.onPrimary} />
     </View>
   );
 };

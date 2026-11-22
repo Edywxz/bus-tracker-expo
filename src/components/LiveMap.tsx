@@ -18,6 +18,8 @@ export interface MapaParada {
   destaque?: boolean;
   /** a casa/dependente do usuário (marcador de casa) */
   casa?: boolean;
+  /** texto sob o marcador (padrão: primeiro nome); ex.: "Minha casa", "Escola de Lucas" */
+  rotulo?: string;
   /** destino da rota (marcador de escola) */
   escola?: boolean;
 }
@@ -86,12 +88,12 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
           const feito = p.status === 'EMBARCADO' || p.status === 'DESEMBARCADO' || p.status === 'AUSENTE';
           const grande = p.casa || p.destaque;
           return (
-            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}`} zIndex={p.destaque ? 3 : 1}>
+            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}${p.rotulo}`} zIndex={p.destaque ? 3 : 1}>
               <View style={s.pin}>
                 <StopMarker kind={p.escola ? 'school' : grande ? 'home' : 'stop'} done={feito} label={p.nome} />
-                <Text style={[s.rotulo, p.destaque && s.rotuloDestaque]} numberOfLines={1}>
-                  {p.destaque ? `${p.nome.split(' ')[0]} · chega primeiro` : p.nome.split(' ')[0]}
-                </Text>
+                {(p.rotulo ?? p.nome.split(' ')[0]) ? (
+                  <Text style={[s.rotulo, p.destaque && s.rotuloDestaque]} numberOfLines={1}>{p.rotulo ?? p.nome.split(' ')[0]}</Text>
+                ) : null}
               </View>
             </Pin>
           );
@@ -105,13 +107,11 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
           </Pin>
         ) : null}
       </MapView>
-      {trilha && trilha.length > 1 ? <Text style={s.atribuicao}>Rota: Powered by Geoapify · © OpenStreetMap</Text> : null}
     </View>
   );
 };
 
 const s = StyleSheet.create({
-  atribuicao: { ...type.caption2, position: 'absolute', left: 8, top: 108, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden' },
   pin: { alignItems: 'center', gap: 2, minWidth: 80, paddingVertical: 4 },
   rotulo: { ...type.caption2, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden', maxWidth: 140, textAlign: 'center' },
   rotuloDestaque: { backgroundColor: colors.primary, color: colors.onPrimary },
