@@ -25,6 +25,7 @@ jobs:
       contents: write
       pull-requests: write
       id-token: write
+      actions: write # reexecutar o automerge quando nada foi alterado
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +55,23 @@ jobs:
             7. Se a revisão não trouxer nada acionável (só resumo/elogio), não faça nada e não peça nova revisão: o loop termina.
 
             8. Sempre termine com UM comentário curto no PR (`gh pr comment`) dizendo o que corrigiu, o que recusou e por quê,
-               ou que não havia nada acionável. Assim o resultado fica visível mesmo sem commit.
+               ou que não havia nada acionável. Assim o resultado fica visível mesmo sem commit. O comentário DEVE começar
+               exatamente com "Revisão do Gemini: nenhuma alteração feita." se você não fez nenhum commit (o CI usa essa frase
+               para liberar o merge), ou com "Revisão do Gemini: N correção(ões) aplicada(s)." se fez commit.
 
             Use "fix(revisão): ..." como prefixo dos commits.
+      # Sem commit novo não há CI novo: reexecuta o job automerge do CI deste commit para ele ler o comentário acima.
+      - name: Sem alterações, reexecuta o automerge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          atual=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          [ "$atual" = "$SHA" ] || exit 0 # houve push: o novo CI cuida do merge
+          run=$(gh run list --repo "$REPO" --workflow ci.yml --commit "$SHA" --event pull_request --json databaseId,status --jq '[.[] | select(.status=="completed")] | first | .databaseId // empty')
+          [ -n "$run" ] || exit 0 # CI ainda rodando: o automerge lê o comentário quando chegar a vez dele
+          job=$(gh run view "$run" --repo "$REPO" --json jobs --jq '[.jobs[] | select(.name=="automerge")] | first | .databaseId // empty')
+          [ -n "$job" ] || exit 0
+          gh run rerun "$run" --repo "$REPO" --job "$job"

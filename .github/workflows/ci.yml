@@ -71,19 +71,26 @@ jobs:
       REPO: ${{ github.repository }}
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      # Espera o Gemini revisar este commit. Com comentários, não mescla: o workflow gemini-fix corrige, o push dispara
-      # um novo CI e este job roda de novo. Sem revisão em 10 min (app fora do ar, PR de bot), mescla mesmo assim.
+      # Espera o Gemini revisar este commit. Com comentários, não mescla: o workflow gemini-fix corrige e o push dispara
+      # um novo CI. Se o gemini-fix recusar tudo (não há commit), ele comenta "Revisão do Gemini: nenhuma alteração feita"
+      # e reexecuta este job, que então mescla. Sem revisão em 10 min (app fora do ar, PR de bot), mescla mesmo assim.
       - name: Espera a revisão do Gemini
         id: gemini
         run: |
           echo "merge=true" >> "$GITHUB_OUTPUT"
           for i in $(seq 20); do
-            id=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq "[.[] | select(.user.login==\"gemini-code-assist[bot]\" and .commit_id==\"$SHA\")] | last | .id // empty")
-            if [ -n "$id" ]; then
+            r=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq "[.[] | select(.user.login==\"gemini-code-assist[bot]\" and .commit_id==\"$SHA\")] | last // empty | \"\(.id) \(.submitted_at)\"")
+            if [ -n "$r" ]; then
+              set -- $r; id=$1; em=$2
               n=$(gh api "repos/$REPO/pulls/$PR/reviews/$id/comments" --jq length)
               if [ "$n" -gt 0 ]; then
-                echo "Gemini deixou $n comentário(s): não mescla, aguarda a correção."
-                echo "merge=false" >> "$GITHUB_OUTPUT"
+                recusou=$(gh api "repos/$REPO/issues/$PR/comments" --jq "[.[] | select(.user.login==\"claude[bot]\" and .created_at > \"$em\" and (.body | startswith(\"Revisão do Gemini: nenhuma alteração feita\")))] | length")
+                if [ "$recusou" -gt 0 ]; then
+                  echo "Gemini deixou $n comentário(s), todos recusados pelo gemini-fix: mescla."
+                else
+                  echo "Gemini deixou $n comentário(s): não mescla, aguarda a correção."
+                  echo "merge=false" >> "$GITHUB_OUTPUT"
+                fi
               fi
               exit 0
             fi
