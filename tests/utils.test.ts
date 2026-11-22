@@ -124,3 +124,16 @@ test('lembrete: filhos deixados na escola → aguardar o horário de saída; na 
   assert.equal(lembrete({ ...base, agora: seg(7, 10), alunos: [naEscola], concluida: true, tipo: 'VOLTA' }), null);
   assert.equal(lembrete({ ...base, agora: seg(7, 10), alunos: [ana], concluida: true }), null); // ninguém desembarcou
 });
+
+test('avisoEncerrar: cada situação tem seu aviso e só "tudo entregue" não é destrutivo', async () => {
+  const { avisoEncerrar } = await import('../src/utils/encerrarRota.ts');
+  assert.match(avisoEncerrar([]).title, /sem passageiros/);
+  assert.match(avisoEncerrar(['AUSENTE']).title, /sem passageiros/);
+  assert.match(avisoEncerrar(['AGUARDANDO', 'AGUARDANDO']).title, /Nenhum passageiro embarcou/);
+  assert.match(avisoEncerrar(['EMBARCADO', 'AGUARDANDO']).message, /esperam|espera/);
+  assert.match(avisoEncerrar(['EMBARCADO', 'DESEMBARCADO']).title, /1 aluno a bordo/);
+  assert.match(avisoEncerrar(['DESEMBARCADO', 'AGUARDANDO']).title, /Faltam 1 aluno/);
+  const ok = avisoEncerrar(['DESEMBARCADO', 'DESEMBARCADO', 'AUSENTE']);
+  assert.equal(ok.destructive, false);
+  assert.match(ok.message, /Todos os 2/);
+});

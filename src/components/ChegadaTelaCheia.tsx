@@ -49,7 +49,7 @@ export const ChegadaTelaCheia: React.FC<Props> = ({ titulo, sub, onFim }) => {
   const raio = (v: Animated.Value) => ({
     position: 'absolute' as const, left: (w - d) / 2, top: (h - d) / 2, width: d, height: d, borderRadius: d / 2,
     transform: [{ scale: reduzir ? 1 : v.interpolate({ inputRange: [0, 1], outputRange: [0.02, 1] }) }],
-    opacity: reduzir ? v : 1,
+    opacity: reduzir ? v : v.interpolate({ inputRange: [0, 0.01], outputRange: [0, 1], extrapolate: 'clamp' }), // invisível até começar (sem ponto no centro)
   });
 
   return (

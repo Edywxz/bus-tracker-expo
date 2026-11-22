@@ -48,6 +48,10 @@ export const ALUNOS_SIM: Record<string, { casa: string; escola: string }> = {
   'aluno-4': { casa: 'sofia', escola: 'santaMaria' },
   'aluno-5': { casa: 'lucas', escola: 'aurora' }, // Ana mora com o Lucas: mesma casa, mesma parada
 };
+/** Casa dos filhos do responsável da demo: a van a busca por último entre as casas, para a espera e o aviso de chegada aparecerem. */
+const CASAS_PROPRIAS = new Set(['lucas']);
+const VAN_VISIVEL_MIN = 5; // a van só aparece ao responsável quando falta isso para chegar
+const VEL_ETA_KMH = 30; // mesma velocidade usada em estimativaRota (AppContext)
 const NOMES: Record<string, string> = { 'aluno-1': 'Lucas', 'aluno-2': 'Beatriz', 'aluno-3': 'Gabriel', 'aluno-4': 'Sofia', 'aluno-5': 'Ana' };
 const HORA: Record<Sentido, [number, number][]> = {
   IDA: [[6, 30], [6, 55], [6, 50]], // esperando depois das 06:45, quando o lembrete deixa de dizer "hora de preparar"
@@ -74,9 +78,10 @@ const permutacoes = <T,>(a: T[]): T[][] => (a.length <= 1 ? [a] : a.flatMap((x, 
 function paradasDe(c: ConfigSim): Parada[] {
   const casas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].casa))]; // irmãos na mesma casa = uma parada
   const escolas = [...new Set(c.alunoIds.map((a) => ALUNOS_SIM[a].escola))];
-  const [antes, depois] = c.sentido === 'IDA' ? [casas, escolas] : [escolas, casas];
   const custo = (o: string[]) => o.reduce((s, id, i) => s + (i ? perna(o[i - 1], id).s : c.sentido === 'IDA' ? perna('garagem', id).s : 0), 0);
-  const melhor = permutacoes(antes).flatMap((a) => permutacoes(depois).map((d) => [...a, ...d])).reduce((m, o) => (custo(o) < custo(m) ? o : m));
+  const ordensCasas = permutacoes(casas.filter((x) => !CASAS_PROPRIAS.has(x))).map((o) => [...o, ...casas.filter((x) => CASAS_PROPRIAS.has(x))]);
+  const [oa, od] = c.sentido === 'IDA' ? [ordensCasas, permutacoes(escolas)] : [permutacoes(escolas), ordensCasas];
+  const melhor = oa.flatMap((a) => od.map((d) => [...a, ...d])).reduce((m, o) => (custo(o) < custo(m) ? o : m));
   return melhor.map((lugar) => ({ lugar, casa: casas.includes(lugar) }));
 }
 
@@ -138,7 +143,10 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
   let fase: EstadoSim['fase'] = 'PREPARAR';
   let faseHora = 0;
   for (const e of feitos) {
-    if (e.tipo === 'FASE') { faseHora = e.fase === 'PREPARAR' ? 0 : e.fase === 'ESPERANDO' ? 1 : 2; fase = e.fase === 'SAIDA' ? 'EM_ROTA' : e.fase; }
+    if (e.tipo === 'FASE') {
+      faseHora = e.fase === 'PREPARAR' ? 0 : e.fase === 'ESPERANDO' ? 1 : 2; fase = e.fase === 'SAIDA' ? 'EM_ROTA' : e.fase;
+      if (e.fase === 'SAIDA') notificacoes.push({ id: 'sim-SAIDA', tipo: 'EMBARQUE', titulo: 'Rota iniciada', mensagem: 'O motorista iniciou a rota.' });
+    }
     else if (e.tipo === 'OCORRENCIA') {
       ocorrencia = e.gravidade;
       notificacoes.push({ id: `sim-OCORRENCIA-${e.t}`, tipo: 'EMERGENCIA', titulo: `Alerta de rota: ${ROTULO[e.gravidade]}`,
@@ -243,4 +251,24 @@ export function visaoDoResponsavel(l: Linha, t: number, meusIds: string[]): { co
   });
   const ultima = todas.map((p) => p.propria).lastIndexOf(true);
   return { concluida, paradas: todas.slice(0, ultima + 1) };
+}
+
+/**
+ * A van só é mostrada ao responsável nos últimos 5 min até uma parada dos filhos dele (casa ou escola) e some quando o
+ * embarque/desembarque ali é registrado. `minutos` = previsão até a parada.
+ */
+export function vanVisivel(l: Linha, t: number, meusIds: string[]): { visivel: boolean; minutos: number } {
+  const meus = l.config.alunoIds.filter((a) => meusIds.includes(a));
+  const idx = estadoEm(l, t).indice;
+  for (const e of l.eventos) {
+    if (e.tipo !== 'PARADA' || t >= e.t + T_REGISTRO) continue; // parada já registrada
+    const casa = l.config.alunoIds.some((a) => ALUNOS_SIM[a].casa === e.lugar);
+    if (!meus.some((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar)) continue;
+    const lugar = DEMO_LUGARES[e.lugar as keyof typeof DEMO_LUGARES];
+    const alvo = l.pontos.reduce((m, p, i) => (distanciaKm(p, lugar) < distanciaKm(l.pontos[m], lugar) ? i : m), 0);
+    const kmFalta = Math.max(0, kmAte(l.km, alvo) - kmAte(l.km, idx));
+    const minutos = Math.max(1, Math.round((kmFalta / VEL_ETA_KMH) * 60));
+    return { visivel: kmFalta <= (VAN_VISIVEL_MIN / 60) * VEL_ETA_KMH, minutos }; // só a próxima parada própria interessa
+  }
+  return { visivel: false, minutos: 0 };
 }

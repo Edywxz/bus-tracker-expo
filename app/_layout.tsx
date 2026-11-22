@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { AppProvider, useApp } from '../src/context/AppContext';
@@ -14,6 +14,8 @@ import { motion, radius } from '../src/theme/tokens';
  * Navegação 100% nativa: Stack nativo + NativeTabs (Liquid Glass no iOS 26 · Material no Android).
  */
 SystemUI.setBackgroundColorAsync(colors.groupedBg).catch(() => {});
+
+export const unstable_settings = { anchor: '(tabs)' };
 
 const Splash: React.FC = () => {
   const o = useRef(new Animated.Value(0)).current;
@@ -33,8 +35,10 @@ const Splash: React.FC = () => {
 
 function RootNavigator() {
   const { authStatus } = useApp();
+  const logado = authStatus !== 'carregando' && authStatus !== 'deslogado';
+  // Ao entrar, o app sempre abre no mapa (aba Início), não na última aba/rota lembrada.
+  useEffect(() => { if (logado) router.replace('/(tabs)/(inicio)'); }, [logado]);
   if (authStatus === 'carregando') return <Splash />;
-  const logado = authStatus !== 'deslogado';
   return (
     <Stack screenOptions={detailOptions}>
       <Stack.Protected guard={!logado}>

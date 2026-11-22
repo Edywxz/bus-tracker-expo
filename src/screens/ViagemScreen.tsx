@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { gap, layout, spacing } from '../theme/tokens';
+import { animateNextLayout, gap, layout, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
 import {
   Button, IconButton, Notice, ProgressBar, PullDownButton, StatusPill,
@@ -18,6 +18,9 @@ import { PainelArrastavel } from '../components/PainelArrastavel';
 import { useControlesSimulacao } from '../components/useControlesSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
+import { avisoEncerrar } from '../utils/encerrarRota';
+import { confirm } from '../components/ds/modality';
+import { vanVisivel } from '../services/simulacao';
 import { lembrete } from '../utils/lembrete';
 import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
@@ -39,7 +42,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim, simulacao,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -62,6 +65,16 @@ export const ViagemScreen: React.FC = () => {
     if (concluida && !eraConcluida.current) setChegada(true);
     eraConcluida.current = concluida;
   }, [concluida]);
+  // 5 s depois da tela cheia (ou ao abrir já concluída) o cartão "Rota concluída" sai e o painel volta ao padrão.
+  const [saindo, setSaindo] = useState(false);
+  const [resumoVisto, setResumoVisto] = useState(false);
+  useEffect(() => {
+    if (!concluida) { setSaindo(false); setResumoVisto(false); return; }
+    if (chegada) return;
+    const t = setTimeout(() => setSaindo(true), 5000);
+    return () => clearTimeout(t);
+  }, [concluida, chegada]);
+  const concluidaNoPainel = concluida && !resumoVisto;
   const pai = role === 'RESPONSAVEL';
   const entregues = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO');
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;
@@ -95,7 +108,11 @@ export const ViagemScreen: React.FC = () => {
       .map((a) => distanciaKm(gpsPosicao, { latitude: a.latitude!, longitude: a.longitude! }));
     return ds.length ? Math.min(...ds) : null;
   })();
-  const aviso = pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida, kmVan }) : null;
+  // Demo (responsável): a van só aparece nos últimos 5 min até a parada dos filhos; fora disso o app só avisa que a rota começou.
+  const demoPai = isDemo && pai;
+  const vanSim = demoPai && simulacao ? vanVisivel(simulacao.linha, simulacao.t, alunos.map((a) => a.id)) : null;
+  const vanAparece = !demoPai || !!vanSim?.visivel;
+  const aviso = demoPai && !simulacao ? null : pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida: concluidaNoPainel, kmVan }) : null;
 
   // Simulação (responsável): quantas paradas de outros passageiros faltam antes da próxima parada do filho.
   const proxPropria = paradasSim ? paradasSim.findIndex((p) => p.propria && !p.feita) : -1;
@@ -104,19 +121,28 @@ export const ViagemScreen: React.FC = () => {
     : antes === 0 ? 'Próxima parada é a do seu filho' : `${antes} ${antes === 1 ? 'parada' : 'paradas'} antes da sua`;
 
   const concluir = async () => {
+    const aviso = avisoEncerrar(alunos.map((a) => a.statusEmbarque));
+    if (!(await confirm({ title: aviso.title, message: aviso.message, confirmLabel: 'Encerrar rota', destructive: aviso.destructive }))) return;
     setFinishing(true); setErro(null);
     try { await finalizarViagem(); } catch (e) { setErro((e as Error).message); } finally { setFinishing(false); }
   };
 
   const pill = emRota
     ? <StatusPill tone="signal" live label={est ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
-    : concluida ? null : <StatusPill tone="neutral" label="Rota não iniciada" /> // concluída: o cartão de chegada já diz;
+    : null; // sem rota ativa (ou já concluída) não há marcador: o texto abaixo já diz
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
   const destaque = (() => {
-    if (concluida && (pai || motorista)) return null; // a confirmação de chegada ocupa o lugar da previsão
+    if (concluidaNoPainel && (pai || motorista)) return null; // a confirmação de chegada ocupa o lugar da previsão
     if (motorista && !emRota) {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
+    }
+    if (demoPai && emRota) {
+      if (!vanSim?.visivel) return { valor: '', sufixo: '', legenda: `${nomes.transportador ?? 'O motorista'} iniciou a rota`, lado: '', ladoSub: restantes };
+      const quem = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').map((a) => a.nome.split(' ')[0]).join(' e ');
+      const busca = aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
+      const legenda = busca ? `Van chega para buscar ${quem}` : viagemAtiva.tipo_viagem === 'VOLTA' ? `${quem} chega em casa` : `${quem} chega à escola`;
+      return { valor: `${vanSim.minutos}`, sufixo: 'min', legenda, lado: horaPrevista(vanSim.minutos), ladoSub: 'previsão aproximada' };
     }
     if (proximaChegada) {
       const quem = proximaChegada.aluno.nome.split(' ')[0];
@@ -161,13 +187,13 @@ export const ViagemScreen: React.FC = () => {
         {emRota ? <Text style={s.meta}>ao vivo</Text> : null}
       </View>
 
-      {concluida && (pai || alunos.length > 0) ? (
+      {concluidaNoPainel && (pai || alunos.length > 0) ? (
         <View style={{ marginTop: spacing.md }}>
-          <ChegadaSegura entregues={entregues} tipo={viagemAtiva.tipo_viagem} hora={agora} motorista={motorista} />
+          <ChegadaSegura entregues={entregues} tipo={viagemAtiva.tipo_viagem} hora={agora} motorista={motorista} saindo={saindo} onSaiu={() => { animateNextLayout(); setResumoVisto(true); }} />
         </View>
       ) : null}
 
-      {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={concluida ? 'school' : aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
+      {aviso ? <View style={{ marginTop: spacing.md }}><Notice tone={aviso.tone} message={aviso.texto} icon={concluidaNoPainel ? 'school' : aviso.tone === 'warning' ? 'warning' : 'calendar'} /></View> : null}
 
       {vazio ? (
         pai ? (
@@ -202,7 +228,7 @@ export const ViagemScreen: React.FC = () => {
                 </View>
               ) : null}
             </View>
-          ) : concluida ? null : (
+          ) : concluidaNoPainel ? null : (
             <View style={{ marginTop: spacing.md }}>
               <Text style={s.title}>{nomes.transportador ? `${nomes.transportador} ainda não iniciou a rota` : 'A rota de hoje ainda não começou'}</Text>
               <Text style={s.sub}>Avisamos você assim que a van sair.</Text>
@@ -292,7 +318,7 @@ export const ViagemScreen: React.FC = () => {
   }
   const paradasMapa: MapaParada[] = [...paradasOutros, ...escolas.values(),
     ...[...residencias.values()].map(({ pin, nomes }) => ({ ...pin, rotulo: pai ? 'Minha casa' : junta(nomes) }))];
-  const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
+  const vanGeo = gpsAtivo && gpsPosicao.latitude !== 0 && !(pai && concluida) && vanAparece ? { latitude: gpsPosicao.latitude, longitude: gpsPosicao.longitude } : null;
   const mapaReal = process.env.EXPO_OS !== 'web' && (paradasMapa.length > 0 || !!vanGeo);
 
   return (
@@ -302,7 +328,7 @@ export const ViagemScreen: React.FC = () => {
         <LiveMap
           van={vanGeo}
           vanAtiva={emRota && gpsAtivo}
-          trilha={isDemo && !emRota ? [] : rotaGeo} // demo sem corrida: nada de trajeto desenhado
+          trilha={(isDemo && !emRota) || !vanAparece ? [] : rotaGeo} // demo sem corrida: nada de trajeto desenhado
           paradas={paradasMapa}
           accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
         />
@@ -335,7 +361,7 @@ export const ViagemScreen: React.FC = () => {
       {chegada ? (
         <ChegadaTelaCheia
           titulo={motorista ? 'Rota concluída' : entregues.length === 1 ? `${entregues[0].nome.split(' ')[0]} chegou em segurança` : 'Seus filhos chegaram em segurança'}
-          sub={motorista ? `${entregues.length} ${entregues.length === 1 ? 'aluno entregue' : 'alunos entregues'} em segurança` : viagemAtiva.tipo_viagem === 'VOLTA' ? 'Entregue em casa' : 'Desembarque confirmado na escola'}
+          sub={motorista ? (entregues.length ? `${entregues.length} ${entregues.length === 1 ? 'aluno entregue' : 'alunos entregues'} em segurança` : 'Rota encerrada') : viagemAtiva.tipo_viagem === 'VOLTA' ? 'Entregue em casa' : 'Desembarque confirmado na escola'}
           onFim={() => setChegada(false)} />
       ) : null}
     </View>
