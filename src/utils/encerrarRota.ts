@@ -14,6 +14,6 @@ export function avisoEncerrar(status: string[]): AvisoEncerrar {
     return { title: `Ainda há ${alunos(aBordo)} a bordo`, message: `${aBordo === 1 ? 'Embarcou' : 'Embarcaram'} e não ${aBordo === 1 ? 'foi desembarcado' : 'foram desembarcados'}.${resto} Encerrar mesmo assim?`, destructive: true };
   }
   if (!entregues) return { title: 'Nenhum passageiro embarcou', message: `${alunos(aguardando)} ainda ${aguardando === 1 ? 'aguarda' : 'aguardam'} embarque. Encerrar mesmo assim?`, destructive: true };
-  if (aguardando) return { title: `Faltam ${alunos(aguardando)} para embarcar`, message: `${entregues === 1 ? '1 já foi entregue' : `${entregues} já foram entregues`}. Encerrar mesmo assim?`, destructive: true };
+  if (aguardando) return { title: aguardando === 1 ? 'Falta 1 aluno para embarcar' : `Faltam ${alunos(aguardando)} para embarcar`, message: `${entregues === 1 ? '1 já foi entregue' : `${entregues} já foram entregues`}. Encerrar mesmo assim?`, destructive: true };
   return { title: 'Encerrar a rota?', message: `${entregues === 1 ? 'O aluno foi entregue' : `Todos os ${entregues} alunos foram entregues`}.`, destructive: false };
 }
