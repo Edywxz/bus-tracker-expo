@@ -257,7 +257,7 @@ export function visaoDoResponsavel(l: Linha, t: number, meusIds: string[]): { co
  * A van só é mostrada ao responsável nos últimos 5 min até uma parada dos filhos dele (casa ou escola) e some quando o
  * embarque/desembarque ali é registrado. `minutos` = previsão até a parada.
  */
-export function vanVisivel(l: Linha, t: number, meusIds: string[]): { visivel: boolean; minutos: number } {
+export function vanVisivel(l: Linha, t: number, meusIds: string[]): { visivel: boolean; minutos: number; trecho: PontoRota[] } {
   const meus = l.config.alunoIds.filter((a) => meusIds.includes(a));
   const idx = estadoEm(l, t).indice;
   for (const e of l.eventos) {
@@ -268,7 +268,8 @@ export function vanVisivel(l: Linha, t: number, meusIds: string[]): { visivel: b
     const alvo = l.pontos.reduce((m, p, i) => (distanciaKm(p, lugar) < distanciaKm(l.pontos[m], lugar) ? i : m), 0);
     const kmFalta = Math.max(0, kmAte(l.km, alvo) - kmAte(l.km, idx));
     const minutos = Math.max(1, Math.round((kmFalta / VEL_ETA_KMH) * 60));
-    return { visivel: kmFalta <= (VAN_VISIVEL_MIN / 60) * VEL_ETA_KMH, minutos }; // só a próxima parada própria interessa
+    // trecho = só o que falta até essa parada; o caminho já feito (e o resto da rota) nunca é revelado ao responsável
+    return { visivel: kmFalta <= (VAN_VISIVEL_MIN / 60) * VEL_ETA_KMH, minutos, trecho: alvo >= idx ? l.pontos.slice(Math.floor(idx), alvo + 1) : [] }; // só a próxima parada própria interessa
   }
-  return { visivel: false, minutos: 0 };
+  return { visivel: false, minutos: 0, trecho: [] };
 }

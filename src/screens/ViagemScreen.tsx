@@ -60,20 +60,16 @@ export const ViagemScreen: React.FC = () => {
   const motorista = role === 'TRANSPORTADOR';
   // Tela cheia de chegada só quando a corrida termina com a tela aberta (não ao abrir uma corrida já concluída).
   const [chegada, setChegada] = useState(false);
+  const [abrirPainel, setAbrirPainel] = useState(concluida ? 1 : 0); // concluída: o painel já nasce aberto
   const eraConcluida = useRef(concluida);
   useEffect(() => {
-    if (concluida && !eraConcluida.current) setChegada(true);
+    if (concluida && !eraConcluida.current) { setChegada(true); setAbrirPainel((n) => n + 1); } // abre por baixo da tela cheia
     eraConcluida.current = concluida;
   }, [concluida]);
-  // 5 s depois da tela cheia (ou ao abrir já concluída) o cartão "Rota concluída" sai e o painel volta ao padrão.
+  // O cartão "Rota concluída" fica até o usuário recolher o painel; aí sai e o painel volta ao padrão.
   const [saindo, setSaindo] = useState(false);
   const [resumoVisto, setResumoVisto] = useState(false);
-  useEffect(() => {
-    if (!concluida) { setSaindo(false); setResumoVisto(false); return; }
-    if (chegada) return;
-    const t = setTimeout(() => setSaindo(true), 5000);
-    return () => clearTimeout(t);
-  }, [concluida, chegada]);
+  useEffect(() => { if (!concluida) { setSaindo(false); setResumoVisto(false); } }, [concluida]);
   const concluidaNoPainel = concluida && !resumoVisto;
   const pai = role === 'RESPONSAVEL';
   const entregues = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO');
@@ -130,7 +126,7 @@ export const ViagemScreen: React.FC = () => {
   };
 
   const pill = emRota
-    ? <StatusPill tone="signal" live label={est ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
+    ? <StatusPill tone="signal" live label={est && motorista ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
     : null; // sem rota ativa (ou já concluída) não há marcador: o texto abaixo já diz
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
@@ -140,7 +136,10 @@ export const ViagemScreen: React.FC = () => {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
     if (demoPai && emRota) {
-      if (!vanSim?.visivel && !filhoABordo) return { valor: '', sufixo: '', legenda: `${nomes.transportador ?? 'O motorista'} iniciou a rota`, lado: '', ladoSub: restantes };
+      if (!vanSim?.visivel && !filhoABordo) {
+        const min = Math.max(1, vanSim?.minutos ?? 1); // estimativa até a parada dos filhos, sem expor a rota
+        return { valor: `${min}`, sufixo: 'min', legenda: `${nomes.transportador ?? 'O motorista'} já iniciou a rota e chegará em breve. Aguarde.`, lado: horaPrevista(min), ladoSub: 'previsão aproximada' };
+      }
       const quem = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').map((a) => a.nome.split(' ')[0]).join(' e ');
       const busca = !filhoABordo && aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
       const legenda = busca ? `Van chega para buscar ${quem}` : viagemAtiva.tipo_viagem === 'VOLTA' ? `${quem} chega em casa` : `${quem} chega à escola`;
@@ -332,7 +331,7 @@ export const ViagemScreen: React.FC = () => {
         <LiveMap
           van={vanGeo}
           vanAtiva={emRota && gpsAtivo}
-          trilha={(isDemo && !emRota) || !vanAparece ? [] : rotaGeo} // demo sem corrida: nada de trajeto desenhado
+          trilha={demoPai ? (vanAparece ? vanSim?.trecho : []) : isDemo && !emRota ? [] : rotaGeo} // responsável: só o trecho até a sua parada // demo sem corrida: nada de trajeto desenhado
           paradas={paradasMapa}
           accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
         />
@@ -352,7 +351,7 @@ export const ViagemScreen: React.FC = () => {
         <PullDownButton label="Mais opções" title={controles.titulo} variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
+      <PainelArrastavel abrir={abrirPainel} onPos={(p) => { if (concluida && !chegada && p !== 'aberto') setSaindo(true); }} resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
       </PainelArrastavel>
 
