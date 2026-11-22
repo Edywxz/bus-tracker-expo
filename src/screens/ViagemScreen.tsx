@@ -111,7 +111,9 @@ export const ViagemScreen: React.FC = () => {
   // Demo (responsável): a van só aparece nos últimos 5 min até a parada dos filhos; fora disso o app só avisa que a rota começou.
   const demoPai = isDemo && pai;
   const vanSim = demoPai && simulacao ? vanVisivel(simulacao.linha, simulacao.t, alunos.map((a) => a.id)) : null;
-  const vanAparece = !demoPai || !!vanSim?.visivel;
+  // Com filho a bordo a van é sempre mostrada (ida e volta); sem ninguém a bordo, só nos últimos 5 min até a parada.
+  const filhoABordo = alunos.some((x) => x.statusEmbarque === 'EMBARCADO');
+  const vanAparece = !demoPai || !!vanSim?.visivel || filhoABordo;
   const aviso = demoPai && !simulacao ? null : pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida: concluidaNoPainel, kmVan }) : null;
 
   // Simulação (responsável): quantas paradas de outros passageiros faltam antes da próxima parada do filho.
@@ -138,11 +140,11 @@ export const ViagemScreen: React.FC = () => {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
     if (demoPai && emRota) {
-      if (!vanSim?.visivel) return { valor: '', sufixo: '', legenda: `${nomes.transportador ?? 'O motorista'} iniciou a rota`, lado: '', ladoSub: restantes };
+      if (!vanSim?.visivel && !filhoABordo) return { valor: '', sufixo: '', legenda: `${nomes.transportador ?? 'O motorista'} iniciou a rota`, lado: '', ladoSub: restantes };
       const quem = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').map((a) => a.nome.split(' ')[0]).join(' e ');
-      const busca = aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
+      const busca = !filhoABordo && aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
       const legenda = busca ? `Van chega para buscar ${quem}` : viagemAtiva.tipo_viagem === 'VOLTA' ? `${quem} chega em casa` : `${quem} chega à escola`;
-      return { valor: `${vanSim.minutos}`, sufixo: 'min', legenda, lado: horaPrevista(vanSim.minutos), ladoSub: 'previsão aproximada' };
+      return { valor: `${(vanSim?.minutos ?? 1)}`, sufixo: 'min', legenda, lado: horaPrevista((vanSim?.minutos ?? 1)), ladoSub: 'previsão aproximada' };
     }
     if (proximaChegada) {
       const quem = proximaChegada.aluno.nome.split(' ')[0];
@@ -304,8 +306,10 @@ export const ViagemScreen: React.FC = () => {
     const feito = quem.length > 0 && quem.every((a) => (viagemAtiva.tipo_viagem === 'VOLTA' ? a.statusEmbarque !== 'AGUARDANDO' : a.statusEmbarque === 'DESEMBARCADO'));
     escolas.set(chave, { ...e, nome, rotulo: nome, status: feito ? 'DESEMBARCADO' : 'AGUARDANDO' });
   }
-  const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
-    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: '', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
+  // Privacidade: o responsável só vê a parada de outro passageiro quando falta no máximo uma antes da dele E a van está a ≤ 5 min.
+  const podeVerOutras = !!vanSim?.visivel && antes != null && antes <= 1;
+  const paradasOutros: MapaParada[] = podeVerOutras ? (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
+    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: '', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const, sutil: true })) : [];
   // Só há pinos de van, escola e residência: os alunos viajam com a van e, fora dela, estão na escola ou em casa.
   // Irmãos no mesmo endereço dividem a residência.
   const residencias = new Map<string, { pin: MapaParada; nomes: string[] }>();

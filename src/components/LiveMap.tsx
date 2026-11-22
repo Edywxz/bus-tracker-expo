@@ -22,6 +22,8 @@ export interface MapaParada {
   rotulo?: string;
   /** destino da rota (marcador de escola) */
   escola?: boolean;
+  /** parada de outro passageiro: ponto pequeno e translúcido, sem rótulo (hierarquia: a do usuário é que importa) */
+  sutil?: boolean;
 }
 
 interface Props {
@@ -88,13 +90,13 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
           const feito = p.status === 'EMBARCADO' || p.status === 'DESEMBARCADO' || p.status === 'AUSENTE';
           const grande = p.casa || p.destaque;
           return (
-            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}${p.rotulo}`} zIndex={p.destaque ? 3 : 1}>
-              <View style={s.pin}>
+            <Pin key={p.id} coordinate={p} rev={`${p.status}${p.casa}${p.destaque}${p.escola}${p.rotulo}${p.sutil}`} zIndex={p.destaque ? 3 : 1}>
+              {p.sutil ? <View style={s.sutil} /> : <View style={s.pin}>
                 <StopMarker kind={p.escola ? 'school' : grande ? 'home' : 'stop'} done={feito} label={p.nome} />
                 {(p.rotulo ?? p.nome.split(' ')[0]) ? (
                   <Text style={[s.rotulo, p.destaque && s.rotuloDestaque]} numberOfLines={1}>{p.rotulo ?? p.nome.split(' ')[0]}</Text>
                 ) : null}
-              </View>
+              </View>}
             </Pin>
           );
         })}
@@ -112,6 +114,7 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
 };
 
 const s = StyleSheet.create({
+  sutil: { width: 12, height: 12, borderRadius: radius.full, backgroundColor: colors.secondaryLabel, opacity: 0.4, borderWidth: 2, borderColor: colors.systemBg },
   pin: { alignItems: 'center', gap: 2, minWidth: 80, paddingVertical: 4 },
   rotulo: { ...type.caption2, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden', maxWidth: 140, textAlign: 'center' },
   rotuloDestaque: { backgroundColor: colors.primary, color: colors.onPrimary },
