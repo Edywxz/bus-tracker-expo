@@ -89,7 +89,7 @@ export const ListaAlunos: React.FC<{ onAdicionar: () => void }> = ({ onAdicionar
                       <Text style={s.name}>{a.nome}</Text>
                       <Text style={s.meta}>{a.turma} · {TURNO[a.turno] ?? a.turno}</Text>
                     </View>
-                    <StatusPill tone={st.tone} label={st.label} />
+                    {a.statusEmbarque === 'AGUARDANDO' ? null : <StatusPill tone={st.tone} label={st.label} />}
                   </View>
                   <View style={s.addr}>
                     <Icon name="location" size={15} color={colors.secondaryLabel} />

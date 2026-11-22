@@ -11,13 +11,16 @@ interface Props {
   tipo: 'IDA' | 'VOLTA';
   hora: Date;
   motorista?: boolean;
+  /** Sai do painel (mola criticamente amortecida, sem overshoot); `onSaiu` ao terminar. */
+  saindo?: boolean;
+  onSaiu?: () => void;
 }
 
 const primeiro = (n: string) => n.split(' ')[0];
 const lista = (n: string[]) => (n.length > 1 ? `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}` : n[0]);
 
 /** Fim da corrida: confirma, de forma clara, que o dependente chegou em segurança. Aparece uma vez (estado raro, vale um destaque). */
-export const ChegadaSegura: React.FC<Props> = ({ entregues, tipo, hora, motorista }) => {
+export const ChegadaSegura: React.FC<Props> = ({ entregues, tipo, hora, motorista, saindo, onSaiu }) => {
   const quando = hora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const n = entregues.length;
   const nomes = lista(entregues.map((e) => primeiro(e.nome)));
@@ -42,10 +45,24 @@ export const ChegadaSegura: React.FC<Props> = ({ entregues, tipo, hora, motorist
     });
     return () => { vivo = false; };
   }, [card, selo]);
+  const saida = useRef(new Animated.Value(0)).current; // 0 = no painel, 1 = fora
+  const aoSair = useRef(onSaiu);
+  aoSair.current = onSaiu;
+  useEffect(() => {
+    // Parte do valor atual (interrompível): se `saindo` voltar a false, a mola leva de volta sem saltar.
+    const a = reduzir
+      ? Animated.timing(saida, { toValue: saindo ? 1 : 0, duration: motion.duration.fast, useNativeDriver: true })
+      : Animated.spring(saida, { toValue: saindo ? 1 : 0, stiffness: 300, damping: 35, mass: 1, useNativeDriver: true });
+    a.start(({ finished }) => { if (finished && saindo) aoSair.current?.(); });
+    return () => a.stop();
+  }, [saindo, reduzir, saida]);
   const escala = (v: Animated.Value, de: number) => (reduzir ? 1 : v.interpolate({ inputRange: [0, 1], outputRange: [de, 1] }));
 
   return (
-    <Animated.View style={[st.card, { opacity: card, transform: [{ scale: escala(card, 0.95) }] }]} accessibilityRole="alert" accessibilityLiveRegion="polite" accessibilityLabel={`${titulo}. ${sub}`}>
+    <Animated.View style={[st.card, {
+      opacity: Animated.multiply(card, saida.interpolate({ inputRange: [0, 1], outputRange: [1, 0], extrapolate: 'clamp' })),
+      transform: reduzir ? [] : [{ scale: Animated.multiply(escala(card, 0.95), saida.interpolate({ inputRange: [0, 1], outputRange: [1, 0.96] })) }, { translateY: saida.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }) }],
+    }]} accessibilityRole="alert" accessibilityLiveRegion="polite" accessibilityLabel={`${titulo}. ${sub}`}>
       <Animated.View style={[st.selo, { opacity: selo, transform: [{ scale: escala(selo, 0.6) }] }]}>
         <Icon name="checkCircle" size={44} color={colors.success} />
       </Animated.View>

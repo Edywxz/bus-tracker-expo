@@ -72,7 +72,6 @@ export const initialMockData: MockDataState = {
       ativo: true,
       criado_em: '2026-01-15T08:00:00Z',
       statusEmbarque: 'AGUARDANDO',
-      ultimoRegistro: 'Aguardando embarque',
     },
     {
       id: 'aluno-2',
@@ -92,7 +91,6 @@ export const initialMockData: MockDataState = {
       ativo: true,
       criado_em: '2026-01-20T09:00:00Z',
       statusEmbarque: 'AGUARDANDO',
-      ultimoRegistro: 'Aguardando embarque',
     },
     {
       id: 'aluno-3',
@@ -112,7 +110,6 @@ export const initialMockData: MockDataState = {
       ativo: true,
       criado_em: '2026-02-01T10:00:00Z',
       statusEmbarque: 'AGUARDANDO',
-      ultimoRegistro: 'Aguardando embarque',
     },
     {
       id: 'aluno-4',
@@ -151,7 +148,6 @@ export const initialMockData: MockDataState = {
       ativo: true,
       criado_em: '2026-02-12T09:00:00Z',
       statusEmbarque: 'AGUARDANDO',
-      ultimoRegistro: 'Aguardando embarque',
     },
   ],
 

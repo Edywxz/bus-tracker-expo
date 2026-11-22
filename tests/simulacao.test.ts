@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEMO_PERNAS } from '../src/services/demoPernas.ts';
-import { montarSimulacao, estadoEm, alvoDoPulo, visaoDoResponsavel, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
+import { montarSimulacao, estadoEm, alvoDoPulo, visaoDoResponsavel, vanVisivel, type ConfigSim, type EventoSim, type Linha } from '../src/services/simulacao.ts';
 
 const TODOS = ['aluno-1', 'aluno-2', 'aluno-3', 'aluno-4', 'aluno-5'];
 const ida = (alunoIds = TODOS): ConfigSim => ({ sentido: 'IDA', alunoIds, ocorrencia: null });
@@ -257,9 +257,11 @@ test('a ordem das paradas é a mais rápida pelas ruas (ida e volta, vários sub
   const escola: Record<string, string> = { 'aluno-1': 'santaMaria', 'aluno-2': 'santaMaria', 'aluno-3': 'santaMaria', 'aluno-4': 'santaMaria', 'aluno-5': 'aurora' };
   for (const ids of [TODOS, ['aluno-2', 'aluno-4'], ['aluno-3'], ['aluno-1', 'aluno-5', 'aluno-4']]) {
     const casas = [...new Set(ids.map((a) => casa[a]))], escolas = [...new Set(ids.map((a) => escola[a]))];
-    const melhorIda = Math.min(...perms(casas).flatMap((c) => perms(escolas).map((e) => custo([...c, ...e], true))));
+    // a casa dos filhos do responsável (lucas) é sempre a última das casas
+    const casasOrd = perms(casas.filter((c) => c !== 'lucas')).map((o) => [...o, ...casas.filter((c) => c === 'lucas')]);
+    const melhorIda = Math.min(...casasOrd.flatMap((c) => perms(escolas).map((e) => custo([...c, ...e], true))));
     assert.equal(custo(lugares(montarSimulacao(ida(ids))), true), melhorIda, `ida ${ids}`);
-    const melhorVolta = Math.min(...perms(escolas).flatMap((e) => perms(casas).map((c) => custo([...e, ...c], false))));
+    const melhorVolta = Math.min(...perms(escolas).flatMap((e) => casasOrd.map((c) => custo([...e, ...c], false))));
     assert.equal(custo(lugares(montarSimulacao(volta(ids))), false), melhorVolta, `volta ${ids}`);
   }
 });
@@ -276,4 +278,14 @@ test('a van termina exatamente na última parada do percurso', () => {
     assert.equal(estadoEm(l, l.duracaoMs).indice, l.pontos.length - 1);
     assert.equal(estadoEm(l, 0).indice, 0);
   }
+});
+
+test('van só aparece ao responsável nos últimos 5 min até a parada dos filhos', () => {
+  const l = montarSimulacao(ida());
+  const meus = ['aluno-1', 'aluno-5'];
+  assert.equal(vanVisivel(l, 0, meus).visivel, false); // saindo da garagem
+  const casaLucas = paradas(l).find((p) => p.lugar === 'lucas')!;
+  assert.equal(vanVisivel(l, casaLucas.t, meus).visivel, true); // parada na casa
+  assert.equal(vanVisivel(l, casaLucas.t - 1000, meus).visivel, true);
+  assert.ok(paradas(l).findIndex((p) => p.lugar === 'lucas') > 0, 'outros alunos vêm antes');
 });
