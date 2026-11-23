@@ -79,19 +79,16 @@ function useDeslizar(alvo: Ponto): Ponto {
 
 const VanMarker: React.FC<{ van: Ponto; ativa: boolean; alvo?: Ponto }> = ({ van, ativa, alvo }) => {
   const pos = useDeslizar(van);
-  const ultimo = useRef<Ponto | null>(null);
-  const angulo = useRef<number | null>(null);
+  const [prevVan, setPrevVan] = useState(van);
+  const [angulo, setAngulo] = useState(() => (alvo ? rumo(van, alvo) : 0));
   const [track, setTrack] = useState(true);
-  const prev = ultimo.current;
-  if (!prev) {
-    ultimo.current = van;
-    if (alvo) angulo.current = rumo(van, alvo);
-  } else if (distanciaKm(prev, van) > 0.004) {
-    const novo = rumo(prev, van), atual = angulo.current ?? novo;
-    angulo.current = atual + ((novo - atual + 540) % 360) - 180;
-    ultimo.current = van;
+  // estado derivado: o ponto de referência só avança após mover > 4 m (ruído de GPS não gira a van)
+  if (distanciaKm(prevVan, van) > 0.004) {
+    const novo = rumo(prevVan, van);
+    setPrevVan(van);
+    setAngulo((atual) => atual + ((novo - atual + 540) % 360) - 180);
   }
-  const graus = angulo.current ?? 0;
+  const graus = angulo;
   // O Apple Maps ignora `rotation` em marcador com View: gira a própria View e deixa o marcador reler a imagem por um instante.
   useEffect(() => {
     setTrack(true);

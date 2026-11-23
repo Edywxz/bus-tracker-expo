@@ -19,6 +19,7 @@ import { useControlesSimulacao } from '../components/useControlesSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
 import { avisoEncerrar } from '../utils/encerrarRota';
+import { mensagemErro } from '../utils/format';
 import { confirm } from '../components/ds/modality';
 import { vanVisivel } from '../services/simulacao';
 import { lembrete } from '../utils/lembrete';
@@ -129,7 +130,7 @@ export const ViagemScreen: React.FC = () => {
     const aviso = avisoEncerrar(alunos.map((a) => a.statusEmbarque));
     if (!(await confirm({ title: aviso.title, message: aviso.message, confirmLabel: 'Encerrar rota', destructive: aviso.destructive }))) return;
     setFinishing(true); setErro(null);
-    try { await finalizarViagem(); } catch (e) { setErro((e as Error).message); } finally { setFinishing(false); }
+    try { await finalizarViagem(); } catch (e) { setErro(mensagemErro(e)); } finally { setFinishing(false); }
   };
 
   const pill = emRota

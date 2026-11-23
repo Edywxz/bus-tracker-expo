@@ -53,7 +53,9 @@ export const PainelArrastavel: React.FC<{ resumo: React.ReactNode; children?: Re
 
   useEffect(() => { if (abrir) { setPos('aberto'); y.setValue(alvoRef.current.aberto); } }, [abrir]); // eslint-disable-line react-hooks/exhaustive-deps
   const primeiraPos = useRef(true);
-  useEffect(() => { if (primeiraPos.current) { primeiraPos.current = false; return; } onPos?.(pos); }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
+  const onPosRef = useRef(onPos);
+  onPosRef.current = onPos;
+  useEffect(() => { if (primeiraPos.current) { primeiraPos.current = false; return; } onPosRef.current?.(pos); }, [pos]);
 
   const pan = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),

@@ -528,7 +528,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
   const pararSimulacao = (suave?: boolean) => {
     if (!isDemo) return;
-    if (suave) {
+    if (suave === true) {
       animateNextLayout();
       setSim(null); setHoraSimulada(null); setGpsIndex(0); setViagemAtiva(initialMockData.viagemAtiva);
       setAlunos((prev) => prev.map((a) => ({ ...a, statusEmbarque: initialMockData.alunos.find((x) => x.id === a.id)?.statusEmbarque ?? 'AGUARDANDO', ultimoRegistro: undefined })));
