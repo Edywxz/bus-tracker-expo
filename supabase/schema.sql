@@ -1,5 +1,5 @@
 -- ==============================================================================
--- VANESCOLAR GPS — SNAPSHOT DO SCHEMA (SUPABASE/POSTGRESQL)
+-- ESCOLAR EM TRÂNSITO — SNAPSHOT DO SCHEMA (SUPABASE/POSTGRESQL)
 -- Espelha o banco real (projeto VanEscolar) em 09/11/2026.
 -- Referência de leitura: a fonte de verdade são as migrations em supabase/migrations/.
 -- Não inclui GRANTs (ver migrations *_grants_*.sql).

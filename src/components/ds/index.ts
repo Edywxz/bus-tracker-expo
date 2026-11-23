@@ -1,5 +1,5 @@
 /**
- * VanEscolar GPS — Design System "Faixa escolar" (Apple HIG + Liquid Glass, com equivalentes Material no Android).
+ * Escolar em Trânsito — Design System "Faixa escolar" (Apple HIG + Liquid Glass, com equivalentes Material no Android).
  * Catálogo vivo: design-system/index.html. Tokens: src/theme/{colors,tokens,type}.ts.
  *
  * Bars ········· Navigation bar (stackScreenOptions / HeaderButton) · Tab bar (NativeTabs em app/(tabs)/_layout.tsx)

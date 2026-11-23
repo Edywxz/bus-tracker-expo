@@ -116,7 +116,7 @@ export const AuthFlow: React.FC = () => {
         <View style={s.topRow}>
           <View style={s.brand}>
             <View style={s.brandIcon}><Icon name="van" size={16} color={colors.onSignal} /></View>
-            <Text style={s.brandText}>VanEscolar</Text>
+            <Text style={s.brandText}>Escolar em Trânsito</Text>
           </View>
           <TouchableScale onPress={() => go('entrar')} accessibilityLabel="Pular apresentação" style={s.skip}>
             <Text style={s.skipText}>Pular</Text>

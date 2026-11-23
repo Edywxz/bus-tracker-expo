@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VanEscolar GPS · Design System</title>
+<title>Escolar em Trânsito · Design System</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="theme.js"></script>
@@ -152,7 +152,7 @@ body.inspecting main{margin-right:350px}
 <div class="copied" id="copied">Copiado</div>
 
 <nav class="side">
-  <div class="brand"><i><svg class="ico ico--sm"><use href="#i-van"/></svg></i>VanEscolar DS</div>
+  <div class="brand"><i><svg class="ico ico--sm"><use href="#i-van"/></svg></i>Escolar em Trânsito DS</div>
   <a class="concept-link" href="concept.html">◳ &nbsp;Concept preview &nbsp;→</a>
   <div class="grp">Foundations</div>
   <a href="#colors">Color</a><a href="#type">Typography</a><a href="#materials">Materials · Liquid Glass</a><a href="#radius">Corner radius</a><a href="#spacing">Spacing &amp; layout</a><a href="#elevation">Elevation</a><a href="#motion">Motion</a><a href="#icons">Iconography</a>
@@ -175,7 +175,7 @@ body.inspecting main{margin-right:350px}
 <main>
   <header style="margin-bottom:44px">
     <div class="t-caption2" style="text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Apple HIG · iOS 26 Liquid Glass · Expo</div>
-    <div class="t-largeTitle">VanEscolar GPS<br>Design System — <span style="color:var(--signal-ink)">Faixa escolar</span></div>
+    <div class="t-largeTitle">Escolar em Trânsito<br>Design System — <span style="color:var(--signal-ink)">Faixa escolar</span></div>
     <p class="sec-desc" style="margin-top:12px;font-size:17px;line-height:1.5">Para pais acompanhando uma van em movimento, uma interface neutra e silenciosa com <b>um único sinal amarelo</b> torna “onde está / quando chega” instantâneo. Tinta preta conduz a ação; amarelo escolar marca só a van ao vivo e o ETA; verde, laranja e vermelho são reservados para embarque, atraso e emergência.</p>
     <p class="sec-desc">Fonte única: <code>styles.css</code>. Ative <b>Dev Mode</b> e clique em qualquer componente para ver props, tokens e métricas; <b>Copy as prompt</b> gera a implementação (padrão: React Native / Expo).</p>
   </header>
@@ -546,7 +546,7 @@ body.inspecting main{margin-right:350px}
   <section id="liveactivity"><h2 class="sec"><span class="cat">Extension</span>Live Activity <span class="ext">domínio</span></h2>
     <p class="sec-desc">Tela de bloqueio / Dynamic Island durante a rota — o pai acompanha sem abrir o app. Sempre escuro (superfície do sistema). Requer target nativo (<code>@bacons/apple-targets</code> + ActivityKit) e dev build.</p>
     <div class="stage map"><div class="live" data-insp="liveactivity">
-      <div class="lv-top"><span class="pill pill--signal"><span class="dot"></span>A caminho</span><span class="lv-sub">VanEscolar</span></div>
+      <div class="lv-top"><span class="pill pill--signal"><span class="dot"></span>A caminho</span><span class="lv-sub">Escolar em Trânsito</span></div>
       <div class="hstack" style="justify-content:space-between;align-items:flex-end"><div><div class="lv-eta">7 min</div><div class="lv-sub">até a parada da Helena</div></div><div class="lv-sub" style="text-align:right">Marcos<br>ABC1D23</div></div>
       <div class="lv-bar"><i style="width:62%"></i><b style="left:62%"><svg class="ico ico--sm" style="--icon-size:14px;--icon-stroke:2"><use href="#i-van"/></svg></b></div>
     </div></div></section>
@@ -775,14 +775,14 @@ function tokenLines(){const L=readVars(''),D=readVars('dark');const out=[];
  for(const[grp,names]of Object.entries(varGroups)){const rows=names.map(n=>L[n]?`- ${n} = ${L[n]}${D[n]&&D[n]!==L[n]?`   | dark: ${D[n]}`:''}`:null).filter(Boolean);if(rows.length)out.push(`### ${grp}`,...rows,'');}
  return out;}
 function expoNotes(){return isExpo()?[`### Expo implementation rules`,`- Tokens live in src/theme/ (colors.ts, tokens.ts, type.ts). Colors: export light+dark objects and pick with useColorScheme(); where a HIG semantic exists, prefer Color.ios.* from expo-router with these hexes as the default/web fallback.`,`- Liquid Glass: expo-glass-effect GlassView (isGlassEffectAPIAvailable() check) → fallback expo-blur BlurView tint "systemMaterial"/"systemChromeMaterial". Glass only on bars, floating controls, menus, sheets — never on list rows/cards; never glass on glass.`,`- Native first: Expo Router NativeTabs for the tab bar, native Stack headers (headerLargeTitle, headerTransparent), formSheet for sheets, @expo/ui for Switch/Picker/Slider/Menu/List sections, Alert.alert, ActionSheetIOS.`,`- Icons: expo-symbols SymbolView (SF Symbols) — not @expo/vector-icons. Fonts: system (SF Pro / SF Pro Rounded via fontFamily "ui-rounded" not available → use fontVariant tabular-nums + weight "800").`,`- Corners: borderCurve:'continuous'. Shadows: boxShadow strings only (no shadow*/elevation). Counters: fontVariant:['tabular-nums']. Haptics: expo-haptics on iOS for confirmations.`,`- Use contentInsetAdjustmentBehavior="automatic" on every ScrollView/FlashList; respect Dynamic Type (don't cap font scaling below 1.3 except in the tab bar).`,'']:[];}
-function foundationsBody(){const L=[`## Foundations — design tokens (single source of truth)`,`Theme "Faixa escolar" for VanEscolar GPS (iOS HIG + Liquid Glass). Define every token below as a named constant in ONE theme module, idiomatic to ${promptLang}. Light values first; dark overrides after "| dark:". Components reference tokens by name — never inline raw values.`,'',...tokenLines(),`### Text styles (Dynamic Type "Large" defaults)`];
+function foundationsBody(){const L=[`## Foundations — design tokens (single source of truth)`,`Theme "Faixa escolar" for Escolar em Trânsito (iOS HIG + Liquid Glass). Define every token below as a named constant in ONE theme module, idiomatic to ${promptLang}. Light values first; dark overrides after "| dark:". Components reference tokens by name — never inline raw values.`,'',...tokenLines(),`### Text styles (Dynamic Type "Large" defaults)`];
  TYPE.forEach(([n,m])=>L.push(`- ${n.replace('t-','')}: ${m}`));
  L.push('',...expoNotes(),`### Rules`,`- ONE interaction family: ink (--primary). Signal yellow marks only the live van, ETA and "a caminho"; never decorative, never body text on white (use --signal-ink).`,`- Every fill keeps its --on-* pair (WCAG-checked: body ≥ 4.5:1). Status colours always paired with a text label.`,`- Content surfaces are solid; depth comes from glass on the control layer + elev-1 (none in dark).`,`- Spacing roles: --gap-related (8) < --gap-section (24) < --gap-major (32); margins 16; touch targets ≥ 44.`,`- All UI copy in Portuguese (Brazil).`);
  return L.join('\n');}
 function liveTok(t){const v=getComputedStyle(document.documentElement).getPropertyValue(t.n.split(' ')[0]).trim();return v||t.n;}
 function buildPrompt(key){const s=SPECS[key];const L=[
   `# Add or update the \`${s.name}\` component — ${promptLang}`,'',
-  `Part of the VanEscolar GPS design system ("Faixa escolar", iOS HIG + Liquid Glass). You are most likely inside the existing bus-tracker-expo codebase: if a component with this role ALREADY EXISTS (check src/components/ and src/components/ui/kit.tsx), modify it IN PLACE to match this spec (the source of truth) — don't duplicate; note breaking prop/token changes with a migration note. Otherwise create it at \`${s.file}\`.`,'',
+  `Part of the Escolar em Trânsito design system ("Faixa escolar", iOS HIG + Liquid Glass). You are most likely inside the existing bus-tracker-expo codebase: if a component with this role ALREADY EXISTS (check src/components/ and src/components/ui/kit.tsx), modify it IN PLACE to match this spec (the source of truth) — don't duplicate; note breaking prop/token changes with a migration note. Otherwise create it at \`${s.file}\`.`,'',
   `## What it is`,s.desc,''];
   if(s.native)L.push(`## Native implementation`,isExpo()?s.native:`(${promptLang}) Use the platform-native equivalent. Expo reference: ${s.native}`,'');
   L.push(`## Props`);s.props.forEach(p=>L.push(`- \`${p.n}\`: ${p.t}${p.def?` (default ${p.def})`:''}${p.d?` — ${p.d}`:''}`));
@@ -793,7 +793,7 @@ function buildPrompt(key){const s=SPECS[key];const L=[
   return L.join('\n');}
 function copyPrompt(key){copyText(buildPrompt(key));toast(`Copiado: ${SPECS[key].name} → ${promptLang}`);}
 function fullSystemPrompt(){const keys=Object.keys(SPECS);const L=[
- `# Install or update the ENTIRE VanEscolar GPS design system — ${promptLang}`,'',
+ `# Install or update the ENTIRE Escolar em Trânsito design system — ${promptLang}`,'',
  `Set up this design system in ${promptLang}. The bus-tracker-expo project already has src/theme/{colors,tokens,type,styles}.ts and src/components/ui/kit.tsx: UPDATE those IN PLACE to match this spec (source of truth) — modify, don't duplicate; list breaking changes with migration notes. Scaffold anything missing.`,'',
  `## Build order`,`1. Foundation token layer (below) as the single source of truth, light + dark.`,`2. Components — independent, may be split across parallel workers, but EVERY component imports the shared token module from step 1; never redefine colours/sizes locally. Keep naming & states consistent.`,`3. Reconcile: one components index + a pass confirming every component references only named tokens; replace old ad-hoc values in screens.`,'','---','',foundationsBody(),'','---','',`## Components (${keys.length})`];
  keys.forEach(k=>{const s=SPECS[k];L.push('',`### ${s.name} — \`${s.file}\``,s.desc,s.native?`- native: ${s.native}`:'',`- props: ${s.props.map(p=>p.n+':'+p.t).join(', ')}`,`- tokens: ${s.tokens.map(t=>t.n).join(', ')}`,`- metrics: ${s.metrics.map(m=>m[0]+' '+m[1]).join(', ')}`);});

@@ -9,7 +9,7 @@ import { colors } from '../src/theme/colors';
 import { motion, radius } from '../src/theme/tokens';
 
 /**
- * VanEscolar GPS — acompanhamento de transporte escolar.
+ * Escolar em Trânsito — acompanhamento de transporte escolar.
  * Fluxo: abertura → apresentação/conta (ou modo de exemplo) → abas por perfil.
  * Navegação 100% nativa: Stack nativo + NativeTabs (Liquid Glass no iOS 26 · Material no Android).
  */

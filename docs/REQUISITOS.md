@@ -1,4 +1,4 @@
-# 📋 Requisitos do Projeto — VanEscolar GPS
+# 📋 Requisitos do Projeto — Escolar em Trânsito
 
 Este documento centraliza todos os **Requisitos Funcionais (RF)** e **Requisitos Não Funcionais (RNF)** do aplicativo de Rastreamento de Transporte Escolar e Gestão de Pagamentos voltado para **Transportadores Escolares Autônomos (Motoristas Independentes)**, com seus respectivos indicadores de progresso e rastreabilidade com o **Diagrama de Casos de Uso (DCU)**.
 
