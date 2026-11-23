@@ -73,6 +73,7 @@ jobs:
     steps:
       # Mescla assim que o Claude responder à última revisão do Gemini (corrigiu com commit ou recusou tudo), sem esperar
       # uma segunda revisão. Etapas, a cada 30 s por até 10 min:
+      #  - Gemini avisou que não revisa os arquivos do PR: mescla;
       #  - sem revisão do Gemini ainda: espera (no fim, mescla mesmo assim: app fora do ar, PR de bot);
       #  - revisão sem comentários: mescla;
       #  - com comentários e o comentário "Revisão do Gemini: ..." do Claude depois dela (correção ou recusa): mescla;
@@ -84,6 +85,9 @@ jobs:
         run: |
           echo "merge=true" >> "$GITHUB_OUTPUT"
           for i in $(seq 20); do
+            # O Gemini não revisa certos tipos de arquivo (ex.: só workflows) e avisa num comentário: não há o que esperar.
+            nao=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" --jq '[.[] | select(.user.login=="gemini-code-assist[bot]" and (.body | test("unable to generate a review")))] | length')
+            if [ "${nao:-0}" -gt 0 ]; then echo "Gemini não revisa este tipo de arquivo: mescla."; exit 0; fi
             r=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq '[.[] | select(.user.login=="gemini-code-assist[bot]")] | last // empty | "\(.id) \(.submitted_at) \(.commit_id)"')
             if [ -n "$r" ]; then
               set -- $r; id=$1; em=$2; commit=$3
