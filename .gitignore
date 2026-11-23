@@ -13,3 +13,11 @@ expo-env.d.ts
 # macOS e arquivos gerados pelo Expo
 .DS_Store
 .expo/
+
+# Arquivos de ferramentas de IA / editor (não vão para o repositório)
+docs/superpowers/
+.remember/
+.claude/
+graphify-out/
+.serena/
+.idea/
