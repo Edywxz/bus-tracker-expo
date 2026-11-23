@@ -101,7 +101,8 @@ interface AppContextType {
   /** Responsável na demo: paradas da viagem até a última do seu dependente (as de outros alunos, sem nome). */
   paradasSim: ParadaVista[] | null;
   iniciarSimulacao: (c: ConfigSim) => void;
-  pararSimulacao: () => void;
+  /** `suave`: volta ao início só nos estados que a simulação mexeu (viagem e embarques), sem recarregar a demo toda. */
+  pararSimulacao: (suave?: boolean) => void;
   /** Demo: continua depois de uma ocorrência de gravidade Alta. */
   retomarSimulacao: () => void;
   pularSimulacao: (alvo: 'SAIDA' | 'PARADA' | 'FIM') => void;
@@ -525,8 +526,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     carregarDemo(role); // começa de um estado limpo
     setSim({ linha: montarSimulacao(c), t: 0, retomado: false });
   };
-  const pararSimulacao = () => {
+  const pararSimulacao = (suave?: boolean) => {
     if (!isDemo) return;
+    if (suave === true) {
+      animateNextLayout();
+      setSim(null); setHoraSimulada(null); setGpsIndex(0); setViagemAtiva(initialMockData.viagemAtiva);
+      setAlunos((prev) => prev.map((a) => ({ ...a, statusEmbarque: initialMockData.alunos.find((x) => x.id === a.id)?.statusEmbarque ?? 'AGUARDANDO', ultimoRegistro: undefined })));
+      return;
+    }
     setSim(null); setHoraSimulada(null); setGpsIndex(0); carregarDemo(role);
   };
   const retomarSimulacao = () => setSim((s) => (s ? { ...s, retomado: true } : s));
@@ -544,10 +551,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const simulacao = useMemo(() => (sim && estadoSim
     ? { linha: sim.linha, t: sim.t, estado: { ...estadoSim, esperandoRetomar: estadoSim.esperandoRetomar && !sim.retomado } } : null), [sim, estadoSim]);
 
-  const buscarTransportador = (codigo: string) => DataService.buscarTransportador(codigo);
+  // Na demo qualquer código vale: não há banco para consultar.
+  const buscarTransportador = async (codigo: string) => (isDemo ? { id: 'transp-1', nome: 'Tio Marcos' } : DataService.buscarTransportador(codigo));
 
   const cadastrarAluno = async (a: NovoAluno) => {
-    if (isDemo) throw new Error('Crie uma conta para cadastrar dependentes de verdade.');
+    if (isDemo) {
+      animateNextLayout();
+      setAlunos((p) => [...p, {
+        id: novoId('aluno'), responsavel_id: DEMO_RESPONSAVEL, transportador_id: 'transp-1', nome: a.nome, data_nascimento: a.dataNascimento,
+        documento: a.documento ?? '', turma: a.turma, turno: a.turno, endereco_busca: a.enderecoBusca, endereco_entrega: a.enderecoEntrega,
+        observacoes_medicas: a.observacoes, escola_nome: a.escolaNome, escola_endereco: a.escolaEndereco,
+        ativo: true, criado_em: new Date().toISOString(), statusEmbarque: 'AGUARDANDO',
+      }]);
+      return;
+    }
     exigirReal();
     await DataService.cadastrarAluno(a);
     animateNextLayout();
@@ -560,10 +577,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const pos = isDemo ? pontoDemo : gpsReal;
-    await BoardingService.registrar({
-      viagemId: viagemAtiva.id, alunoId, tipo, latitude: pos?.latitude, longitude: pos?.longitude,
-    });
-    atualizarContadorOffline();
+    if (!isDemo) {
+      await BoardingService.registrar({
+        viagemId: viagemAtiva.id, alunoId, tipo, latitude: pos?.latitude, longitude: pos?.longitude,
+      });
+      atualizarContadorOffline();
+    }
     animateNextLayout();
     setAlunos((prev) => prev.map((a) => a.id !== alunoId ? a : {
       ...a,

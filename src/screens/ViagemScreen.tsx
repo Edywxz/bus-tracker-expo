@@ -19,9 +19,9 @@ import { useControlesSimulacao } from '../components/useControlesSimulacao';
 import { ListaAlunos } from '../components/ListaAlunos';
 import { distanciaKm } from '../utils/proximidade';
 import { avisoEncerrar } from '../utils/encerrarRota';
+import { mensagemErro } from '../utils/format';
 import { confirm } from '../components/ds/modality';
 import { vanVisivel } from '../services/simulacao';
-import { mensagemErro } from '../utils/format';
 import { lembrete } from '../utils/lembrete';
 import { pontoDeDescida, primeiroAChegar } from '../utils/proximidade';
 import { AbsenceSheet, AddStudentSheet, EmergencySheet, StartRouteSheet } from '../sheets/Sheets';
@@ -43,7 +43,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim, simulacao,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim, simulacao, pararSimulacao,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -61,21 +61,24 @@ export const ViagemScreen: React.FC = () => {
   const motorista = role === 'TRANSPORTADOR';
   // Tela cheia de chegada só quando a corrida termina com a tela aberta (não ao abrir uma corrida já concluída).
   const [chegada, setChegada] = useState(false);
+  const [abrirPainel, setAbrirPainel] = useState(concluida ? 1 : 0); // concluída: o painel já nasce aberto
   const eraConcluida = useRef(concluida);
   useEffect(() => {
-    if (concluida && !eraConcluida.current) setChegada(true);
+    if (concluida && !eraConcluida.current) { setChegada(true); setAbrirPainel((n) => n + 1); } // abre por baixo da tela cheia
     eraConcluida.current = concluida;
   }, [concluida]);
-  // 5 s depois da tela cheia (ou ao abrir já concluída) o cartão "Rota concluída" sai e o painel volta ao padrão.
+  // O cartão "Rota concluída" fica até o usuário recolher o painel; aí sai e o painel volta ao padrão.
   const [saindo, setSaindo] = useState(false);
   const [resumoVisto, setResumoVisto] = useState(false);
-  useEffect(() => {
-    if (!concluida) { setSaindo(false); setResumoVisto(false); return; }
-    if (chegada) return;
-    const t = setTimeout(() => setSaindo(true), 5000);
-    return () => clearTimeout(t);
-  }, [concluida, chegada]);
+  useEffect(() => { if (!concluida) { setSaindo(false); setResumoVisto(false); } }, [concluida]);
   const concluidaNoPainel = concluida && !resumoVisto;
+  // Ida e volta concluídas e o resumo já visto: a simulação termina e a demo volta ao início.
+  const voltaFim = simulacao?.estado.fase === 'FIM' && simulacao.linha.config.sentido === 'VOLTA';
+  useEffect(() => { // espera a saída do cartão assentar para não sobrepor duas transições de layout
+    if (!voltaFim || !resumoVisto) return;
+    const t = setTimeout(() => pararSimulacao(true), 450);
+    return () => clearTimeout(t);
+  }, [voltaFim, resumoVisto]); // eslint-disable-line react-hooks/exhaustive-deps
   const pai = role === 'RESPONSAVEL';
   const entregues = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO');
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;
@@ -112,7 +115,9 @@ export const ViagemScreen: React.FC = () => {
   // Demo (responsável): a van só aparece nos últimos 5 min até a parada dos filhos; fora disso o app só avisa que a rota começou.
   const demoPai = isDemo && pai;
   const vanSim = demoPai && simulacao ? vanVisivel(simulacao.linha, simulacao.t, alunos.map((a) => a.id)) : null;
-  const vanAparece = !demoPai || !!vanSim?.visivel;
+  // Com filho a bordo a van é sempre mostrada (ida e volta); sem ninguém a bordo, só nos últimos 5 min até a parada.
+  const filhoABordo = alunos.some((x) => x.statusEmbarque === 'EMBARCADO');
+  const vanAparece = !demoPai || !!vanSim?.visivel || filhoABordo;
   const aviso = demoPai && !simulacao ? null : pai ? lembrete({ agora, alunos, eventos: eventosCalendario, emRota, tipo: viagemAtiva.tipo_viagem, concluida: concluidaNoPainel, kmVan }) : null;
 
   // Simulação (responsável): quantas paradas de outros passageiros faltam antes da próxima parada do filho.
@@ -129,7 +134,7 @@ export const ViagemScreen: React.FC = () => {
   };
 
   const pill = emRota
-    ? <StatusPill tone="signal" live label={est ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
+    ? <StatusPill tone="signal" live label={est && motorista ? `A caminho · ${km(est.km)}` : motorista ? 'Em rota' : 'A caminho'} />
     : null; // sem rota ativa (ou já concluída) não há marcador: o texto abaixo já diz
 
   /* ------------------------------------------------------------------ bloco de tempo / número principal */
@@ -139,11 +144,14 @@ export const ViagemScreen: React.FC = () => {
       return { valor: `${ativos}`, sufixo: ativos === 1 ? 'passageiro' : 'passageiros', legenda: `previstos · turno da ${TURNO[viagemAtiva.turno] ?? 'manhã'}`, lado: '', ladoSub: '' };
     }
     if (demoPai && emRota) {
-      if (!vanSim?.visivel) return { valor: '', sufixo: '', legenda: `${nomes.transportador ?? 'O motorista'} iniciou a rota`, lado: '', ladoSub: restantes };
+      if (!vanSim?.visivel && !filhoABordo) {
+        const min = Math.max(1, vanSim?.minutos ?? 1); // estimativa até a parada dos filhos, sem expor a rota
+        return { valor: `${min}`, sufixo: 'min', legenda: `${nomes.transportador ?? 'O motorista'} já iniciou a rota e chegará em breve. Aguarde.`, lado: horaPrevista(min), ladoSub: 'previsão aproximada' };
+      }
       const quem = alunos.filter((a) => a.statusEmbarque !== 'AUSENTE').map((a) => a.nome.split(' ')[0]).join(' e ');
-      const busca = aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
+      const busca = !filhoABordo && aguardando > 0 === (viagemAtiva.tipo_viagem === 'IDA');
       const legenda = busca ? `Van chega para buscar ${quem}` : viagemAtiva.tipo_viagem === 'VOLTA' ? `${quem} chega em casa` : `${quem} chega à escola`;
-      return { valor: `${vanSim.minutos}`, sufixo: 'min', legenda, lado: horaPrevista(vanSim.minutos), ladoSub: 'previsão aproximada' };
+      return { valor: `${(vanSim?.minutos ?? 1)}`, sufixo: 'min', legenda, lado: horaPrevista((vanSim?.minutos ?? 1)), ladoSub: 'previsão aproximada' };
     }
     if (proximaChegada) {
       const quem = proximaChegada.aluno.nome.split(' ')[0];
@@ -305,8 +313,10 @@ export const ViagemScreen: React.FC = () => {
     const feito = quem.length > 0 && quem.every((a) => (viagemAtiva.tipo_viagem === 'VOLTA' ? a.statusEmbarque !== 'AGUARDANDO' : a.statusEmbarque === 'DESEMBARCADO'));
     escolas.set(chave, { ...e, nome, rotulo: nome, status: feito ? 'DESEMBARCADO' : 'AGUARDANDO' });
   }
-  const paradasOutros: MapaParada[] = (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
-    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: '', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const }));
+  // Privacidade: o responsável só vê a parada de outro passageiro quando falta no máximo uma antes da dele E a van está a ≤ 5 min.
+  const podeVerOutras = !!vanSim?.visivel && antes != null && antes <= 1;
+  const paradasOutros: MapaParada[] = podeVerOutras ? (paradasSim ?? []).filter((p) => !p.propria && !p.feita)
+    .map((p) => ({ id: p.id, nome: p.rotulo, rotulo: '', latitude: p.latitude, longitude: p.longitude, status: 'AGUARDANDO' as const, sutil: true })) : [];
   // Só há pinos de van, escola e residência: os alunos viajam com a van e, fora dela, estão na escola ou em casa.
   // Irmãos no mesmo endereço dividem a residência.
   const residencias = new Map<string, { pin: MapaParada; nomes: string[] }>();
@@ -329,7 +339,7 @@ export const ViagemScreen: React.FC = () => {
         <LiveMap
           van={vanGeo}
           vanAtiva={emRota && gpsAtivo}
-          trilha={(isDemo && !emRota) || !vanAparece ? [] : rotaGeo} // demo sem corrida: nada de trajeto desenhado
+          trilha={demoPai ? (vanAparece ? vanSim?.trecho : []) : isDemo && !emRota ? [] : rotaGeo} // responsável: só o trecho até a sua parada // demo sem corrida: nada de trajeto desenhado
           paradas={paradasMapa}
           accessibilityLabel={emRota ? `Mapa da rota. Van em ${gpsPosicao.rua}` : 'Mapa da rota. Van parada'}
         />
@@ -349,7 +359,7 @@ export const ViagemScreen: React.FC = () => {
         <PullDownButton label="Mais opções" title={controles.titulo} variant="glass" actions={acoes} />
       </SafeAreaView>
 
-      <PainelArrastavel resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
+      <PainelArrastavel abrir={abrirPainel} onPos={(p) => { if (concluida && !chegada && p !== 'aberto') setSaindo(true); }} resumo={<View style={{ paddingBottom: spacing.md }}>{sheet}</View>}>
         {vazio ? null : <ListaAlunos onAdicionar={() => setAddStudent(true)} />}
       </PainelArrastavel>
 
