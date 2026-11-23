@@ -1,5 +1,5 @@
 /**
- * VanEscolar GPS — Design System "Faixa escolar" · espaçamento, forma, elevação, movimento.
+ * Escolar em Trânsito — Design System "Faixa escolar" · espaçamento, forma, elevação, movimento.
  * Ritmo de 4/8pt. Nenhum valor visual repetido deve ficar fora deste arquivo.
  */
 import { Easing, LayoutAnimation, Platform, UIManager } from 'react-native';

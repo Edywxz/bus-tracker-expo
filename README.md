@@ -1,4 +1,4 @@
-# 🚌 VanEscolar GPS — Software de Rastreamento e Gestão Escolar
+# 🚌 Escolar em Trânsito — Software de Rastreamento e Gestão Escolar
 
 Aplicativo mobile desenvolvido em **React Native** com **Expo** e **TypeScript**, voltado para **Transportadores Escolares Autônomos (Motoristas Independentes)**, e **Pais/Responsáveis**. A escola não usa o app: é o destino da rota, informado no cadastro de cada aluno.
 

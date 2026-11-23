@@ -1,6 +1,6 @@
-# 📐 Diagrama de Classes UML — VanEscolar GPS
+# 📐 Diagrama de Classes UML — Escolar em Trânsito
 
-Este documento detalha o **Diagrama de Classes UML** desenvolvido para o sistema **VanEscolar GPS**, integrando os requisitos do domínio (atores: **Responsável** e **Transportador**), o Diagrama de Casos de Uso (DCU) e os requisitos funcionais (**RF001 a RF021**, exceto o RF015, removido) e não funcionais (**RNF001 a RNF008**).
+Este documento detalha o **Diagrama de Classes UML** desenvolvido para o sistema **Escolar em Trânsito**, integrando os requisitos do domínio (atores: **Responsável** e **Transportador**), o Diagrama de Casos de Uso (DCU) e os requisitos funcionais (**RF001 a RF021**, exceto o RF015, removido) e não funcionais (**RNF001 a RNF008**).
 
 ---
 

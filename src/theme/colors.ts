@@ -1,5 +1,5 @@
 /**
- * VanEscolar GPS — Design System "Faixa escolar" · cores
+ * Escolar em Trânsito — Design System "Faixa escolar" · cores
  * Referência: Apple HIG (iOS 26) com equivalentes Material no Android.
  * Fonte da verdade: design-system/styles.css (contraste WCAG verificado por cálculo).
  *

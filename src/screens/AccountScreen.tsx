@@ -71,7 +71,7 @@ export const AccountScreen: React.FC = () => {
           </Card>
           <ListSection style={{ marginTop: spacing.sm }}>
             <ListRow icon="share" iconTone="gray" title="Compartilhar código" role="action"
-              onPress={() => share({ title: 'Código VanEscolar', message: `Use o código ${codigoConvite} no app VanEscolar GPS para cadastrar seu dependente.` })} chevron={false} />
+              onPress={() => share({ title: 'Código Escolar em Trânsito', message: `Use o código ${codigoConvite} no app Escolar em Trânsito para cadastrar seu dependente.` })} chevron={false} />
             <ListRow icon="edit" iconTone="gray" title="Gerar novo código" role="action" onPress={renovar} chevron={false} />
           </ListSection>
         </FadeInUp>
@@ -106,7 +106,7 @@ export const AccountScreen: React.FC = () => {
           <ListRow icon="logout" iconTone="gray" title={isDemo ? 'Sair do modo de exemplo' : 'Sair'} onPress={confirmarSair} chevron={false} />
           {!isDemo && <ListRow role="destructive" icon="trash" title="Excluir conta" onPress={confirmarExcluir} chevron={false} />}
         </ListSection>
-        <SectionFooter>VanEscolar GPS · versão 1.0</SectionFooter>
+        <SectionFooter>Escolar em Trânsito · versão 1.0</SectionFooter>
       </FadeInUp>
 
       <EditProfileSheet visible={edit} onClose={() => setEdit(false)} />

@@ -244,7 +244,7 @@ export const PaymentDetailScreen: React.FC<{ id?: string }> = ({ id }) => {
   return (
     <Screen title={nomeMes(m.mes_referencia)}
       headerRight={recibo ? <IconButton icon="share" label="Compartilhar recibo" variant="plain"
-        onPress={() => share({ title: `Recibo · ${titulo}`, message: `Recibo VanEscolar GPS\n${aluno?.nome ?? ''} · ${titulo}\n${brl(m.valor)}\nAutenticação: ${recibo}` })} /> : undefined}
+        onPress={() => share({ title: `Recibo · ${titulo}`, message: `Recibo Escolar em Trânsito\n${aluno?.nome ?? ''} · ${titulo}\n${brl(m.valor)}\nAutenticação: ${recibo}` })} /> : undefined}
       footer={footer}>
       <View style={s.amountBlock}>
         <Text style={s.center}>Mensalidade{aluno ? ` · ${aluno.nome}` : ''}</Text>

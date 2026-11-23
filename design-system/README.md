@@ -1,4 +1,4 @@
-# VanEscolar GPS — Design System “Faixa escolar”
+# Escolar em Trânsito — Design System “Faixa escolar”
 
 Guia de referência: **Apple Human Interface Guidelines (iOS 26, Liquid Glass)**. Implementação alvo: **Expo / React Native**.
 
