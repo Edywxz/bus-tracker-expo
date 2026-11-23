@@ -1,0 +1,318 @@
+# 🗄️ Diagrama de Entidade-Relacionamento — Escolar em Trânsito
+
+Modelo físico do banco **Supabase (PostgreSQL + PostGIS)**. Fonte: `supabase/schema.sql` + migrations `20261117150000_previsoes_chegada` e `20261117180000_alerta_van_chegando` (tabelas que ainda não estão no `schema.sql`).
+
+Total: **21 tabelas** + `auth.users` (gerenciada pelo Supabase Auth).
+
+Arquivos: [`diagrama-entidade.drawio`](./diagrama-entidade.drawio) (editável no draw.io), [`diagrama-entidade.drawio.png`](./diagrama-entidade.drawio.png) (imagem com o XML embutido, também editável), [`diagrama-entidade.pdf`](./diagrama-entidade.pdf) (página única, vetorial) e [`diagrama-entidade.mmd`](./diagrama-entidade.mmd) (fonte Mermaid).
+
+![DER](./diagrama-entidade.drawio.png)
+
+---
+
+## 1. Diagrama (Mermaid)
+
+```mermaid
+erDiagram
+    AUTH_USERS ||--|| PERFIS : "id"
+    PERFIS ||--o| RESPONSAVEIS : "especializa"
+    PERFIS ||--o| TRANSPORTADORES : "especializa"
+    PERFIS ||--o{ ENDERECOS_RESPONSAVEL : "possui"
+    PERFIS ||--o{ NOTIFICACOES : "recebe"
+    PERFIS ||--o{ PUSH_TOKENS : "registra"
+
+    RESPONSAVEIS ||--o{ ALUNOS : "responde por"
+    TRANSPORTADORES ||--o{ ALUNOS : "transporta"
+    ENDERECOS_RESPONSAVEL |o--o{ ALUNOS : "busca / entrega"
+
+    ALUNOS ||--o{ PESSOAS_AUTORIZADAS : "autoriza"
+    ALUNOS ||--o{ COMUNICADOS_AUSENCIA : "falta"
+    RESPONSAVEIS ||--o{ COMUNICADOS_AUSENCIA : "envia"
+    TRANSPORTADORES ||--o{ COMUNICADOS_AUSENCIA : "recebe"
+
+    TRANSPORTADORES ||--o{ VEICULOS : "possui"
+    TRANSPORTADORES ||--o{ VIAGENS : "realiza"
+    VEICULOS ||--o{ VIAGENS : "usado em"
+    TRANSPORTADORES ||--o{ CALENDARIO_ESCOLAR : "define"
+
+    VIAGENS ||--o{ LOCALIZACOES_GPS : "registra"
+    VIAGENS ||--o{ REGISTROS_EMBARQUE_DESEMBARQUE : "registra"
+    VIAGENS ||--o{ EVENTOS_ROTA : "registra"
+    VIAGENS ||--o{ ALERTAS_PROXIMIDADE : "dispara"
+    ALUNOS ||--o{ REGISTROS_EMBARQUE_DESEMBARQUE : "embarca"
+    ALUNOS ||--o{ ALERTAS_PROXIMIDADE : "alvo"
+    ALUNOS ||--o{ PREVISOES_CHEGADA : "tem"
+    TRANSPORTADORES ||--o{ PREVISOES_CHEGADA : "calcula"
+    TRANSPORTADORES ||--o{ LOCALIZACOES_GPS : "emite"
+    TRANSPORTADORES ||--o{ EVENTOS_ROTA : "emite"
+
+    ALUNOS ||--o{ CONTRATOS_SERVICO : "contratado"
+    RESPONSAVEIS ||--o{ CONTRATOS_SERVICO : "assina"
+    TRANSPORTADORES ||--o{ CONTRATOS_SERVICO : "presta"
+    CONTRATOS_SERVICO ||--o{ MENSALIDADES : "gera"
+    RESPONSAVEIS ||--o{ MENSALIDADES : "paga"
+    TRANSPORTADORES ||--o{ MENSALIDADES : "recebe"
+    MENSALIDADES ||--o{ PAGAMENTOS : "quitada por"
+
+    TRANSPORTADORES ||--o{ MENSAGENS : "canal"
+    PERFIS ||--o{ MENSAGENS : "responsavel / remetente"
+
+    AUTH_USERS {
+        uuid id PK
+    }
+    PERFIS {
+        uuid id PK,FK
+        varchar nome
+        varchar email UK
+        varchar cpf UK
+        varchar telefone
+        enum tipo_usuario "RESPONSAVEL | TRANSPORTADOR"
+        boolean ativo
+        timestamptz criado_em
+        timestamptz atualizado_em
+    }
+    RESPONSAVEIS {
+        uuid id PK,FK
+        text endereco_residencial
+    }
+    TRANSPORTADORES {
+        uuid id PK,FK
+        varchar cnh
+        varchar categoria_cnh
+        varchar numero_credencial
+        varchar alvara_autonomo
+        text foto_url
+        varchar codigo_convite UK
+        numeric valor_mensalidade_padrao
+        int dia_vencimento_padrao "1..28"
+        text chave_pix
+    }
+    ENDERECOS_RESPONSAVEL {
+        uuid id PK
+        uuid responsavel_id FK
+        varchar rotulo
+        text endereco_texto
+        double latitude
+        double longitude
+        varchar precisao "NUMERO|RUA|CEP|MANUAL"
+        varchar origem "GEOAPIFY|CEP|MANUAL"
+        boolean ajustado_manual
+        timestamptz geocodificado_em
+        timestamptz criado_em
+    }
+    ALUNOS {
+        uuid id PK
+        uuid responsavel_id FK
+        uuid transportador_id FK
+        varchar nome
+        date data_nascimento
+        varchar documento
+        varchar turma
+        enum turno "MANHA|TARDE|INTEGRAL|NOITE"
+        text endereco_busca
+        text endereco_entrega
+        uuid endereco_busca_id FK
+        uuid endereco_entrega_id FK
+        varchar escola_nome
+        text escola_endereco
+        text observacoes_medicas
+        text foto_url
+        boolean ativo
+        timestamptz criado_em
+    }
+    PESSOAS_AUTORIZADAS {
+        uuid id PK
+        uuid aluno_id FK
+        varchar nome
+        varchar cpf
+        varchar telefone
+        varchar grau_parentesco
+        text foto_url
+        boolean ativo
+        timestamptz criado_em
+    }
+    COMUNICADOS_AUSENCIA {
+        uuid id PK
+        uuid aluno_id FK
+        uuid responsavel_id FK
+        uuid transportador_id FK
+        date data_inicio
+        date data_fim
+        enum periodo "IDA|VOLTA|AMBOS"
+        text motivo
+        timestamptz notificado_em
+    }
+    VEICULOS {
+        uuid id PK
+        uuid transportador_id FK
+        varchar placa UK
+        varchar modelo
+        int ano
+        int capacidade_assentos
+        varchar renavam
+        varchar numero_alvara
+        date validade_vistoria
+        boolean ativo
+        timestamptz criado_em
+    }
+    VIAGENS {
+        uuid id PK
+        uuid transportador_id FK
+        uuid veiculo_id FK
+        enum tipo_viagem "IDA|VOLTA"
+        enum turno
+        timestamptz data_hora_inicio
+        timestamptz data_hora_fim
+        enum status "AGENDADA|EM_ANDAMENTO|CONCLUIDA|CANCELADA"
+        numeric km_percorrido
+        timestamptz criado_em
+    }
+    LOCALIZACOES_GPS {
+        uuid id PK
+        uuid viagem_id FK
+        uuid transportador_id FK
+        geometry posicao "Point 4326"
+        numeric velocidade
+        numeric direcao
+        numeric precisao_metros
+        timestamptz timestamp
+    }
+    REGISTROS_EMBARQUE_DESEMBARQUE {
+        uuid id PK
+        uuid viagem_id FK
+        uuid aluno_id FK
+        enum tipo "EMBARQUE|DESEMBARQUE"
+        timestamptz data_hora
+        numeric latitude
+        numeric longitude
+        boolean registrado_offline
+        timestamptz sincronizado_em
+    }
+    EVENTOS_ROTA {
+        uuid id PK
+        uuid viagem_id FK
+        uuid transportador_id FK
+        varchar tipo
+        text descricao
+        varchar severidade "default MEDIA"
+        numeric latitude
+        numeric longitude
+        timestamptz data_hora
+    }
+    CALENDARIO_ESCOLAR {
+        uuid id PK
+        uuid transportador_id FK
+        date data
+        varchar titulo
+        varchar tipo "LETIVO|FERIADO|RECESSO|EVENTO"
+        text descricao
+    }
+    PREVISOES_CHEGADA {
+        uuid aluno_id PK,FK
+        varchar evento PK "BUSCA|ENTREGA"
+        uuid transportador_id FK
+        int minutos
+        timestamptz calculado_em
+    }
+    ALERTAS_PROXIMIDADE {
+        uuid viagem_id PK,FK
+        uuid aluno_id PK,FK
+        timestamptz criado_em
+    }
+    CONTRATOS_SERVICO {
+        uuid id PK
+        varchar numero_contrato UK
+        uuid transportador_id FK
+        uuid responsavel_id FK
+        uuid aluno_id FK
+        numeric valor_mensalidade
+        int dia_vencimento "1..31"
+        date data_inicio
+        date data_termino
+        text termos_condicoes
+        enum status "ATIVO|SUSPENSO|CANCELADO|ENCERRADO"
+        timestamptz criado_em
+    }
+    MENSALIDADES {
+        uuid id PK
+        uuid contrato_id FK
+        uuid responsavel_id FK
+        uuid transportador_id FK
+        int mes_referencia "1..12"
+        int ano_referencia
+        numeric valor
+        date data_vencimento
+        numeric valor_multa_juros
+        enum status "PENDENTE|PAGO|VENCIDO|CANCELADO"
+        timestamptz criado_em
+    }
+    PAGAMENTOS {
+        uuid id PK
+        uuid mensalidade_id FK
+        enum metodo "PIX|CARTAO|BOLETO"
+        numeric valor_pago
+        timestamptz data_pagamento
+        varchar transacao_id
+        jsonb detalhes_metodo
+        varchar status "default CONFIRMADO"
+    }
+    MENSAGENS {
+        uuid id PK
+        uuid transportador_id FK
+        uuid responsavel_id FK
+        uuid remetente_id FK
+        varchar remetente_nome
+        varchar origem "PAIS|MOTORISTA"
+        text texto
+        timestamptz criado_em
+    }
+    NOTIFICACOES {
+        uuid id PK
+        uuid usuario_id FK
+        varchar tipo "CHEGANDO|EMBARQUE|PAGAMENTO|EMERGENCIA|AVISO"
+        varchar titulo
+        text mensagem
+        boolean lida
+        timestamptz criado_em
+    }
+    PUSH_TOKENS {
+        text token PK
+        uuid usuario_id FK
+        varchar plataforma "ios|android"
+        timestamptz atualizado_em
+    }
+```
+
+---
+
+## 2. Módulos
+
+| Módulo | Tabelas |
+|---|---|
+| Identidade | `perfis`, `responsaveis`, `transportadores`, `enderecos_responsavel` |
+| Alunos | `alunos`, `pessoas_autorizadas`, `comunicados_ausencia` |
+| Frota e operação | `veiculos`, `viagens`, `localizacoes_gps`, `registros_embarque_desembarque`, `eventos_rota`, `calendario_escolar`, `previsoes_chegada`, `alertas_proximidade` |
+| Financeiro | `contratos_servico`, `mensalidades`, `pagamentos` |
+| Comunicação | `mensagens`, `notificacoes`, `push_tokens` |
+
+## 3. Regras de integridade relevantes
+
+- **Herança por PK compartilhada:** `responsaveis.id` e `transportadores.id` são FK para `perfis.id`; `perfis.id` é FK para `auth.users.id`.
+- **Exclusão em cascata:** apagar o usuário no Auth remove perfil, filhos, notificações e tokens. Dados operacionais (viagens, GPS, embarques) caem junto com a viagem.
+- **`ON DELETE RESTRICT`** protege o histórico: `alunos → transportadores`, `viagens → veiculos` e todo o financeiro (`contratos_servico`, `mensalidades`) em relação a transportador, responsável e aluno.
+- **`ON DELETE SET NULL`:** `alunos.endereco_busca_id` e `endereco_entrega_id`.
+- **Únicos:** `perfis.email`, `perfis.cpf`, `veiculos.placa`, `contratos_servico.numero_contrato`, `transportadores.codigo_convite` e `(responsavel_id, lower(btrim(endereco_texto)))` em `enderecos_responsavel`.
+- **PKs compostas:** `previsoes_chegada (aluno_id, evento)` e `alertas_proximidade (viagem_id, aluno_id)`.
+- **Domínios via `CHECK`:** dia de vencimento, mês de referência, tipo do calendário, origem da mensagem, tipo de notificação, plataforma do push, precisão e origem do endereço.
+- **Geoespacial:** `localizacoes_gps.posicao` é `GEOMETRY(Point, 4326)` com índice GiST (PostGIS).
+- **Extensões:** `uuid-ossp`, `postgis`, `pgcrypto`, `pg_net` (chamada HTTP do push) e `supabase_vault` (segredos do push).
+
+## 4. Enums (tipos PostgreSQL)
+
+`tipo_usuario_enum`, `turno_enum`, `tipo_viagem_enum`, `status_viagem_enum`, `tipo_embarque_enum`, `status_contrato_enum`, `status_mensalidade_enum`, `metodo_pagamento_enum`, `periodo_ausencia_enum`. Valores listados no diagrama.
+
+## 5. Observações
+
+- `mensagens.responsavel_id` e `remetente_id` apontam para `perfis` (não para `responsaveis`).
+- `veiculos` é 1:N com o transportador (um transportador pode ter vários veículos).
+- Relações com `perfis` no diagrama que são lógicas, não FK direta: `mensagens.remetente_id` pode ser responsável ou transportador.
