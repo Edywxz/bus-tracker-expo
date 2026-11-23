@@ -42,7 +42,7 @@ const km = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 
 export const ViagemScreen: React.FC = () => {
   const {
     role, alunos, viagemAtiva, temViagem, temVeiculo, gpsPosicao, gpsAtivo, gpsStep, isDemo, estimativaRota, rotaGeo, recalcularRota, previsoes, gpsNegado,
-    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim, simulacao,
+    finalizarViagem, codigoConvite, recarregar, nomes, eventosCalendario, horaSimulada, paradasSim, simulacao, pararSimulacao,
   } = useApp();
   const [relogio, setAgora] = useState(() => new Date());
   const agora = horaSimulada ?? relogio;
@@ -71,6 +71,13 @@ export const ViagemScreen: React.FC = () => {
   const [resumoVisto, setResumoVisto] = useState(false);
   useEffect(() => { if (!concluida) { setSaindo(false); setResumoVisto(false); } }, [concluida]);
   const concluidaNoPainel = concluida && !resumoVisto;
+  // Ida e volta concluídas e o resumo já visto: a simulação termina e a demo volta ao início.
+  const voltaFim = simulacao?.estado.fase === 'FIM' && simulacao.linha.config.sentido === 'VOLTA';
+  useEffect(() => { // espera a saída do cartão assentar para não sobrepor duas transições de layout
+    if (!voltaFim || !resumoVisto) return;
+    const t = setTimeout(() => pararSimulacao(true), 450);
+    return () => clearTimeout(t);
+  }, [voltaFim, resumoVisto]); // eslint-disable-line react-hooks/exhaustive-deps
   const pai = role === 'RESPONSAVEL';
   const entregues = alunos.filter((a) => a.statusEmbarque === 'DESEMBARCADO');
   const aBordo = alunos.filter((a) => a.statusEmbarque === 'EMBARCADO').length;

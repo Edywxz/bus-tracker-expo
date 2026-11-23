@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { Icon, StopMarker } from './ds';
+import { StopMarker } from './ds';
+import { VanTopo } from './VanTopo';
 import { colors } from '../theme/colors';
 import { fill, radius } from '../theme/tokens';
 import { type } from '../theme/type';
-import type { Ponto } from '../utils/proximidade';
+import { distanciaKm, rumo, type Ponto } from '../utils/proximidade';
 
 /**
  * Mapa real (Apple Maps no iOS, Google Maps no Android) com a van ao vivo, as paradas dos passageiros
@@ -47,6 +48,61 @@ const Pin: React.FC<{ coordinate: Ponto; rev: string; zIndex?: number; children:
   return (
     <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={track} zIndex={zIndex}>
       {children}
+    </Marker>
+  );
+};
+
+/** Van que gira para onde anda: o rumo só muda ao se mover > 4 m (parada ou ruído de GPS mantém a direção) e gira pelo menor arco. */
+/** Desliza a van até cada novo ponto (duração = intervalo entre atualizações, linear: movimento contínuo); saltos grandes (pular a simulação) são imediatos. */
+function useDeslizar(alvo: Ponto): Ponto {
+  const [pos, setPos] = useState(alvo);
+  const atual = useRef(alvo);
+  const ultima = useRef(Date.now());
+  useEffect(() => {
+    const agora = Date.now();
+    const dur = Math.min(2000, Math.max(200, agora - ultima.current));
+    ultima.current = agora;
+    const de = atual.current;
+    if (distanciaKm(de, alvo) > 0.3) { atual.current = alvo; setPos(alvo); return; }
+    let raf = 0;
+    const passo = () => {
+      const k = Math.min(1, (Date.now() - agora) / dur);
+      atual.current = { latitude: de.latitude + (alvo.latitude - de.latitude) * k, longitude: de.longitude + (alvo.longitude - de.longitude) * k };
+      setPos(atual.current);
+      if (k < 1) raf = requestAnimationFrame(passo);
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [alvo.latitude, alvo.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+  return pos;
+}
+
+const VanMarker: React.FC<{ van: Ponto; ativa: boolean; alvo?: Ponto }> = ({ van, ativa, alvo }) => {
+  const pos = useDeslizar(van);
+  const ultimo = useRef<Ponto | null>(null);
+  const angulo = useRef<number | null>(null);
+  const [track, setTrack] = useState(true);
+  const prev = ultimo.current;
+  if (!prev) {
+    ultimo.current = van;
+    if (alvo) angulo.current = rumo(van, alvo);
+  } else if (distanciaKm(prev, van) > 0.004) {
+    const novo = rumo(prev, van), atual = angulo.current ?? novo;
+    angulo.current = atual + ((novo - atual + 540) % 360) - 180;
+    ultimo.current = van;
+  }
+  const graus = angulo.current ?? 0;
+  // O Apple Maps ignora `rotation` em marcador com View: gira a própria View e deixa o marcador reler a imagem por um instante.
+  useEffect(() => {
+    setTrack(true);
+    const t = setTimeout(() => setTrack(false), 500);
+    return () => clearTimeout(t);
+  }, [ativa, Math.round(graus)]);
+  return (
+    <Marker coordinate={pos} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={track} zIndex={5}>
+      <View style={{ transform: [{ rotate: `${graus}deg` }] }}>
+        <VanTopo ativa={ativa} />
+      </View>
     </Marker>
   );
 };
@@ -102,11 +158,7 @@ export const LiveMap: React.FC<Props> = ({ van, vanAtiva, trilha, paradas, paddi
         })}
 
         {van ? (
-          <Pin coordinate={van} rev={`${vanAtiva}`} zIndex={5}>
-            <View style={[s.van, !vanAtiva && { backgroundColor: colors.fill1 }]}>
-              <Icon name="van" size={20} color={vanAtiva ? colors.onSignal : colors.label} />
-            </View>
-          </Pin>
+          <VanMarker van={van} ativa={vanAtiva} alvo={trilha?.find((p) => distanciaKm(p, van) > 0.004)} />
         ) : null}
       </MapView>
     </View>
@@ -118,5 +170,4 @@ const s = StyleSheet.create({
   pin: { alignItems: 'center', gap: 2, minWidth: 80, paddingVertical: 4 },
   rotulo: { ...type.caption2, color: colors.label, backgroundColor: colors.matThick, paddingHorizontal: 4, borderRadius: radius.xs, overflow: 'hidden', maxWidth: 140, textAlign: 'center' },
   rotuloDestaque: { backgroundColor: colors.primary, color: colors.onPrimary },
-  van: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.signal, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.systemBg },
 });

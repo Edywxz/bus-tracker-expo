@@ -36,7 +36,7 @@ export function useControlesSimulacao(): { titulo?: string; acoes: SheetAction[]
     ...(!acabou ? [{ label: 'Próxima parada', onPress: () => pularSimulacao('PARADA') }, { label: 'Ir para o fim', onPress: () => pularSimulacao('FIM') }] : []),
     ...(podeOcorrer ? [{ label: 'Disparar ocorrência', role: 'destructive' as const,
       onPress: () => (linha.config.ocorrencia ? dispararOcorrencia(linha.config.ocorrencia) : setEscolhendo(true)) }] : []),
-    { label: 'Parar simulação', onPress: pararSimulacao },
+    { label: 'Parar simulação', onPress: () => pararSimulacao() },
   ];
   return { titulo: `Simulação · ${status}`, acoes, sheet };
 }

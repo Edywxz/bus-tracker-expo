@@ -60,6 +60,13 @@ const HORA: Record<Sentido, [number, number][]> = {
 
 // km acumulados até cada ponto do percurso; índices fracionários (trechos cortados pela ocorrência) interpolam entre pontos.
 const kmAte = (km: number[], x: number) => { const i = Math.min(Math.floor(x), km.length - 2); return km[i] + (x - i) * (km[i + 1] - km[i]); };
+/** Índice (fracionário) do ponto em que se chega após `x` km acumulados: velocidade constante mesmo com vértices irregulares. */
+const indiceEmKm = (km: number[], x: number) => {
+  let i = 0;
+  while (i < km.length - 2 && km[i + 1] < x) i++;
+  const d = km[i + 1] - km[i];
+  return i + (d > 0 ? Math.min(1, Math.max(0, (x - km[i]) / d)) : 0);
+};
 const kmEntre = (km: number[], de: number, para: number) => Math.abs(kmAte(km, para) - kmAte(km, de));
 const ROTULO: Record<Gravidade, string> = { BAIXA: 'Trânsito intenso', MEDIA: 'Desvio de via', ALTA: 'Pane mecânica', EMERGENCIA: 'Acidente na pista' };
 const BAIXA_JANELA_MS = 7500; // estrada normal coberta durante o trânsito; leva o dobro do tempo
@@ -168,7 +175,8 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
   const seg = [...l.segmentos].reverse().find((s) => s.t0 <= t) ?? l.segmentos[0];
   const antesDaSaida = t < l.segmentos[0].t0;
   const f = antesDaSaida || seg.t1 <= seg.t0 ? 0 : Math.min(1, (t - seg.t0) / (seg.t1 - seg.t0));
-  const indice = antesDaSaida ? seg.de : Math.round(seg.de + (seg.para - seg.de) * f);
+  const kmDe = kmAte(l.km, seg.de);
+  const indice = antesDaSaida ? seg.de : Math.round(indiceEmKm(l.km, kmDe + (kmAte(l.km, seg.para) - kmDe) * f));
   const total = l.segmentos.reduce((s, x) => s + kmEntre(l.km, x.de, x.para), 0);
   const kmRestantes = antesDaSaida ? total
     : l.segmentos.reduce((s, x) => s + (x.t0 > t ? kmEntre(l.km, x.de, x.para) : x === seg ? kmEntre(l.km, x.de, x.para) * (1 - f) : 0), 0);
@@ -183,10 +191,11 @@ export function estadoEm(l: Linha, t: number): EstadoSim {
 }
 
 /** Parte o segmento que contém t (se t cai dentro dele) em dois, com índice fracionário no corte. */
-function cortar(segs: Segmento[], t: number): Segmento[] {
+function cortar(segs: Segmento[], t: number, km: number[]): Segmento[] {
   return segs.flatMap((s) => {
     if (!(s.t0 < t && t < s.t1)) return [s];
-    const m = s.de + (s.para - s.de) * ((t - s.t0) / (s.t1 - s.t0));
+    const kmDe = kmAte(km, s.de);
+    const m = indiceEmKm(km, kmDe + (kmAte(km, s.para) - kmDe) * ((t - s.t0) / (s.t1 - s.t0)));
     return [{ ...s, t1: t, para: m }, { ...s, t0: t, de: m }];
   });
 }
@@ -201,7 +210,7 @@ export function montarSimulacao(c: ConfigSim): Linha {
   const antes = (e: EventoSim) => e.t < T || (e.t === T && e.tipo !== 'FIM');
 
   if (g === 'EMERGENCIA') {
-    let segmentos = cortar(base.segmentos, T).filter((s) => s.t1 <= T);
+    let segmentos = cortar(base.segmentos, T, base.km).filter((s) => s.t1 <= T);
     if (!segmentos.length) segmentos = [{ t0: T, t1: T, de: base.segmentos[0].de, para: base.segmentos[0].de }]; // urgente na saída: van parada na origem
     const eventos = [...base.eventos.filter(antes), ocorr, { t: T, tipo: 'ENCERRADA' } as EventoSim];
     return { ...base, segmentos, eventos, duracaoMs: T, ocorrenciaEm: T, pausaManualEm: null };
@@ -213,8 +222,8 @@ export function montarSimulacao(c: ConfigSim): Linha {
   const fim = T + BAIXA_JANELA_MS;
   const warp = (t: number) => g === 'MEDIA' ? (t <= T ? t : t + MEDIA_PARADA_MS)
     : t <= T ? t : t <= fim ? T + (t - T) * 2 : t + BAIXA_JANELA_MS;
-  let segs = cortar(base.segmentos, T);
-  if (g === 'BAIXA') segs = cortar(segs, fim);
+  let segs = cortar(base.segmentos, T, base.km);
+  if (g === 'BAIXA') segs = cortar(segs, fim, base.km);
   const k = segs.findIndex((s) => s.t0 >= T);
   const parado = g === 'MEDIA'
     ? [{ t0: T, t1: T + MEDIA_PARADA_MS, de: (segs[k] ?? segs[segs.length - 1]).de, para: (segs[k] ?? segs[segs.length - 1]).de }] : [];
@@ -265,7 +274,9 @@ export function vanVisivel(l: Linha, t: number, meusIds: string[]): { visivel: b
     const casa = l.config.alunoIds.some((a) => ALUNOS_SIM[a].casa === e.lugar);
     if (!meus.some((a) => ALUNOS_SIM[a][casa ? 'casa' : 'escola'] === e.lugar)) continue;
     const lugar = DEMO_LUGARES[e.lugar as keyof typeof DEMO_LUGARES];
-    const alvo = l.pontos.reduce((m, p, i) => (distanciaKm(p, lugar) < distanciaKm(l.pontos[m], lugar) ? i : m), 0);
+    // onde a van de fato para (fim da perna); o ponto mais próximo do lugar pode ficar antes da esquina
+    const alvo = l.segmentos.find((s) => s.de === s.para && s.t0 === e.t)?.de
+      ?? l.pontos.reduce((m, p, i) => (distanciaKm(p, lugar) < distanciaKm(l.pontos[m], lugar) ? i : m), 0);
     const kmFalta = Math.max(0, kmAte(l.km, alvo) - kmAte(l.km, idx));
     const minutos = Math.max(1, Math.round((kmFalta / VEL_ETA_KMH) * 60));
     // trecho = só o que falta até essa parada; o caminho já feito (e o resto da rota) nunca é revelado ao responsável
