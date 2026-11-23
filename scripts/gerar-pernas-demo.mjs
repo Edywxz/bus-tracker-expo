@@ -34,7 +34,7 @@ for (const [a, b] of pares) {
     for (const [lon, lat] of st.geometry.coordinates) {
       const p = { latitude: +lat.toFixed(6), longitude: +lon.toFixed(6), rua: st.name || '' };
       const u = pontos[pontos.length - 1];
-      if (!u || dist(u, p) >= 60) pontos.push(p); // amostra a cada ~60 m
+      if (!u || dist(u, p) >= 1) pontos.push(p); // todos os vértices (só tira repetidos): amostrar cortaria as esquinas
     }
   }
   const fim = rota.legs[0].steps.at(-1).geometry.coordinates.at(-1);

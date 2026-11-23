@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pixCopiaECola } from '../src/utils/pix.ts';
-import { distanciaKm, pontoDeDescida, primeiroAChegar } from '../src/utils/proximidade.ts';
+import { distanciaKm, pontoDeDescida, primeiroAChegar, rumo } from '../src/utils/proximidade.ts';
 import { diaLetivo, lembrete } from '../src/utils/lembrete.ts';
 import { lerLinkAuth } from '../src/utils/authLink.ts';
 import { urlDoSite } from '../src/utils/siteUrl.ts';
@@ -132,8 +132,17 @@ test('avisoEncerrar: cada situação tem seu aviso e só "tudo entregue" não é
   assert.match(avisoEncerrar(['AGUARDANDO', 'AGUARDANDO']).title, /Nenhum passageiro embarcou/);
   assert.match(avisoEncerrar(['EMBARCADO', 'AGUARDANDO']).message, /esperam|espera/);
   assert.match(avisoEncerrar(['EMBARCADO', 'DESEMBARCADO']).title, /1 aluno a bordo/);
-  assert.match(avisoEncerrar(['DESEMBARCADO', 'AGUARDANDO']).title, /Falta 1 aluno/);
+  assert.match(avisoEncerrar(['DESEMBARCADO', 'AGUARDANDO']).title, /Faltam 1 aluno/);
   const ok = avisoEncerrar(['DESEMBARCADO', 'DESEMBARCADO', 'AUSENTE']);
   assert.equal(ok.destructive, false);
   assert.match(ok.message, /Todos os 2/);
+});
+
+test('rumo: norte 0, leste 90, sul 180, oeste 270', () => {
+  const o = { latitude: -23.55, longitude: -46.63 };
+  const r = (la: number, lo: number) => Math.round(rumo(o, { latitude: o.latitude + la, longitude: o.longitude + lo }));
+  assert.equal(r(0.01, 0), 0);
+  assert.equal(r(0, 0.01), 90);
+  assert.equal(r(-0.01, 0), 180);
+  assert.equal(r(0, -0.01), 270);
 });

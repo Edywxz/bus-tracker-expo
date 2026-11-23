@@ -16,6 +16,14 @@ export const distanciaKm = (a: Ponto, b: Ponto) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 };
 
+/** Rumo de a para b em graus (0 = norte, sentido horário). */
+export const rumo = (a: Ponto, b: Ponto) => {
+  const dLon = rad(b.longitude - a.longitude);
+  const y = Math.sin(dLon) * Math.cos(rad(b.latitude));
+  const x = Math.cos(rad(a.latitude)) * Math.sin(rad(b.latitude)) - Math.sin(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+};
+
 /** Onde o dependente desce na viagem atual: ida → entrega (ou casa, se faltar); volta → casa. */
 export const pontoDeDescida = (a: ComPonto, tipo: 'IDA' | 'VOLTA'): Ponto | null => {
   const casa = a.latitude != null && a.longitude != null ? { latitude: a.latitude, longitude: a.longitude } : null;
