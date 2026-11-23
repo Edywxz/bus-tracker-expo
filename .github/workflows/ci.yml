@@ -71,32 +71,35 @@ jobs:
       REPO: ${{ github.repository }}
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      # Espera o Gemini revisar este commit. Com comentários, não mescla: o workflow gemini-fix corrige e o push dispara
-      # um novo CI. Se o gemini-fix recusar tudo (não há commit), ele comenta "Revisão do Gemini: nenhuma alteração feita"
-      # e reexecuta este job, que então mescla. Sem revisão em 10 min (app fora do ar, PR de bot), mescla mesmo assim.
-      - name: Espera a revisão do Gemini
+      # Mescla assim que o Claude responder à última revisão do Gemini (corrigiu com commit ou recusou tudo), sem esperar
+      # uma segunda revisão. Etapas, a cada 30 s por até 10 min:
+      #  - sem revisão do Gemini ainda: espera (no fim, mescla mesmo assim: app fora do ar, PR de bot);
+      #  - revisão sem comentários: mescla;
+      #  - com comentários e o comentário "Revisão do Gemini: ..." do Claude depois dela (correção ou recusa): mescla;
+      #  - com comentários, revisão deste commit e sem resposta do Claude: não mescla; o gemini-fix responde e
+      #    reexecuta este job (recusa) ou faz push (correção) e o novo CI cuida do merge;
+      #  - com comentários, revisão de commit anterior (Claude acabou de corrigir) e sem resposta: espera o comentário.
+      - name: Espera a revisão do Gemini e a resposta do Claude
         id: gemini
         run: |
           echo "merge=true" >> "$GITHUB_OUTPUT"
           for i in $(seq 20); do
-            r=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq "[.[] | select(.user.login==\"gemini-code-assist[bot]\" and .commit_id==\"$SHA\")] | last // empty | \"\(.id) \(.submitted_at)\"")
+            r=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq '[.[] | select(.user.login=="gemini-code-assist[bot]")] | last // empty | "\(.id) \(.submitted_at) \(.commit_id)"')
             if [ -n "$r" ]; then
-              set -- $r; id=$1; em=$2
+              set -- $r; id=$1; em=$2; commit=$3
               n=$(gh api "repos/$REPO/pulls/$PR/reviews/$id/comments" --jq length)
-              if [ "$n" -gt 0 ]; then
-                recusou=$(gh api "repos/$REPO/issues/$PR/comments" --jq "[.[] | select(.user.login==\"claude[bot]\" and .created_at > \"$em\" and (.body | startswith(\"Revisão do Gemini: nenhuma alteração feita\")))] | length")
-                if [ "$recusou" -gt 0 ]; then
-                  echo "Gemini deixou $n comentário(s), todos recusados pelo gemini-fix: mescla."
-                else
-                  echo "Gemini deixou $n comentário(s): não mescla, aguarda a correção."
-                  echo "merge=false" >> "$GITHUB_OUTPUT"
-                fi
+              if [ "$n" -eq 0 ]; then echo "Revisão do Gemini sem comentários: mescla."; exit 0; fi
+              resp=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" --jq "[.[] | select(.user.login==\"claude[bot]\" and .created_at > \"$em\" and (.body | startswith(\"Revisão do Gemini:\")))] | length")
+              if [ "${resp:-0}" -gt 0 ]; then echo "Claude respondeu aos $n comentário(s) do Gemini: mescla."; exit 0; fi
+              if [ "$commit" = "$SHA" ]; then
+                echo "Gemini deixou $n comentário(s) neste commit: não mescla, aguarda o gemini-fix."
+                echo "merge=false" >> "$GITHUB_OUTPUT"
+                exit 0
               fi
-              exit 0
             fi
             sleep 30
           done
-          echo "::warning::Gemini não revisou em 10 min; mesclando sem a revisão."
+          echo "::warning::Sem revisão do Gemini ou resposta do Claude em 10 min; mesclando assim mesmo."
       - name: Squash merge e apaga a branch
         if: steps.gemini.outputs.merge == 'true'
         run: gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
